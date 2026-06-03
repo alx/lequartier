@@ -4,8 +4,8 @@
 
 {% block content %}
 <section class="intro-section">
-  <h1 class="intro-title">🏠 Airbnb Map</h1>
-  <p class="intro-desc">Generate a neighbourhood map for any Airbnb listing — supermarkets, parks, playgrounds, transit, restaurants and more.</p>
+  <h1 class="intro-title">🏠 Le Quartier</h1>
+  <p class="intro-desc">Generate a neighbourhood map for any rental listing — supermarkets, parks, playgrounds, transit, restaurants and more.</p>
 </section>
 
 <div id="wizard-blocks">
@@ -13,7 +13,7 @@
   <!-- Step 1 — URL input -->
   <section id="step1-block" class="wizard-block">
     <div class="card card-hero">
-      <div class="block-label">🔗 Step 1 — Paste the Airbnb URL</div>
+      <div class="block-label">🔗 Step 1 — Paste the listing URL</div>
       <h2>Find nearby places for your guests</h2>
 
       {% if error %}
@@ -53,7 +53,7 @@
         <input type="hidden" id="listing_photo_hidden" name="listing_photo" value="">
 
         <div class="form-group">
-          <label for="airbnb_url">Airbnb listing URL <span class="required">*</span></label>
+          <label for="airbnb_url">Listing URL <span class="required">*</span></label>
           <input type="url" id="airbnb_url" name="airbnb_url" required autofocus
                  placeholder="https://www.airbnb.com/rooms/686559818391956388"
                  style="font-size:1rem; padding:0.7rem 0.9rem;">
@@ -66,7 +66,7 @@
               <label for="gmaps_url">Google Maps URL <span class="muted">(optional — faster &amp; more accurate coordinates)</span></label>
               <input type="url" id="gmaps_url" name="gmaps_url"
                      placeholder="https://www.google.com/maps?ll=48.858,2.294&z=16&…">
-              <p class="field-hint">From the Airbnb host page, right-click the map embed and copy the URL.</p>
+              <p class="field-hint">From the listing page, right-click the map embed and copy the URL.</p>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
               <div class="form-group">
@@ -142,7 +142,7 @@
     <section class="wizard-block">
       <div class="card">
         <div class="block-label">🗺 Step 2 — Review &amp; Customise Map</div>
-        <p class="muted">Paste an Airbnb URL above to load nearby places.</p>
+        <p class="muted">Paste a listing URL above to load nearby places.</p>
       </div>
     </section>
   </div>

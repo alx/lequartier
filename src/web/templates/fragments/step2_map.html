@@ -119,7 +119,7 @@
     iconAnchor: [16, 16],
   });
   const homeMarker = L.marker([CENTER_LAT, CENTER_LON], { icon: homeIcon })
-    .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
+    .bindPopup('<strong>Your listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
     .addTo(map);
   L.circle([CENTER_LAT, CENTER_LON], {
     radius: 400,
@@ -472,7 +472,7 @@
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'airbnb-{{ listing_id }}-locations.geojson';
+    a.download = 'lequartier-{{ listing_id }}-locations.geojson';
     a.click();
     URL.revokeObjectURL(url);
   };

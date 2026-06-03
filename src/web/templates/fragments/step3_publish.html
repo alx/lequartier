@@ -39,7 +39,7 @@
       </div>
       <div class="form-group">
         <label for="pr-desc">Short description <span class="muted">(optional)</span></label>
-        <textarea id="pr-desc" name="description" rows="2" placeholder="Family-friendly neighbourhood near the Airbnb">Everything you need within walking distance: the best cafés, markets, restaurants, and hidden gems — curated just for guests staying here.</textarea>
+        <textarea id="pr-desc" name="description" rows="2" placeholder="Family-friendly neighbourhood near the listing">Everything you need within walking distance: the best cafés, markets, restaurants, and hidden gems — curated just for guests staying here.</textarea>
         <p class="field-hint">A sentence describing the neighbourhood for your guests.</p>
       </div>
       <div class="form-group">
@@ -71,7 +71,7 @@
       <input type="hidden" name="slug" value="{{ slug }}">
       <input type="hidden" name="title" value="{{ default_title }}">
       <input type="hidden" name="description"
-             value="{{ n_pois }} places near the Airbnb listing in {{ location.get('city', '') }}. Source: OSM + Google Places.">
+             value="{{ n_pois }} places near the listing in {{ location.get('city', '') }}. Source: OSM + Google Places.">
       <button type="submit" class="btn btn-outline">
         <span class="htmx-indicator spinner"></span>
         💾 Commit &amp; Push →
@@ -94,7 +94,7 @@
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'airbnb-' + SLUG + '-locations.geojson';
+    a.download = 'lequartier-' + SLUG + '-locations.geojson';
     a.click();
     URL.revokeObjectURL(url);
   };
