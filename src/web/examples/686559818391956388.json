@@ -1,0 +1,801 @@
+{
+  "listing_id": "686559818391956388",
+  "lat": 37.9767,
+  "lon": 23.7184,
+  "categories": [
+    "activities",
+    "bakery",
+    "bike_share",
+    "culture",
+    "market",
+    "park",
+    "pharmacy",
+    "playground",
+    "restaurant",
+    "supermarket",
+    "transit"
+  ],
+  "result": {
+    "lat": 37.9767,
+    "lon": 23.7184,
+    "confidence": "medium",
+    "listing_id": "686559818391956388",
+    "location": {
+      "neighbourhood": "Πετράλωνα",
+      "city": "Αθήνα",
+      "country": "Ελλάς",
+      "timezone": null
+    },
+    "geojson": {
+      "type": "FeatureCollection",
+      "_meta": {
+        "crs": "EPSG:4326",
+        "generated": "2026-06-03T04:47:49.674564+00:00",
+        "source": "OSM Overpass + Google Places — https://www.airbnb.com/rooms/686559818391956388",
+        "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+        "center": {
+          "lat": 37.9767,
+          "lon": 23.7184
+        },
+        "radius_m": 1000.0,
+        "coord_confidence": "high",
+        "units": "metric",
+        "routing": true,
+        "category_meta": {
+          "Supermarket": {
+            "icon": "🛒",
+            "color": "#16a34a"
+          },
+          "Bakery & Food": {
+            "icon": "🥖",
+            "color": "#2563eb"
+          },
+          "Market": {
+            "icon": "🏪",
+            "color": "#f97316"
+          },
+          "Night Shop": {
+            "icon": "🌙",
+            "color": "#9333ea"
+          },
+          "Park": {
+            "icon": "🌳",
+            "color": "#dc2626"
+          },
+          "Playground": {
+            "icon": "🛝",
+            "color": "#0891b2"
+          },
+          "Dog Park": {
+            "icon": "🐕",
+            "color": "#ca8a04"
+          },
+          "Transit": {
+            "icon": "🚌",
+            "color": "#be185d"
+          },
+          "Activity": {
+            "icon": "🎠",
+            "color": "#15803d"
+          },
+          "Culture": {
+            "icon": "🏛️",
+            "color": "#1d4ed8"
+          },
+          "Wellness": {
+            "icon": "🧘",
+            "color": "#ea580c"
+          },
+          "Restaurant": {
+            "icon": "🍽️",
+            "color": "#7c3aed"
+          },
+          "Health": {
+            "icon": "💊",
+            "color": "#b91c1c"
+          },
+          "Bike Share": {
+            "icon": "🚲",
+            "color": "#0e7490"
+          }
+        },
+        "location": {
+          "neighbourhood": "Πετράλωνα",
+          "city": "Αθήνα",
+          "country": "Ελλάς",
+          "timezone": null
+        }
+      },
+      "features": [
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-001",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7187879,
+              37.9747617
+            ]
+          },
+          "properties": {
+            "name": "Supermarket #4400863146",
+            "category": "Supermarket",
+            "icon": "🛒",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": true,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-002",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7169971,
+              37.9749858
+            ]
+          },
+          "properties": {
+            "name": "Market In",
+            "category": "Supermarket",
+            "icon": "🛒",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "secondary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-003",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7179978,
+              37.9760942
+            ]
+          },
+          "properties": {
+            "name": "Αρτοποιείο Δήμου",
+            "category": "Bakery & Food",
+            "icon": "🥖",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "opening_hours": {
+              "raw": "Mo-Th 07:00-18:00; Fr-Sa 07:00-20:00; Su 08:00-16:00",
+              "open_now": null,
+              "source": "osm"
+            },
+            "phone": "+30 21 0346 2131",
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-004",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7167838,
+              37.9757063
+            ]
+          },
+          "properties": {
+            "name": "Artοπωλείον",
+            "category": "Bakery & Food",
+            "icon": "🥖",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-005",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.714264,
+              37.9752715
+            ]
+          },
+          "properties": {
+            "name": "Boulangerie Oliver´s",
+            "category": "Bakery & Food",
+            "icon": "🥖",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-006",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7165122,
+              37.980591
+            ]
+          },
+          "properties": {
+            "name": "Στο Βάθος Κήπος",
+            "category": "Bakery & Food",
+            "icon": "🥖",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "opening_hours": {
+              "raw": "Mo-Fr 09:30-22:00; Sa 10:30-19:00",
+              "open_now": null,
+              "source": "osm"
+            },
+            "phone": "+302130235776",
+            "website": "https://bathoskipos.gr/",
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-007",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7157261,
+              37.9802037
+            ]
+          },
+          "properties": {
+            "name": "Athens Street Hub",
+            "category": "Market",
+            "icon": "🏪",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-008",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7247479,
+              37.9761788
+            ]
+          },
+          "properties": {
+            "name": "Monastiraki Flea Market",
+            "category": "Market",
+            "icon": "🏪",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-009",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7197117,
+              37.9764122
+            ]
+          },
+          "properties": {
+            "name": "Park #219361270",
+            "category": "Park",
+            "icon": "🌳",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": true,
+            "status": "secondary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-010",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7193057,
+              37.9778106
+            ]
+          },
+          "properties": {
+            "name": "Park #219302399",
+            "category": "Park",
+            "icon": "🌳",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": true,
+            "status": "secondary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-011",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7169558,
+              37.9777001
+            ]
+          },
+          "properties": {
+            "name": "Park #217268336",
+            "category": "Park",
+            "icon": "🌳",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": true,
+            "status": "secondary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-012",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7203288,
+              37.9755522
+            ]
+          },
+          "properties": {
+            "name": "Thissio Park",
+            "category": "Park",
+            "icon": "🌳",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-013",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7201734,
+              37.9748073
+            ]
+          },
+          "properties": {
+            "name": "Playground #64088785",
+            "category": "Playground",
+            "icon": "🛝",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": true,
+            "status": "secondary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-014",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7146238,
+              37.9731169
+            ]
+          },
+          "properties": {
+            "name": "Playground #495025624",
+            "category": "Playground",
+            "icon": "🛝",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": true,
+            "status": "secondary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-015",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7173413,
+              37.9760643
+            ]
+          },
+          "properties": {
+            "name": "ΑΚΤΑΙΟΥ",
+            "category": "Transit",
+            "icon": "🚌",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-016",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7203289,
+              37.9767658
+            ]
+          },
+          "properties": {
+            "name": "Thiseio",
+            "category": "Transit",
+            "icon": "🚌",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-017",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7168358,
+              37.9750113
+            ]
+          },
+          "properties": {
+            "name": "ΝΗΛΕΩΣ",
+            "category": "Transit",
+            "icon": "🚌",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-018",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7155781,
+              37.9766436
+            ]
+          },
+          "properties": {
+            "name": "ΔΗΜΟΦΩΝΤΟΣ",
+            "category": "Transit",
+            "icon": "🚌",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-019",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7207286,
+              37.9782377
+            ]
+          },
+          "properties": {
+            "name": "ΑΓ. ΑΣΩΜΑΤΟΙ",
+            "category": "Transit",
+            "icon": "🚌",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-020",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.72151,
+              37.97736
+            ]
+          },
+          "properties": {
+            "name": "ΣΤ. ΗΣΑΠ ΘΗΣΕΙΟ",
+            "category": "Transit",
+            "icon": "🚌",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-021",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7186254,
+              37.9752675
+            ]
+          },
+          "properties": {
+            "name": "Herakleidon Museum",
+            "category": "Activity",
+            "icon": "🎠",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "opening_hours": {
+              "raw": "We-Su 10:00-17:15; Jan 1 off; Easter off; Aug 15 off; Dec 25-26 off",
+              "open_now": null,
+              "source": "osm"
+            },
+            "phone": "+302103461981",
+            "website": "https://herakleidon.org",
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-022",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7184363,
+              37.9768552
+            ]
+          },
+          "properties": {
+            "name": "To Steki tou Ilia",
+            "category": "Restaurant",
+            "icon": "🍽️",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "phone": "+30 210 3422407",
+            "website": "https://www.facebook.com/to.steki.tou.hlia/",
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-023",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7183774,
+              37.9753513
+            ]
+          },
+          "properties": {
+            "name": "Avli",
+            "category": "Restaurant",
+            "icon": "🍽️",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-024",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7173522,
+              37.9755712
+            ]
+          },
+          "properties": {
+            "name": "Κοτσάκια και Μαντινάδες",
+            "category": "Restaurant",
+            "icon": "🍽️",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-025",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.719396,
+              37.975505
+            ]
+          },
+          "properties": {
+            "name": "Mentor Cafe",
+            "category": "Restaurant",
+            "icon": "🍽️",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "phone": "+30 21 0345 2948",
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-026",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7165085,
+              37.9759199
+            ]
+          },
+          "properties": {
+            "name": "Φακίδες",
+            "category": "Restaurant",
+            "icon": "🍽️",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-027",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7183754,
+              37.9759336
+            ]
+          },
+          "properties": {
+            "name": "Health #4400860646",
+            "category": "Health",
+            "icon": "💊",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": true,
+            "status": "primary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-028",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7176917,
+              37.9748657
+            ]
+          },
+          "properties": {
+            "name": "Γεωργαλά",
+            "category": "Health",
+            "icon": "💊",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "secondary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-029",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7187068,
+              37.9747854
+            ]
+          },
+          "properties": {
+            "name": "Health #4400863147",
+            "category": "Health",
+            "icon": "💊",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": true,
+            "status": "secondary"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "airbnb/686559818391956388-030",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              23.7241321,
+              37.9775726
+            ]
+          },
+          "properties": {
+            "name": "Simple bike",
+            "category": "Bike Share",
+            "icon": "🚲",
+            "coord_source": "osm",
+            "coord_accuracy": "high",
+            "source": "osm",
+            "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
+            "generated_name": false,
+            "status": "primary"
+          }
+        }
+      ]
+    },
+    "n_pois": 30,
+    "airbnb_url": "https://www.airbnb.com/rooms/686559818391956388",
+    "from_cache": false,
+    "listing_title": "Rental unit in Athens · ★4.92 · 2 bedrooms · 2 beds · 1.5 private baths",
+    "listing_photo": "https://a0.muscache.com/im/pictures/miso/Hosting-686559818391956388/original/20307476-c0b1-4ce1-94cf-4627de59c5a9.jpeg?im_w=720&width=720&quality=70&auto=webp"
+  }
+}

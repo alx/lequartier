@@ -26,7 +26,7 @@
 
         <div class="example-cards-label">Try an example:</div>
         <div class="example-cards" id="example-cards">
-          <button type="button" class="example-card" data-url="https://www.airbnb.com/rooms/686559818391956388" onclick="fillExample(this)">
+          <button type="button" class="example-card" data-url="https://www.airbnb.com/rooms/686559818391956388" data-lat="37.9767" data-lon="23.7184" onclick="fillExample(this)">
             <div class="example-card-thumb-wrap">
               <img class="example-card-thumb" id="ex-thumb-0" alt="" style="display:none;">
               <div class="example-card-thumb-placeholder" id="ex-placeholder-0"></div>
@@ -36,7 +36,7 @@
               <div class="example-card-url muted">airbnb.com · rooms/686559818391956388</div>
             </div>
           </button>
-          <button type="button" class="example-card" data-url="https://www.airbnb.fr/rooms/10349749" onclick="fillExample(this)">
+          <button type="button" class="example-card" data-url="https://www.airbnb.fr/rooms/10349749" data-lat="43.60498" data-lon="1.45783" onclick="fillExample(this)">
             <div class="example-card-thumb-wrap">
               <img class="example-card-thumb" id="ex-thumb-1" alt="" style="display:none;">
               <div class="example-card-thumb-placeholder" id="ex-placeholder-1"></div>
@@ -121,6 +121,8 @@
           window.fillExample = function(btn) {
             var url = btn.dataset.url;
             document.getElementById('airbnb_url').value = url;
+            if (btn.dataset.lat) document.getElementById('lat').value = btn.dataset.lat;
+            if (btn.dataset.lon) document.getElementById('lon').value = btn.dataset.lon;
             var d = previewCache[url] || {};
             document.getElementById('listing_title_hidden').value = d.title || '';
             document.getElementById('listing_photo_hidden').value = d.photo_url || '';

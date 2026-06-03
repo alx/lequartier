@@ -92,6 +92,9 @@ def create_app(config: dict | None = None) -> Flask:
     from .poi_engine import initialize, get_cfg
     initialize(env_path=PROJECT_ROOT / ".env")
 
+    from .examples import seed_cache
+    seed_cache()
+
     commit_hash, commit_dt = _read_commit_info()
 
     @app.context_processor
