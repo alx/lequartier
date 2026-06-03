@@ -25,7 +25,7 @@ _GH_REPO = "alx/travel-guide"
 
 def _gh_headers(token: str) -> dict:
     return {
-        "Authorization": f"token {token}",
+        "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
@@ -33,10 +33,19 @@ def _gh_headers(token: str) -> dict:
 
 def _gh_put_file(hdrs: dict, branch: str, path: str, content: str, message: str) -> None:
     encoded = base64.b64encode(content.encode()).decode()
+    body: dict = {"message": message, "content": encoded, "branch": branch}
+    existing = http_requests.get(
+        f"{_GH_API}/repos/{_GH_REPO}/contents/{path}",
+        headers=hdrs,
+        params={"ref": branch},
+        timeout=15,
+    )
+    if existing.status_code == 200:
+        body["sha"] = existing.json()["sha"]
     resp = http_requests.put(
         f"{_GH_API}/repos/{_GH_REPO}/contents/{path}",
         headers=hdrs,
-        json={"message": message, "content": encoded, "branch": branch},
+        json=body,
         timeout=20,
     )
     resp.raise_for_status()
@@ -372,9 +381,13 @@ def step3_create_pr():
             msg = exc.response.json().get("message", "")
         except Exception:
             pass
-        current_app.logger.error("GitHub PR error %s: %s", exc.response.status_code, msg)
+        status = exc.response.status_code
+        current_app.logger.error("GitHub PR error %s: %s", status, msg)
+        hint = ""
+        if status == 403:
+            hint = " — ensure your token has Contents (read/write) and Pull requests (read/write) permissions (fine-grained PAT), or the 'repo' scope (classic PAT)."
         return render_template("fragments/pr_result.html",
-                               error=f"GitHub API error {exc.response.status_code}: {msg}",
+                               error=f"GitHub API error {status}: {msg}{hint}",
                                pr_url=None, email=email)
     except Exception as exc:
         current_app.logger.error("GitHub PR error: %s", exc)
