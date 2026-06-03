@@ -1,0 +1,30 @@
+<section id="loading-fetch" class="wizard-block"
+  {% if not error %}
+  hx-get="/tasks/{{ task_id }}/poll/fetch"
+  hx-trigger="every 1s"
+  hx-swap="innerHTML"
+  hx-target="#step2-area"
+  {% endif %}>
+  <div class="card loading-card">
+    <div class="block-label">⏳ Fetching Nearby Places</div>
+    <h2>{% if error %}Something went wrong{% else %}Finding places near your Airbnb…{% endif %}</h2>
+    {% if not error %}
+    <p class="muted" style="margin-bottom:1.25rem">
+      Querying OpenStreetMap and Google Places. This takes about 15–30 seconds.
+    </p>
+    {% endif %}
+    <div class="progress-wrap">
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner{% if error %} progress-bar-error{% endif %}"
+             style="width: {{ pct }}%"></div>
+      </div>
+      <p class="progress-label{% if error %} progress-label-error{% endif %}">{{ progress }}</p>
+    </div>
+    {% if error %}
+    <p class="muted" style="margin-top:1rem">
+      Try providing the Google Maps URL or lat/lon coordinates in the advanced options.
+    </p>
+    <a href="/" class="btn btn-outline" style="margin-top:0.75rem; display:inline-block;">← Start over</a>
+    {% endif %}
+  </div>
+</section>

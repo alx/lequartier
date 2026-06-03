@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Le Quartier{% endblock %}</title>
+  <meta name="description" content="Generate a neighbourhood map for any Airbnb listing — supermarkets, parks, transit, restaurants and more.">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+</head>
+<body>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if commit_short %}
+  <footer class="site-footer">
+    <span class="footer-label">Le Quartier</span>
+    <span class="footer-sep">·</span>
+    <a href="{{ github_commit_url }}" target="_blank" rel="noopener" class="footer-commit">{{ commit_short }}</a>
+    <span class="footer-sep">·</span>
+    <span class="footer-date">{{ commit_date }} {{ commit_time }}</span>
+    <span class="footer-sep">·</span>
+    <a href="https://lequartier.girard-davila.net" target="_blank" rel="noopener">lequartier.girard-davila.net</a>
+    <span class="footer-sep">·</span>
+    <a href="/cache">⚡ cache</a>
+  </footer>
+  {% endif %}
+
+  <script>
+  document.body.addEventListener('htmx:afterSwap', function(evt) {
+    var target = evt.detail.target;
+    if (!target) return;
+    var stepAreas = ['step2-area', 'step3-area'];
+    if (stepAreas.indexOf(target.id) >= 0) {
+      setTimeout(function() {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+    }
+  });
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

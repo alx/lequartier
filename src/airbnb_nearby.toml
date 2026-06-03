@@ -1,0 +1,316 @@
+# airbnb_nearby.toml
+# Configuration for scripts/airbnb_env/airbnb_nearby.py
+#
+# Place this file alongside the script:
+#   scripts/airbnb_env/airbnb_nearby.toml
+# or pass a custom path with: --config /path/to/airbnb_nearby.toml
+#
+# All values shown are the defaults baked into the script.
+# Override only what you need.
+
+# ---------------------------------------------------------------------------
+# Global filtering constants
+# ---------------------------------------------------------------------------
+
+[defaults]
+max_per_category  = 5       # per-category POI cap (overridden per category below)
+min_rating        = 3.5     # drop POIs with rating below this
+min_reviews       = 10      # only apply rating filter when review count >= this
+max_total_pois    = 30      # hard cap across all categories in final GeoJSON
+dedup_radius_m    = 80      # intra-category proximity dedup threshold (metres)
+hard_dist_cap_m   = 1400    # global distance cap; categories can override with dist_cap
+search_radius_m   = 1000    # default Overpass/Google search radius (--radius flag)
+units             = "metric"    # A05: "metric" or "imperial"
+preferred_lang    = "en"        # B04: OSM name tag language preference (e.g. "en", "fr")
+ui_lang           = "en"        # B13: UI label language (requires label_<lang> keys in categories)
+cache_ttl_days    = 7           # B08: GeoJSON cache time-to-live in days
+routing           = true        # C02: enable walking route on POI focus
+
+# Default active categories (subset of all defined below).
+# Use --categories flag to override at runtime.
+default_categories = [
+  "supermarket",
+  "bakery",
+  "market",
+  "park",
+  "playground",
+  "transit",
+  "activities",
+  "culture",
+  "restaurant",
+  "pharmacy",
+  "bike_share",
+]
+
+# ---------------------------------------------------------------------------
+# Category definitions
+#
+# Required keys per category:
+#   label         — human-readable name shown in UI and GeoJSON properties
+#   icon          — emoji shown in sidebar and map markers
+#   overpass      — Overpass QL filter fragment; {r}, {lat}, {lon} are substituted
+#   google_types  — list of Google Places API types for fallback enrichment
+#
+# Optional keys:
+#   max           — per-category POI cap (overrides defaults.max_per_category)
+#   dist_cap      — hard distance cap in metres (overrides defaults.hard_dist_cap_m)
+#   radius        — Overpass search radius override (overrides defaults.search_radius_m)
+#   default       — if false, excluded from default_categories even if listed above
+# ---------------------------------------------------------------------------
+
+[categories.supermarket]
+label        = "Supermarket"
+icon         = "🛒"
+max          = 2
+dist_cap     = 700
+radius       = 600
+overpass     = """
+node(around:{r},{lat},{lon})["shop"~"^(supermarket|grocery|convenience)$"];
+way(around:{r},{lat},{lon})["shop"~"^(supermarket|grocery|convenience)$"];
+"""
+google_types = ["supermarket", "grocery_store", "convenience_store"]
+
+# ---------------------------------------------------------------------------
+# NEW: Bakery / Specialty Food
+# Covers: boulangerie, butcher, deli, organic shop, Asian grocery.
+# These were in the Toulouse GPX file but completely missed by Overpass.
+# ---------------------------------------------------------------------------
+[categories.bakery]
+label        = "Bakery & Food"
+icon         = "🥖"
+max          = 4
+dist_cap     = 800
+radius       = 700
+overpass     = """
+node(around:{r},{lat},{lon})["shop"="bakery"];
+node(around:{r},{lat},{lon})["shop"="butcher"];
+node(around:{r},{lat},{lon})["shop"="deli"];
+node(around:{r},{lat},{lon})["shop"="cheese"];
+node(around:{r},{lat},{lon})["shop"="organic"];
+node(around:{r},{lat},{lon})["shop"="convenience"]["cuisine"~"asian|indian|african"];
+"""
+google_types = ["bakery"]
+
+# ---------------------------------------------------------------------------
+# NEW: Market
+# Weekly/daily street markets and covered market halls.
+# Distinct from supermarkets — time-bound, different character.
+# ---------------------------------------------------------------------------
+[categories.market]
+label        = "Market"
+icon         = "🏪"
+max          = 2
+dist_cap     = 1000
+radius       = 1000
+overpass     = """
+node(around:{r},{lat},{lon})["amenity"="marketplace"];
+way(around:{r},{lat},{lon})["amenity"="marketplace"];
+node(around:{r},{lat},{lon})["shop"="marketplace"];
+"""
+google_types = ["market"]
+
+# ---------------------------------------------------------------------------
+# NEW: Late-Night Shop
+# Epicerie de nuit, 24h convenience. High value for arriving guests.
+# ---------------------------------------------------------------------------
+[categories.night_shop]
+label        = "Night Shop"
+icon         = "🌙"
+max          = 2
+dist_cap     = 500
+radius       = 500
+default      = false    # opt-in only: --categories night_shop
+overpass     = """
+node(around:{r},{lat},{lon})["shop"~"^(convenience|supermarket)$"]["opening_hours"~"24/7|22:00|23:00|00:00"];
+"""
+google_types = ["convenience_store"]
+
+[categories.park]
+label        = "Park"
+icon         = "🌳"
+max          = 4
+dist_cap     = 1200
+radius       = 1000
+overpass     = """
+node(around:{r},{lat},{lon})["leisure"~"^(park|garden)$"];
+way(around:{r},{lat},{lon})["leisure"~"^(park|garden)$"];
+relation(around:{r},{lat},{lon})["leisure"~"^(park|garden)$"];
+"""
+google_types = ["park", "national_park"]
+
+[categories.playground]
+label        = "Playground"
+icon         = "🛝"
+max          = 2
+dist_cap     = 900
+radius       = 1000
+overpass     = """
+node(around:{r},{lat},{lon})["leisure"="playground"];
+way(around:{r},{lat},{lon})["leisure"="playground"];
+"""
+google_types = ["playground"]
+
+# ---------------------------------------------------------------------------
+# NEW: Dog Park
+# Off-leash areas. Opt-in only — only relevant for pet-owning guests.
+# ---------------------------------------------------------------------------
+[categories.dog_park]
+label        = "Dog Park"
+icon         = "🐕"
+max          = 3
+dist_cap     = 1000
+radius       = 1000
+default      = false    # opt-in only: --categories dog_park
+overpass     = """
+node(around:{r},{lat},{lon})["leisure"="dog_park"];
+way(around:{r},{lat},{lon})["leisure"="dog_park"];
+"""
+google_types = []
+
+[categories.transit]
+label        = "Transit"
+icon         = "🚌"
+max          = 6
+dist_cap     = 900
+radius       = 800
+overpass     = """
+node(around:{r},{lat},{lon})["highway"="bus_stop"];
+node(around:{r},{lat},{lon})["amenity"="bus_station"];
+node(around:{r},{lat},{lon})["railway"~"^(station|tram_stop|halt)$"];
+way(around:{r},{lat},{lon})["railway"~"^(station|tram_stop|halt)$"];
+"""
+google_types = ["bus_station", "train_station", "subway_station", "transit_station"]
+
+[categories.activities]
+label        = "Activity"
+icon         = "🎠"
+max          = 4
+dist_cap     = 1400
+radius       = 1000
+overpass     = """
+node(around:{r},{lat},{lon})["tourism"~"^(museum|aquarium|theme_park)$"];
+way(around:{r},{lat},{lon})["tourism"~"^(museum|aquarium|theme_park)$"];
+node(around:{r},{lat},{lon})["leisure"~"^(swimming_pool|water_park|miniature_golf|sports_centre)$"]["access"!="private"];
+way(around:{r},{lat},{lon})["leisure"~"^(swimming_pool|water_park|miniature_golf|sports_centre)$"]["access"!="private"];
+"""
+google_types = ["museum", "aquarium", "amusement_park", "water_park", "swimming_pool"]
+
+# ---------------------------------------------------------------------------
+# NEW: Culture
+# Cinema, theatre, library, bookshop, viewpoint, music venue.
+# Largest category in the Toulouse GPX file — fully absent from old script.
+# ---------------------------------------------------------------------------
+[categories.culture]
+label        = "Culture"
+icon         = "🏛️"
+max          = 6
+dist_cap     = 1200
+radius       = 1000
+overpass     = """
+node(around:{r},{lat},{lon})["amenity"="cinema"];
+way(around:{r},{lat},{lon})["amenity"="cinema"];
+node(around:{r},{lat},{lon})["amenity"="theatre"];
+way(around:{r},{lat},{lon})["amenity"="theatre"];
+node(around:{r},{lat},{lon})["amenity"="library"];
+way(around:{r},{lat},{lon})["amenity"="library"];
+node(around:{r},{lat},{lon})["amenity"="music_venue"];
+way(around:{r},{lat},{lon})["amenity"="music_venue"];
+node(around:{r},{lat},{lon})["shop"="books"];
+node(around:{r},{lat},{lon})["tourism"="viewpoint"];
+"""
+google_types = [
+  "movie_theater",
+  "performing_arts_theater",
+  "library",
+  "book_store",
+  "tourist_attraction",
+]
+
+# ---------------------------------------------------------------------------
+# NEW: Wellness / Sport Studio
+# Yoga, fitness, climbing. Different from sports_centre pools.
+# In Toulouse: Au rendez-vous des Yogis, Solo Escalade — missed by old query.
+# ---------------------------------------------------------------------------
+[categories.wellness]
+label        = "Wellness"
+icon         = "🧘"
+max          = 3
+dist_cap     = 1200
+radius       = 1000
+default      = false    # opt-in: well-covered cities only; sparse OSM tagging elsewhere
+overpass     = """
+node(around:{r},{lat},{lon})["leisure"="fitness_centre"];
+way(around:{r},{lat},{lon})["leisure"="fitness_centre"];
+node(around:{r},{lat},{lon})["leisure"="climbing"];
+way(around:{r},{lat},{lon})["leisure"="climbing"];
+node(around:{r},{lat},{lon})["sport"="yoga"];
+node(around:{r},{lat},{lon})["amenity"="physiotherapist"];
+"""
+google_types = ["gym", "yoga_studio"]
+
+[categories.restaurant]
+label        = "Restaurant"
+icon         = "🍽️"
+max          = 5
+dist_cap     = 900
+radius       = 800
+overpass     = """
+node(around:{r},{lat},{lon})["amenity"="restaurant"];
+node(around:{r},{lat},{lon})["amenity"="cafe"];
+"""
+google_types = ["restaurant", "cafe"]
+
+# ---------------------------------------------------------------------------
+# Health: expanded from pharmacy-only to include dentist, GP, lab.
+# All three types appeared in the Toulouse file under "Health".
+# ---------------------------------------------------------------------------
+[categories.pharmacy]
+label        = "Health"
+icon         = "💊"
+max          = 3
+dist_cap     = 800
+radius       = 700
+overpass     = """
+node(around:{r},{lat},{lon})["amenity"="pharmacy"];
+way(around:{r},{lat},{lon})["amenity"="pharmacy"];
+node(around:{r},{lat},{lon})["amenity"="dentist"];
+node(around:{r},{lat},{lon})["amenity"="doctors"];
+node(around:{r},{lat},{lon})["amenity"="clinic"];
+node(around:{r},{lat},{lon})["healthcare"="laboratory"];
+"""
+google_types = ["pharmacy", "dentist", "doctor"]
+
+[categories.bike_share]
+label        = "Bike Share"
+icon         = "🚲"
+max          = 3
+dist_cap     = 700
+radius       = 600
+overpass     = """
+node(around:{r},{lat},{lon})["amenity"="bicycle_rental"];
+way(around:{r},{lat},{lon})["amenity"="bicycle_rental"];
+"""
+google_types = ["bicycle_rental"]
+
+# ---------------------------------------------------------------------------
+# Priority order for global cap trimming.
+# When total POIs exceed defaults.max_total_pois, categories at the END
+# of this list are trimmed first (least essential for arrival context).
+# ---------------------------------------------------------------------------
+[trim_priority]
+order = [
+  "transit",
+  "pharmacy",
+  "supermarket",
+  "night_shop",
+  "bakery",
+  "market",
+  "playground",
+  "dog_park",
+  "park",
+  "bike_share",
+  "restaurant",
+  "wellness",
+  "activities",
+  "culture",
+]

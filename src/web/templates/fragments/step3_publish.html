@@ -1,0 +1,95 @@
+<section id="step3-publish" class="wizard-block">
+  <div class="card">
+    <div class="block-label">📤 Step 3 — Download &amp; Publish</div>
+    <div class="summary-row">
+      <span>🏠 Listing <code>{{ listing_id }}</code></span>
+      {% if location.get("city") %}
+      <span>📍 {{ location.get("neighbourhood", "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ location.get("city", "") }}</span>
+      {% endif %}
+      <span><strong>{{ n_pois }}</strong> places selected</span>
+    </div>
+  </div>
+
+  <!-- Download -->
+  <div class="card">
+    <h3>⬇ Download GeoJSON</h3>
+    <p class="muted" style="margin-bottom:1rem;">
+      Save <code>locations.geojson</code> to share or use elsewhere.
+    </p>
+    <button class="btn btn-primary" onclick="downloadGeoJSON3()">
+      ⬇ Download locations.geojson
+    </button>
+  </div>
+
+  <!-- GitHub PR -->
+  {% if has_github_token and in_git_repo %}
+  <div class="card" id="pr-card">
+    <h3>🐙 Create GitHub PR on maps.girard-davila.com</h3>
+    <p class="muted" style="margin-bottom:1rem;">
+      Opens a pull request on <strong>alx/travel-guide</strong>. The map goes live automatically after merge.
+    </p>
+    <form hx-post="/step3/create-pr"
+          hx-target="#pr-card"
+          hx-swap="innerHTML">
+      <div class="form-group">
+        <label for="pr-slug">Map slug</label>
+        <input type="text" id="pr-slug" name="slug" value="{{ slug }}" required>
+        <p class="field-hint">URL path on maps.girard-davila.com, e.g. <code>airbnb/{{ listing_id }}</code></p>
+      </div>
+      <div class="form-group">
+        <label for="pr-title">Map title</label>
+        <input type="text" id="pr-title" name="title" value="{{ default_title }}" required>
+      </div>
+      <div class="form-group">
+        <label for="pr-desc">Description <span class="muted">(optional)</span></label>
+        <textarea id="pr-desc" name="description" rows="2" placeholder="Family-friendly neighbourhood near the Airbnb">Everything you need within walking distance: the best cafés, markets, restaurants, and hidden gems — curated just for guests staying here.</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <span class="htmx-indicator spinner"></span>
+        🐙 Create GitHub PR →
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Local write -->
+  {% if can_write_local %}
+  <div class="card" id="local-card">
+    <h3>💾 Write directly to travel-guide</h3>
+    <p class="muted" style="margin-bottom:1rem;">
+      Since this app runs alongside the travel-guide repo, it can commit &amp; push directly.
+    </p>
+    <form hx-post="/step3/local-write"
+          hx-target="#local-card"
+          hx-swap="innerHTML">
+      <input type="hidden" name="slug" value="{{ slug }}">
+      <input type="hidden" name="title" value="{{ default_title }}">
+      <input type="hidden" name="description"
+             value="{{ n_pois }} places near the Airbnb listing in {{ location.get('city', '') }}. Source: OSM + Google Places.">
+      <button type="submit" class="btn btn-outline">
+        <span class="htmx-indicator spinner"></span>
+        💾 Commit &amp; Push →
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+</section>
+
+<script type="application/json" id="geojson-data-3">{{ geojson_json | safe }}</script>
+<script>
+(function() {
+  const GJ   = JSON.parse(document.getElementById('geojson-data-3').textContent);
+  const SLUG = {{ listing_id | tojson }};
+
+  window.downloadGeoJSON3 = function() {
+    const blob = new Blob([JSON.stringify(GJ, null, 2)], { type: 'application/geo+json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'airbnb-' + SLUG + '-locations.geojson';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+})();
+</script>

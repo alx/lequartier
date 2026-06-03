@@ -1,0 +1,20 @@
+<div class="card">
+  <h3>🐙 GitHub PR</h3>
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  <p class="muted" style="margin-top:0.75rem;">Check that your <code>GITHUB_TOKEN</code> has the <code>repo</code> scope.</p>
+  {% else %}
+  <div class="alert alert-success">
+    Pull request created! ✓
+  </div>
+  <p style="margin-top:0.75rem;">
+    <a href="{{ pr_url }}" target="_blank" rel="noopener" class="btn btn-primary">
+      🐙 View PR on GitHub →
+    </a>
+  </p>
+  <p class="muted" style="margin-top:0.75rem; font-size:0.88rem;">
+    The CI will auto-generate a map preview and the map goes live at
+    <strong>maps.girard-davila.com</strong> after the PR is merged.
+  </p>
+  {% endif %}
+</div>

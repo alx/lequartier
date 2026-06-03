@@ -1,0 +1,476 @@
+<section id="step2-map" class="wizard-block">
+  {% if from_cache %}
+  <div class="cache-banner">
+    ⚡ Loaded from cache — <a href="/" onclick="document.getElementById('force_refresh_hidden').value='1'">force refresh</a> to re-fetch live data
+  </div>
+  {% endif %}
+  <div class="card" style="padding-bottom:0.75rem;">
+    <div class="block-label">🗺 Step 2 — Review &amp; Customise Map</div>
+    <div class="map-meta">
+      <span class="map-meta-item">
+        📍 <strong>{{ lat | round(5) }}, {{ lon | round(5) }}</strong>
+        {% if confidence != "high" %}<span class="badge badge-warn">{{ confidence }} accuracy</span>{% endif %}
+      </span>
+      {% if location.get("neighbourhood") or location.get("city") %}
+      <span class="map-meta-item">
+        🏙 {{ location.get("neighbourhood", "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ location.get("city", "") }}
+      </span>
+      {% endif %}
+      <span class="map-meta-item" id="poi-count-badge">
+        <strong id="poi-count">{{ n_pois }}</strong> places found
+      </span>
+      {% if airbnb_url %}
+      <span class="map-meta-item">
+        <a href="{{ airbnb_url }}" target="_blank" rel="noopener">🏠 View listing ↗</a>
+      </span>
+      {% endif %}
+      {% if listing_photo or listing_title %}
+      <span class="map-meta-item map-meta-listing-preview">
+        {% if listing_photo %}
+        <img class="listing-meta-thumb" src="{{ listing_photo }}" alt="{{ listing_title or '' }}" loading="lazy">
+        {% endif %}
+        {% if listing_title %}<span class="listing-meta-title">{{ listing_title }}</span>{% endif %}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div id="map" class="map-container"></div>
+  <div class="secondary-toggle-bar">
+    <label>
+      <input type="checkbox" id="show-secondary" checked>
+      Show secondary locations on map
+    </label>
+    <span style="margin-left:auto;font-size:0.78rem;">Secondary = smaller dim markers · toggle per-place in the list below</span>
+  </div>
+
+  <!-- Category toggles -->
+  <div class="card" style="margin-top:1rem;">
+    <h3>Toggle categories</h3>
+    <div class="cat-bulk-actions">
+      <button type="button" class="btn-cat-bulk" id="btn-select-all">Select all</button>
+      <button type="button" class="btn-cat-bulk" id="btn-select-none">Select none</button>
+    </div>
+    <div class="category-toggles" id="category-toggles">
+      {% for key, cat in categories.items() %}
+      <label class="category-toggle-row" data-cat="{{ cat.label }}">
+        <input type="checkbox" class="cat-checkbox" data-cat="{{ cat.label }}" checked>
+        <span class="cat-icon">{{ cat.icon }}</span>
+        <span class="cat-label">{{ cat.label }}</span>
+        <span class="cat-count badge" id="cat-count-{{ loop.index }}">–</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- POI list -->
+  <div class="card" style="margin-top:1rem;">
+    <h3>Places <span class="muted" style="font-weight:400; font-size:0.85rem;">(uncheck to exclude · ● / ○ to set primary / secondary)</span></h3>
+    <div class="poi-list" id="poi-list"></div>
+  </div>
+
+  <!-- Actions -->
+  <div class="card actions-card" style="margin-top:1rem;">
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+      <button class="btn btn-outline" id="dl-btn" onclick="downloadGeoJSON()">
+        ⬇ Download GeoJSON
+      </button>
+      <form hx-post="/step2/continue"
+            hx-target="#step3-area"
+            hx-swap="innerHTML"
+            id="continue-form"
+            style="display:contents;">
+        <div id="active-ids-container"></div>
+        <button type="submit" class="btn btn-primary" id="continue-btn">
+          Continue →
+        </button>
+      </form>
+    </div>
+    <p class="muted" style="margin-top:0.5rem; font-size:0.85rem;">
+      Toggle categories or remove individual places, then continue to download &amp; publish.
+    </p>
+  </div>
+</section>
+
+<script type="application/json" id="geojson-data">{{ geojson_json | safe }}</script>
+<script>
+(function () {
+  const RAW_GEOJSON  = JSON.parse(document.getElementById('geojson-data').textContent);
+  const CENTER_LAT   = {{ lat }};
+  const CENTER_LON   = {{ lon }};
+  const AIRBNB_URL   = {{ airbnb_url | tojson }};
+
+  // Leaflet map
+  const map = L.map('map').setView([CENTER_LAT, CENTER_LON], 16);
+  window._wizardMap = map;
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
+  }).addTo(map);
+
+  // Airbnb pin
+  const homeIcon = L.divIcon({
+    html: '<div class="map-pin map-pin-home">🏠</div>',
+    className: '',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+  const homeMarker = L.marker([CENTER_LAT, CENTER_LON], { icon: homeIcon })
+    .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
+    .addTo(map);
+  L.circle([CENTER_LAT, CENTER_LON], {
+    radius: 400,
+    color: '#1a6b3c',
+    weight: 1.5,
+    opacity: 0.5,
+    fillColor: '#1a6b3c',
+    fillOpacity: 0.05,
+    interactive: false,
+  }).addTo(map);
+
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = function() {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML =
+      '<span class="map-legend-circle"></span>' +
+      '<span>~5 min walk (400 m)</span>';
+    return div;
+  };
+  legend.addTo(map);
+
+  // State
+  const activePois    = new Set(RAW_GEOJSON.features.map(f => f.id));
+  const secondaryPois = new Set(RAW_GEOJSON.features.filter(f => f.properties.status === 'secondary').map(f => f.id));
+  const markerMap  = {};   // id → L.marker
+  const layerByCat = {};   // label → L.layerGroup
+  let selectedCatFilter = null;  // label string or null = show all
+  let showSecondary = true;
+
+  // Color per category (mirrors COLOR_PALETTE in airbnb_nearby.py)
+  const PALETTE = [
+    '#16a34a','#2563eb','#f97316','#9333ea','#dc2626',
+    '#0891b2','#ca8a04','#be185d','#15803d','#1d4ed8',
+    '#ea580c','#7c3aed','#b91c1c','#0e7490',
+  ];
+  const catColors = {};
+  const catMeta   = RAW_GEOJSON._meta?.category_meta || {};
+  Object.entries(catMeta).forEach(([label, m], i) => {
+    catColors[label] = m.color || PALETTE[i % PALETTE.length];
+  });
+
+  function makeIcon(poi) {
+    const color = catColors[poi.properties.category] || '#6b7280';
+    const secondary = secondaryPois.has(poi.id);
+    const size = secondary ? 20 : 28;
+    const fs   = secondary ? 10 : 14;
+    const border = secondary ? '#ccc' : 'white';
+    const opacity = secondary ? '0.55' : '1';
+    return L.divIcon({
+      html: '<div class="map-pin" style="background:' + color + ';width:' + size + 'px;height:' + size + 'px;font-size:' + fs + 'px;border-color:' + border + ';opacity:' + opacity + '">' + (poi.properties.icon || '📍') + '</div>',
+      className: '',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+  }
+
+  function popupHtml(feature) {
+    const props = feature.properties;
+    const id = feature.id;
+    const isSec = secondaryPois.has(id);
+    let h = '<strong>' + props.name + '</strong><br>';
+    h += '<span class="popup-cat">' + (props.icon || '') + ' ' + props.category + '</span>';
+    if (props.rating) h += '<br>⭐ ' + props.rating.toFixed(1);
+    if (props.opening_hours?.raw) h += '<br>🕐 ' + props.opening_hours.raw;
+    if (props.phone) h += '<br>📞 ' + props.phone;
+    if (props.website) h += '<br><a href="' + props.website + '" target="_blank" rel="noopener">🔗 Website</a>';
+    h += '<div class="popup-actions">';
+    h += '<button class="popup-action-btn popup-status-btn" onclick="window.toggleSecondaryFromPopup(\'' + id + '\')" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '">'
+       + (isSec ? '○ Secondary' : '● Primary') + '</button>';
+    h += '<button class="popup-action-btn popup-remove-btn" onclick="window.removePoi(\'' + id + '\');window._wizardMap?.closePopup();" title="Remove from map">✕ Remove</button>';
+    h += '</div>';
+    return h;
+  }
+
+  // Build markers
+  RAW_GEOJSON.features.forEach(feature => {
+    const [lon, lat] = feature.geometry.coordinates;
+    const props = feature.properties;
+    const marker = L.marker([lat, lon], { icon: makeIcon(feature) })
+      .bindPopup(popupHtml(feature));
+
+    if (!layerByCat[props.category]) {
+      layerByCat[props.category] = L.layerGroup().addTo(map);
+    }
+    layerByCat[props.category].addLayer(marker);
+    markerMap[feature.id] = marker;
+  });
+
+  // Render POI list
+  function renderPoiList() {
+    const list = document.getElementById('poi-list');
+    if (!list) return;
+    const active = RAW_GEOJSON.features.filter(f =>
+      activePois.has(f.id) &&
+      (selectedCatFilter === null || f.properties.category === selectedCatFilter)
+    );
+    list.innerHTML = '';
+    const byCat = {};
+    active.forEach(f => {
+      const cat = f.properties.category;
+      if (!byCat[cat]) byCat[cat] = [];
+      byCat[cat].push(f);
+    });
+    Object.entries(byCat).forEach(([cat, pois]) => {
+      const group = document.createElement('div');
+      group.className = 'poi-group';
+      group.innerHTML = '<div class="poi-group-header">' + (catMeta[cat]?.icon || '') + ' ' + cat + '</div>';
+      pois.forEach(f => {
+        const row = document.createElement('div');
+        const isSec = secondaryPois.has(f.id);
+        row.className = 'poi-row' + (isSec ? ' poi-secondary' : '');
+        row.dataset.id = f.id;
+        const color = catColors[f.properties.category] || '#6b7280';
+        const statusTitle = isSec ? 'Promote to primary' : 'Demote to secondary';
+        const statusIcon  = isSec ? '○' : '●';
+        row.innerHTML =
+          '<span class="poi-dot" style="background:' + color + '"></span>' +
+          '<button type="button" class="poi-status-btn" title="' + statusTitle + '" onclick="toggleSecondary(\'' + f.id + '\')">' + statusIcon + '</button>' +
+          '<span class="poi-name">' + f.properties.name + '</span>' +
+          '<button type="button" class="poi-remove-btn" title="Remove from map" onclick="removePoi(\'' + f.id + '\')">✕</button>';
+        group.appendChild(row);
+      });
+      list.appendChild(group);
+    });
+    updatePoiCount();
+    updateCatCounts();
+  }
+
+  function updatePoiCount() {
+    const el = document.getElementById('poi-count');
+    if (el) el.textContent = activePois.size;
+  }
+
+  function updateCatCounts() {
+    document.querySelectorAll('.cat-checkbox').forEach(cb => {
+      const cat   = cb.dataset.cat;
+      const count = RAW_GEOJSON.features.filter(f => activePois.has(f.id) && f.properties.category === cat).length;
+      const badge = cb.closest('.category-toggle-row').querySelector('.cat-count');
+      if (badge) badge.textContent = count;
+    });
+  }
+
+  // Core toggle logic shared by list button and popup button
+  function _doToggleSecondary(id) {
+    const f = RAW_GEOJSON.features.find(x => x.id === id);
+    if (!f) return;
+    if (secondaryPois.has(id)) {
+      secondaryPois.delete(id);
+    } else {
+      secondaryPois.add(id);
+    }
+    // Rebuild marker with updated icon
+    const oldMarker = markerMap[id];
+    if (oldMarker) {
+      const [lon, lat] = f.geometry.coordinates;
+      const newMarker = L.marker([lat, lon], { icon: makeIcon(f) })
+        .bindPopup(popupHtml(f));
+      if (layerByCat[f.properties.category]) {
+        layerByCat[f.properties.category].removeLayer(oldMarker);
+        if (showSecondary || !secondaryPois.has(id)) {
+          layerByCat[f.properties.category].addLayer(newMarker);
+        }
+      }
+      markerMap[id] = newMarker;
+    }
+    // Update row in list
+    const row = document.querySelector('.poi-row[data-id="' + id + '"]');
+    if (row) {
+      const isSec = secondaryPois.has(id);
+      row.className = 'poi-row' + (isSec ? ' poi-secondary' : '');
+      const btn = row.querySelector('.poi-status-btn');
+      if (btn) { btn.textContent = isSec ? '○' : '●'; btn.title = isSec ? 'Promote to primary' : 'Demote to secondary'; }
+    }
+    syncHiddenInputs();
+  }
+
+  window.toggleSecondary = _doToggleSecondary;
+
+  // Called from inside the popup — toggles status then reopens popup with fresh content
+  window.toggleSecondaryFromPopup = function(id) {
+    _doToggleSecondary(id);
+    // The marker was replaced; open its popup so user sees the updated button label
+    const marker = markerMap[id];
+    if (marker) marker.openPopup();
+  };
+
+  // Remove individual POI
+  window.removePoi = function(id) {
+    activePois.delete(id);
+    secondaryPois.delete(id);
+    const marker = markerMap[id];
+    if (marker) {
+      const f = RAW_GEOJSON.features.find(x => x.id === id);
+      if (f && layerByCat[f.properties.category]) {
+        layerByCat[f.properties.category].removeLayer(marker);
+      }
+    }
+    const row = document.querySelector('.poi-row[data-id="' + id + '"]');
+    if (row) row.remove();
+    updatePoiCount();
+    updateCatCounts();
+    syncHiddenInputs();
+  };
+
+  // Category toggle
+  document.querySelectorAll('.cat-checkbox').forEach(cb => {
+    cb.addEventListener('change', function() {
+      selectedCatFilter = null;
+      document.querySelectorAll('.category-toggle-row').forEach(r =>
+        r.classList.remove('cat-filter-active'));
+      updateMarkerOpacity();
+      const cat   = this.dataset.cat;
+      const layer = layerByCat[cat];
+      if (this.checked) {
+        if (layer) map.addLayer(layer);
+        RAW_GEOJSON.features
+          .filter(f => f.properties.category === cat && markerMap[f.id])
+          .forEach(f => activePois.add(f.id));
+      } else {
+        if (layer) map.removeLayer(layer);
+        RAW_GEOJSON.features
+          .filter(f => f.properties.category === cat)
+          .forEach(f => activePois.delete(f.id));
+      }
+      renderPoiList();
+      syncHiddenInputs();
+    });
+  });
+
+  // Sync active IDs (and secondary IDs) into hidden inputs for the HTMX form
+  function syncHiddenInputs() {
+    const container = document.getElementById('active-ids-container');
+    if (!container) return;
+    container.innerHTML = '';
+    activePois.forEach(id => {
+      const inp = document.createElement('input');
+      inp.type  = 'hidden';
+      inp.name  = 'active_ids';
+      inp.value = id;
+      container.appendChild(inp);
+    });
+    secondaryPois.forEach(id => {
+      if (!activePois.has(id)) return;
+      const inp = document.createElement('input');
+      inp.type  = 'hidden';
+      inp.name  = 'secondary_ids';
+      inp.value = id;
+      container.appendChild(inp);
+    });
+  }
+
+  // Update marker opacity based on selectedCatFilter (secondary markers keep lower baseline)
+  function updateMarkerOpacity() {
+    homeMarker.setOpacity(1);
+    RAW_GEOJSON.features.forEach(f => {
+      const marker = markerMap[f.id];
+      if (!marker) return;
+      const sec = secondaryPois.has(f.id);
+      const dim = selectedCatFilter !== null && f.properties.category !== selectedCatFilter;
+      marker.setOpacity(dim ? (sec ? 0.3 : 0.5) : (sec ? 0.55 : 1));
+    });
+  }
+
+  // Show/hide secondary markers on the map
+  document.getElementById('show-secondary')?.addEventListener('change', function() {
+    showSecondary = this.checked;
+    RAW_GEOJSON.features.forEach(f => {
+      if (!secondaryPois.has(f.id) || !activePois.has(f.id)) return;
+      const marker = markerMap[f.id];
+      const layer  = layerByCat[f.properties.category];
+      if (!marker || !layer) return;
+      if (showSecondary) {
+        layer.addLayer(marker);
+      } else {
+        layer.removeLayer(marker);
+      }
+    });
+  });
+
+  // Segregate categories with 0 POIs into a "Not found" subsection
+  function segregateEmptyCategories() {
+    const togglesDiv = document.getElementById('category-toggles');
+    if (!togglesDiv) return;
+    const emptyRows = [];
+    togglesDiv.querySelectorAll('.category-toggle-row').forEach(row => {
+      if (!layerByCat[row.dataset.cat]) emptyRows.push(row);
+    });
+    if (!emptyRows.length) return;
+    emptyRows.forEach(row => {
+      row.remove();
+      const cb = row.querySelector('.cat-checkbox');
+      if (cb) { cb.disabled = true; cb.checked = false; }
+      const badge = row.querySelector('.cat-count');
+      if (badge) badge.textContent = '0';
+      row.classList.add('cat-row-not-found');
+    });
+    const header = document.createElement('div');
+    header.className = 'not-found-header';
+    header.textContent = 'Not found nearby';
+    const grid = document.createElement('div');
+    grid.className = 'category-toggles category-toggles-not-found';
+    emptyRows.forEach(row => grid.appendChild(row));
+    togglesDiv.insertAdjacentElement('afterend', grid);
+    togglesDiv.insertAdjacentElement('afterend', header);
+  }
+
+  // Click category label to filter Places list (toggle)
+  document.querySelectorAll('.cat-label').forEach(labelSpan => {
+    labelSpan.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const cat = labelSpan.closest('.category-toggle-row')?.dataset.cat;
+      if (!cat || !layerByCat[cat]) return;
+      selectedCatFilter = (selectedCatFilter === cat) ? null : cat;
+      document.querySelectorAll('.category-toggle-row').forEach(r =>
+        r.classList.toggle('cat-filter-active', r.dataset.cat === selectedCatFilter));
+      updateMarkerOpacity();
+      renderPoiList();
+    });
+  });
+
+  // Select All / Select None
+  document.getElementById('btn-select-all')?.addEventListener('click', () => {
+    document.querySelectorAll('.cat-checkbox:not(:disabled)').forEach(cb => {
+      if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+    });
+  });
+  document.getElementById('btn-select-none')?.addEventListener('click', () => {
+    document.querySelectorAll('.cat-checkbox:not(:disabled)').forEach(cb => {
+      if (cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+    });
+  });
+
+  // Client-side GeoJSON download
+  window.downloadGeoJSON = function() {
+    const active = {
+      ...RAW_GEOJSON,
+      features: RAW_GEOJSON.features
+        .filter(f => activePois.has(f.id))
+        .map(f => ({ ...f, properties: { ...f.properties, status: secondaryPois.has(f.id) ? 'secondary' : 'primary' } })),
+    };
+    const blob = new Blob([JSON.stringify(active, null, 2)], { type: 'application/geo+json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'airbnb-{{ listing_id }}-locations.geojson';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Initial render
+  segregateEmptyCategories();
+  renderPoiList();
+  syncHiddenInputs();
+})();
+</script>

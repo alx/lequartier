@@ -1,0 +1,17 @@
+<div class="card">
+  <h3>💾 Local write</h3>
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  {% else %}
+  <div class="alert alert-success">
+    Committed &amp; pushed ✓ — <code>{{ commit }}</code>
+  </div>
+  <p style="margin-top:0.75rem;">
+    Preview locally with:
+    <code class="code-path">hugo serve</code>
+  </p>
+  <p class="muted" style="margin-top:0.5rem; font-size:0.88rem;">
+    The GitHub Actions workflow will build and deploy the updated map automatically.
+  </p>
+  {% endif %}
+</div>

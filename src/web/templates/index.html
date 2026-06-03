@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Airbnb Map Generator — Neighbourhood POI Map{% endblock %}
+
+{% block content %}
+<section class="intro-section">
+  <h1 class="intro-title">🏠 Airbnb Map</h1>
+  <p class="intro-desc">Generate a neighbourhood map for any Airbnb listing — supermarkets, parks, playgrounds, transit, restaurants and more.</p>
+</section>
+
+<div id="wizard-blocks">
+
+  <!-- Step 1 — URL input -->
+  <section id="step1-block" class="wizard-block">
+    <div class="card card-hero">
+      <div class="block-label">🔗 Step 1 — Paste the Airbnb URL</div>
+      <h2>Find nearby places for your guests</h2>
+
+      {% if error %}
+      <div class="alert alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form hx-post="/step1/submit"
+            hx-target="#step2-area"
+            hx-swap="innerHTML">
+
+        <div class="example-cards-label">Try an example:</div>
+        <div class="example-cards" id="example-cards">
+          <button type="button" class="example-card" data-url="https://www.airbnb.com/rooms/686559818391956388" onclick="fillExample(this)">
+            <div class="example-card-thumb-wrap">
+              <img class="example-card-thumb" id="ex-thumb-0" alt="" style="display:none;">
+              <div class="example-card-thumb-placeholder" id="ex-placeholder-0"></div>
+            </div>
+            <div class="example-card-body">
+              <div class="example-card-title" id="ex-title-0"><span class="skeleton-text"></span></div>
+              <div class="example-card-url muted">airbnb.com · rooms/686559818391956388</div>
+            </div>
+          </button>
+          <button type="button" class="example-card" data-url="https://www.airbnb.fr/rooms/10349749" onclick="fillExample(this)">
+            <div class="example-card-thumb-wrap">
+              <img class="example-card-thumb" id="ex-thumb-1" alt="" style="display:none;">
+              <div class="example-card-thumb-placeholder" id="ex-placeholder-1"></div>
+            </div>
+            <div class="example-card-body">
+              <div class="example-card-title" id="ex-title-1"><span class="skeleton-text"></span></div>
+              <div class="example-card-url muted">airbnb.fr · rooms/10349749</div>
+            </div>
+          </button>
+        </div>
+        <input type="hidden" id="listing_title_hidden" name="listing_title" value="">
+        <input type="hidden" id="listing_photo_hidden" name="listing_photo" value="">
+
+        <div class="form-group">
+          <label for="airbnb_url">Airbnb listing URL <span class="required">*</span></label>
+          <input type="url" id="airbnb_url" name="airbnb_url" required autofocus
+                 placeholder="https://www.airbnb.com/rooms/686559818391956388"
+                 style="font-size:1rem; padding:0.7rem 0.9rem;">
+        </div>
+
+        <details class="advanced-toggle">
+          <summary>Advanced options</summary>
+          <div class="advanced-body">
+            <div class="form-group">
+              <label for="gmaps_url">Google Maps URL <span class="muted">(optional — faster &amp; more accurate coordinates)</span></label>
+              <input type="url" id="gmaps_url" name="gmaps_url"
+                     placeholder="https://www.google.com/maps?ll=48.858,2.294&z=16&…">
+              <p class="field-hint">From the Airbnb host page, right-click the map embed and copy the URL.</p>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+              <div class="form-group">
+                <label for="lat">Latitude override</label>
+                <input type="number" id="lat" name="lat" step="any" placeholder="48.858370">
+              </div>
+              <div class="form-group">
+                <label for="lon">Longitude override</label>
+                <input type="number" id="lon" name="lon" step="any" placeholder="2.294481">
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <label class="force-refresh-row">
+          <input type="checkbox" name="force_refresh" value="1">
+          <span>Force refresh <span class="muted">(bypass cache, re-fetch all data)</span></span>
+        </label>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">
+          <span class="htmx-indicator spinner"></span>
+          🗺 Fetch Nearby Places →
+        </button>
+
+        <script>
+        (function () {
+          var EXAMPLES = [
+            { url: 'https://www.airbnb.com/rooms/686559818391956388', i: 0 },
+            { url: 'https://www.airbnb.fr/rooms/10349749', i: 1 },
+          ];
+          var previewCache = {};
+
+          function fetchPreview(ex) {
+            fetch('/api/listing-preview?url=' + encodeURIComponent(ex.url))
+              .then(function(r) { return r.ok ? r.json() : {}; })
+              .catch(function() { return {}; })
+              .then(function(data) {
+                previewCache[ex.url] = data;
+                var titleEl = document.getElementById('ex-title-' + ex.i);
+                if (titleEl) titleEl.textContent = data.title || '';
+                if (data.photo_url) {
+                  var img = document.getElementById('ex-thumb-' + ex.i);
+                  var ph  = document.getElementById('ex-placeholder-' + ex.i);
+                  img.onload = function() { img.style.display = 'block'; if (ph) ph.style.display = 'none'; };
+                  img.src = data.photo_url;
+                }
+              });
+          }
+
+          document.addEventListener('DOMContentLoaded', function() {
+            EXAMPLES.forEach(fetchPreview);
+          });
+
+          window.fillExample = function(btn) {
+            var url = btn.dataset.url;
+            document.getElementById('airbnb_url').value = url;
+            var d = previewCache[url] || {};
+            document.getElementById('listing_title_hidden').value = d.title || '';
+            document.getElementById('listing_photo_hidden').value = d.photo_url || '';
+            htmx.trigger(document.querySelector('form[hx-post="/step1/submit"]'), 'submit');
+          };
+        })();
+        </script>
+      </form>
+    </div>
+  </section>
+
+  <!-- Step 2 area -->
+  <div id="step2-area">
+    <section class="wizard-block">
+      <div class="card">
+        <div class="block-label">🗺 Step 2 — Review &amp; Customise Map</div>
+        <p class="muted">Paste an Airbnb URL above to load nearby places.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Step 3 area -->
+  <div id="step3-area">
+    <section class="wizard-block">
+      <div class="card">
+        <div class="block-label">📤 Step 3 — Download &amp; Publish</div>
+        <p class="muted">Complete Step 2 to download your map.</p>
+      </div>
+    </section>
+  </div>
+
+</div>
+{% endblock %}

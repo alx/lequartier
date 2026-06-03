@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Cache — Airbnb Map Generator{% endblock %}
+
+{% block content %}
+<section class="intro-section" style="padding-bottom:1rem;">
+  <h1 class="intro-title" style="font-size:1.6rem;">⚡ Cache</h1>
+  <p class="intro-desc">Cached API responses for Airbnb listing lookups.</p>
+  <a href="/" class="btn btn-outline" style="margin-top:0.75rem; display:inline-flex;">← Back to map generator</a>
+</section>
+
+<div style="max-width:900px; margin:0 auto; padding:0 1.5rem 4rem;">
+  {% if not entries %}
+  <div class="card">
+    <p class="muted">No cached entries yet. Generate a map to populate the cache.</p>
+  </div>
+  {% else %}
+  <div class="card" style="padding:0; overflow:hidden;">
+    <table class="cache-table">
+      <thead>
+        <tr>
+          <th>Listing ID</th>
+          <th>City</th>
+          <th>POIs</th>
+          <th>Cached</th>
+          <th>Age</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr id="cache-row-{{ loop.index }}">
+          <td><code>{{ e.listing_id }}</code></td>
+          <td>{{ e.city or "—" }}</td>
+          <td>{{ e.n_pois }}</td>
+          <td style="font-size:0.82rem; color:var(--text-muted);">{{ e.cached_at[:19] if e.cached_at else "—" }}</td>
+          <td>
+            {% if e.age_days is not none %}
+              {% if e.age_days < 1 %}
+                <span class="badge" style="background:#dcfce7;color:#15803d;">fresh</span>
+              {% elif e.age_days < 7 %}
+                <span class="badge">{{ e.age_days }}d</span>
+              {% else %}
+                <span class="badge badge-warn">stale</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td>
+            <div id="invalidate-{{ loop.index }}">
+              <button
+                hx-post="/cache/{{ e.listing_id }}/invalidate"
+                hx-target="#cache-row-{{ loop.index }}"
+                hx-swap="outerHTML"
+                class="btn btn-outline"
+                style="font-size:0.8rem; padding:0.25rem 0.6rem; color:var(--danger); border-color:var(--danger);"
+                onclick="return confirm('Delete cache for {{ e.listing_id }}?')">
+                🗑 Delete
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
