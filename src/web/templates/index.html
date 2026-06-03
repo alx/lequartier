@@ -22,7 +22,9 @@
 
       <form hx-post="/step1/submit"
             hx-target="#step2-area"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            hx-on:htmx:before-request="if(typeof gtag!=='undefined') gtag('event','step1_submit',{has_gmaps_url:!!document.getElementById('gmaps_url').value})"
+            >
 
         <div class="example-cards-label">Try an example:</div>
         <div class="example-cards" id="example-cards">
@@ -126,6 +128,7 @@
             var d = previewCache[url] || {};
             document.getElementById('listing_title_hidden').value = d.title || '';
             document.getElementById('listing_photo_hidden').value = d.photo_url || '';
+            if (typeof gtag !== 'undefined') gtag('event', 'example_clicked', {listing_url: url});
             htmx.trigger(document.querySelector('form[hx-post="/step1/submit"]'), 'submit');
           };
         })();

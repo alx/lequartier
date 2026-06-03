@@ -83,6 +83,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.config["GOOGLE_MAPS_API_KEY"] = os.environ.get("GOOGLE_MAPS_API_KEY", "")
     app.config["GITHUB_TOKEN"] = os.environ.get("GITHUB_TOKEN", "")
+    app.config["GA_MEASUREMENT_ID"] = os.environ.get("GA_MEASUREMENT_ID", "")
 
     app.jinja_env.filters["urlencode"] = quote_plus
 
@@ -96,6 +97,7 @@ def create_app(config: dict | None = None) -> Flask:
     seed_cache()
 
     commit_hash, commit_dt = _read_commit_info()
+    app.config["IN_GIT_REPO"] = bool(commit_hash)
 
     @app.context_processor
     def inject_flags():
@@ -112,8 +114,9 @@ def create_app(config: dict | None = None) -> Flask:
             "github_commit_url": f"https://github.com/{GITHUB_REPO}/commit/{commit_hash}" if commit_hash else "",
             "has_github_token": bool(app.config.get("GITHUB_TOKEN")),
             "can_write_local": False,
-            "in_git_repo": False,
+            "in_git_repo": bool(commit_hash),
             "categories": cfg.categories if cfg else {},
+            "ga_measurement_id": app.config.get("GA_MEASUREMENT_ID", ""),
         }
 
     from .routes.wizard import wizard

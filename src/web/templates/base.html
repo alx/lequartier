@@ -11,6 +11,17 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- Google Analytics -->
+  {% if ga_measurement_id %}
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ ga_measurement_id }}');
+  </script>
+  {% endif %}
 </head>
 <body>
   <main>
@@ -40,6 +51,11 @@
       setTimeout(function() {
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 120);
+    }
+    if (typeof gtag !== 'undefined') {
+      if (target.id === 'step2-area') gtag('event', 'step2_loaded');
+      if (target.id === 'step3-area') gtag('event', 'step3_loaded');
+      if (target.id === 'pr-card')    gtag('event', 'pr_result_shown');
     }
   });
   </script>

@@ -21,32 +21,38 @@
     </button>
   </div>
 
-  <!-- GitHub PR -->
+  <!-- Publish online -->
   {% if has_github_token and in_git_repo %}
   <div class="card" id="pr-card">
-    <h3>🐙 Create GitHub PR on maps.girard-davila.com</h3>
+    <h3>🗺 Publish the map online</h3>
     <p class="muted" style="margin-bottom:1rem;">
-      Opens a pull request on <strong>alx/travel-guide</strong>. The map goes live automatically after merge.
+      Fill in the details below and click the button — we'll review your map and publish it at <strong>maps.girard-davila.com</strong>, usually within a day or two.
     </p>
     <form hx-post="/step3/create-pr"
           hx-target="#pr-card"
-          hx-swap="innerHTML">
-      <div class="form-group">
-        <label for="pr-slug">Map slug</label>
-        <input type="text" id="pr-slug" name="slug" value="{{ slug }}" required>
-        <p class="field-hint">URL path on maps.girard-davila.com, e.g. <code>airbnb/{{ listing_id }}</code></p>
-      </div>
+          hx-swap="innerHTML"
+          hx-on:htmx:before-request="if(typeof gtag!=='undefined') gtag('event','pr_form_submitted')"
+          >
       <div class="form-group">
         <label for="pr-title">Map title</label>
         <input type="text" id="pr-title" name="title" value="{{ default_title }}" required>
       </div>
       <div class="form-group">
-        <label for="pr-desc">Description <span class="muted">(optional)</span></label>
+        <label for="pr-desc">Short description <span class="muted">(optional)</span></label>
         <textarea id="pr-desc" name="description" rows="2" placeholder="Family-friendly neighbourhood near the Airbnb">Everything you need within walking distance: the best cafés, markets, restaurants, and hidden gems — curated just for guests staying here.</textarea>
+        <p class="field-hint">A sentence describing the neighbourhood for your guests.</p>
+      </div>
+      <div class="form-group">
+        <label for="pr-email">Your email address</label>
+        <input type="email" id="pr-email" name="email" required placeholder="you@example.com">
+        <p class="field-hint">We'll email you when your map is live.</p>
+      </div>
+      <div class="form-group" style="display:none;">
+        <input type="text" id="pr-slug" name="slug" value="{{ slug }}">
       </div>
       <button type="submit" class="btn btn-primary">
         <span class="htmx-indicator spinner"></span>
-        🐙 Create GitHub PR →
+        📤 Publish the map online →
       </button>
     </form>
   </div>
@@ -83,6 +89,7 @@
   const SLUG = {{ listing_id | tojson }};
 
   window.downloadGeoJSON3 = function() {
+    if (typeof gtag !== 'undefined') gtag('event', 'geojson_downloaded_step3');
     const blob = new Blob([JSON.stringify(GJ, null, 2)], { type: 'application/geo+json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');

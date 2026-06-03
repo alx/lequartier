@@ -80,7 +80,9 @@
             hx-target="#step3-area"
             hx-swap="innerHTML"
             id="continue-form"
-            style="display:contents;">
+            style="display:contents;"
+            hx-on:htmx:before-request="if(typeof gtag!=='undefined') gtag('event','step2_continue')"
+            >
         <div id="active-ids-container"></div>
         <button type="submit" class="btn btn-primary" id="continue-btn">
           Continue →
@@ -264,6 +266,7 @@
   function _doToggleSecondary(id) {
     const f = RAW_GEOJSON.features.find(x => x.id === id);
     if (!f) return;
+    if (typeof gtag !== 'undefined') gtag('event', 'poi_toggled_secondary', {category: f.properties.category, to_secondary: !secondaryPois.has(id)});
     if (secondaryPois.has(id)) {
       secondaryPois.delete(id);
     } else {
@@ -306,6 +309,8 @@
 
   // Remove individual POI
   window.removePoi = function(id) {
+    const _f = RAW_GEOJSON.features.find(x => x.id === id);
+    if (typeof gtag !== 'undefined') gtag('event', 'poi_removed', {category: _f?.properties?.category});
     activePois.delete(id);
     secondaryPois.delete(id);
     const marker = markerMap[id];
@@ -325,6 +330,7 @@
   // Category toggle
   document.querySelectorAll('.cat-checkbox').forEach(cb => {
     cb.addEventListener('change', function() {
+      if (typeof gtag !== 'undefined') gtag('event', 'category_toggled', {category: this.dataset.cat, checked: this.checked});
       selectedCatFilter = null;
       document.querySelectorAll('.category-toggle-row').forEach(r =>
         r.classList.remove('cat-filter-active'));
@@ -441,11 +447,13 @@
 
   // Select All / Select None
   document.getElementById('btn-select-all')?.addEventListener('click', () => {
+    if (typeof gtag !== 'undefined') gtag('event', 'select_all_clicked');
     document.querySelectorAll('.cat-checkbox:not(:disabled)').forEach(cb => {
       if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
     });
   });
   document.getElementById('btn-select-none')?.addEventListener('click', () => {
+    if (typeof gtag !== 'undefined') gtag('event', 'select_none_clicked');
     document.querySelectorAll('.cat-checkbox:not(:disabled)').forEach(cb => {
       if (cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
     });
@@ -453,6 +461,7 @@
 
   // Client-side GeoJSON download
   window.downloadGeoJSON = function() {
+    if (typeof gtag !== 'undefined') gtag('event', 'geojson_downloaded', {poi_count: activePois.size});
     const active = {
       ...RAW_GEOJSON,
       features: RAW_GEOJSON.features
