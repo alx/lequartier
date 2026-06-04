@@ -8,7 +8,7 @@ from . import cache as cache_mod
 
 logger = logging.getLogger(__name__)
 
-_EXAMPLES_DIR = Path(__file__).parent / "examples"
+_EXAMPLES_DIR = Path(__file__).parent / "curated"
 
 EXAMPLE_COORDS: dict[str, tuple[float, float]] = {
     "686559818391956388": (37.9767, 23.7184),
