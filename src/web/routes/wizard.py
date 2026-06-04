@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import random
 import re
 import subprocess
@@ -9,6 +10,8 @@ import time
 from pathlib import Path
 
 import requests as http_requests
+from functools import wraps
+
 from flask import (
     Blueprint,
     Response,
@@ -60,6 +63,24 @@ def _gh_put_file(hdrs: dict, branch: str, path: str, content: str, message: str)
     resp.raise_for_status()
 
 wizard = Blueprint("wizard", __name__)
+
+
+def _require_edit_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        username = os.environ.get("EDIT_USERNAME", "")
+        password = os.environ.get("EDIT_PASSWORD", "")
+        if not username or not password:
+            return f(*args, **kwargs)
+        auth = request.authorization
+        if auth and auth.username == username and auth.password == password:
+            return f(*args, **kwargs)
+        return Response(
+            "Authentication required.",
+            401,
+            {"WWW-Authenticate": 'Basic realm="Edit"'},
+        )
+    return decorated
 
 
 def _fetch_task(
@@ -331,6 +352,7 @@ def airbnb_page(listing_id: str):
 
 
 @wizard.get("/airbnb/<listing_id>/edit")
+@_require_edit_auth
 def airbnb_edit_page(listing_id: str):
     """Full interactive editor."""
     task_id = request.args.get("task_id")
