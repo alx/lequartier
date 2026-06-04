@@ -85,6 +85,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.config["GOOGLE_MAPS_API_KEY"] = os.environ.get("GOOGLE_MAPS_API_KEY", "")
     app.config["GITHUB_TOKEN"] = os.environ.get("GITHUB_TOKEN", "")
     app.config["GA_MEASUREMENT_ID"] = os.environ.get("GA_MEASUREMENT_ID", "")
+    app.config["PROJECT_ROOT"] = str(PROJECT_ROOT)
 
     top100_path = Path(__file__).parent / "static" / "data" / "top100.json"
     try:
@@ -129,6 +130,9 @@ def create_app(config: dict | None = None) -> Flask:
 
     from .routes.wizard import wizard
     app.register_blueprint(wizard)
+
+    from .routes.webhook import webhook
+    app.register_blueprint(webhook)
 
     return app
 
