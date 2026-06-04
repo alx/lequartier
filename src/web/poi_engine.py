@@ -60,6 +60,7 @@ def fetch_all(
     radius: float | None = None,
     progress_cb=None,
     partial_cb=None,
+    log_cb=None,
 ) -> tuple[dict, dict, dict, str]:
     cfg = lib.get_config()
     cats   = categories or cfg.default_categories
@@ -68,6 +69,10 @@ def fetch_all(
     def _prog(pct, msg):
         if progress_cb:
             progress_cb(pct, msg)
+
+    def _log(msg):
+        if log_cb:
+            log_cb(msg)
 
     def _emit_partial(filtered_partial, listing_id, location_partial=None):
         if not partial_cb:
@@ -81,8 +86,12 @@ def fetch_all(
 
     listing_id = lib.listing_id_from_url(airbnb_url)
 
-    _prog(30, "Querying OSM Overpass…")
-    osm = lib.query_overpass(cats, lat, lon, radius)
+    def _per_cat(cat_key):
+        label = lib.CATEGORIES.get(cat_key, {}).get("label", cat_key)
+        _log(f"Querying OSM for {label}…")
+
+    _prog(30, "Querying OSM…")
+    osm = lib.query_overpass(cats, lat, lon, radius, per_cat_cb=_per_cat)
 
     if osm:
         osm_filtered = lib.filter_and_limit(lib.merge_results(osm, None), lat, lon)
@@ -91,6 +100,7 @@ def fetch_all(
     api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
     google  = None
     if api_key:
+        _log("Querying Google Places…")
         _prog(60, "Querying Google Places…")
         google = lib.query_google_nearby(api_key, cats, lat, lon, radius)
     else:

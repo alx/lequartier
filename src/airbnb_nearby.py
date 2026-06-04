@@ -639,11 +639,13 @@ def _overpass_query(category_key: str, lat: float, lon: float, radius: float) ->
     return pois
 
 
-def query_overpass(categories: list[str], lat: float, lon: float, radius: float) -> dict[str, list[dict]]:
+def query_overpass(categories: list[str], lat: float, lon: float, radius: float, per_cat_cb=None) -> dict[str, list[dict]]:
     results: dict[str, list[dict]] = {}
     for i, cat in enumerate(categories):
         if i > 0:
             time.sleep(1)
+        if per_cat_cb:
+            per_cat_cb(cat)
         print(f"  Querying OSM for {cat}...", file=sys.stderr)
         results[cat] = _overpass_query(cat, lat, lon, radius)
     return results

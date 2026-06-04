@@ -1,6 +1,6 @@
 <!-- Primary content: polling trigger lives in hidden #step2-area -->
 <div {% if not error %}
-     hx-get="/tasks/{{ task_id }}/poll/fetch"
+     hx-get="/tasks/{{ task_id }}/poll/{{ 'view' if readonly else 'fetch' }}"
      hx-trigger="every 1s"
      hx-swap="innerHTML"
      hx-target="#step2-area"
@@ -13,8 +13,8 @@
     <div class="progress-bar-inner{% if error %} progress-bar-error{% endif %}"
          style="width:{{ pct }}%"></div>
   </div>
-  <p class="progress-label{% if error %} progress-label-error{% endif %}">{{ progress }}</p>
   {% if error %}
+  <p class="progress-label progress-label-error">{{ progress }}</p>
   <p class="muted" style="margin-top:0.5rem; font-size:0.82rem;">
     Try the Advanced options with a Google Maps URL or lat/lon coordinates.
   </p>

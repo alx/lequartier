@@ -50,8 +50,8 @@
     <div class="progress-bar-outer">
       <div class="progress-bar-inner" style="width:5%"></div>
     </div>
-    <p class="progress-label">Starting…</p>
   </div>
+  <div id="activity-log" style="font-size:0.72rem; color:var(--text-muted); font-family:monospace; margin-top:0.35rem; text-align:left; max-height:4.5rem; overflow:hidden;"></div>
   {% endif %}
 
   <a href="/" class="btn btn-outline" style="width:100%; margin-top:0.75rem; font-size:0.82rem;">← Start over</a>
@@ -99,7 +99,7 @@
       <span style="font-size:0.78rem; color:var(--text-muted);">📍 {{ location.get('neighbourhood', '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ location.get('city', '') }}</span>
       {% endif %}
       <a href="{{ airbnb_url }}" target="_blank" rel="noopener"
-         style="font-size:0.78rem; color:var(--text-muted); text-decoration:none; white-space:nowrap;"
+         style="font-size:0.78rem; color:var(--text-muted); text-decoration:none; white-space:nowrap; margin-left:auto;"
          onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb ↗</a>
     </div>
     {% if not readonly %}
@@ -191,20 +191,13 @@ window.closePublishModal = function() { document.getElementById('publish-modal')
   var mapInitialized = false;
   var polling = true;
 
-  function addHomeAndCircles(lat, lon, confidence) {
+  function addHomeAndCircles(lat, lon) {
     var homeIcon = L.divIcon({
       html: '<div class="map-pin map-pin-home">🏠</div>',
       className: '', iconSize: [32, 32], iconAnchor: [16, 16],
     });
     var hm = L.marker([lat, lon], { icon: homeIcon }).addTo(map);
     window._loadingLayers.push(hm);
-
-    var uRadius = confidence === 'high' ? 80 : 220;
-    var uc = L.circle([lat, lon], {
-      radius: uRadius, color: '#f97316', weight: 1, opacity: 0.9,
-      fillColor: '#f97316', fillOpacity: 0.12, interactive: false,
-    }).addTo(map);
-    window._loadingLayers.push(uc);
 
     [{ r: 1200, fo: 0.03 }, { r: 800, fo: 0.05 }, { r: 400, fo: 0.09 }].forEach(function(c) {
       var wc = L.circle([lat, lon], {
@@ -236,6 +229,8 @@ window.closePublishModal = function() { document.getElementById('publish-modal')
     });
   }
 
+  var _lastMsg = '';
+
   async function pollMapState() {
     if (!polling) return;
     try {
@@ -244,15 +239,24 @@ window.closePublishModal = function() { document.getElementById('publish-modal')
       var bar = document.getElementById('loading-bar');
       if (bar) {
         var inner = bar.querySelector('.progress-bar-inner');
-        var label = bar.querySelector('.progress-label');
         if (inner) inner.style.width = (r.progress_pct || 5) + '%';
-        if (label) label.textContent = r.progress || 'Starting…';
+      }
+
+      if (r.progress && r.progress !== _lastMsg) {
+        _lastMsg = r.progress;
+        var log = document.getElementById('activity-log');
+        if (log) {
+          var line = document.createElement('div');
+          line.textContent = r.progress;
+          log.insertBefore(line, log.firstChild);
+          while (log.children.length > 5) log.removeChild(log.lastChild);
+        }
       }
 
       if (r.lat && r.lon && !mapInitialized) {
         mapInitialized = true;
         map.setView([r.lat, r.lon], 15);
-        addHomeAndCircles(r.lat, r.lon, r.confidence || 'low');
+        addHomeAndCircles(r.lat, r.lon);
       }
 
       if (r.features && r.features.length) {
@@ -281,6 +285,13 @@ window.closePublishModal = function() { document.getElementById('publish-modal')
   });
   var leftOverlay = document.getElementById('left-overlay');
   if (leftOverlay) obs.observe(leftOverlay, { attributes: true, attributeFilter: ['style'] });
+
+  setInterval(function() {
+    var inner = document.querySelector('#loading-bar .progress-bar-inner');
+    if (!inner || !polling) return;
+    var cur = parseFloat(inner.style.width) || 5;
+    if (cur < 88) inner.style.width = (cur + 1.5) + '%';
+  }, 3000);
 
   pollMapState();
 })();
