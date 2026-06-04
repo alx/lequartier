@@ -1,0 +1,11 @@
+{
+  "name": "lequartier",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "generate-preview": "node scripts/generate-preview.js"
+  },
+  "dependencies": {
+    "playwright": "^1.44.0"
+  }
+}

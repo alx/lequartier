@@ -8,26 +8,34 @@
   const CENTER_LON   = {{ lon }};
   const AIRBNB_URL   = {{ airbnb_url | tojson }};
   const LISTING_ID   = {{ listing_id | tojson }};
+  const READONLY     = {{ 'true' if readonly else 'false' }};
+  const CONFIDENCE   = {{ confidence | tojson }};
 
-  // Activate full-viewport map
   document.getElementById('map').classList.add('map-active');
 
-  // Show right sidebar
-  document.getElementById('right-overlay').style.display = '';
+  const rightOverlay = document.getElementById('right-overlay');
+  if (rightOverlay) rightOverlay.style.display = '';
 
-  // Set listing_id for publish modal
   const notifyInput = document.getElementById('notify-listing-id');
   if (notifyInput) notifyInput.value = LISTING_ID;
 
-  // Leaflet map
-  const map = L.map('map').setView([CENTER_LAT, CENTER_LON], 16);
-  window._wizardMap = map;
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19,
-  }).addTo(map);
+  // Reuse existing map if created during loading phase
+  const existingMap = window._wizardMap;
+  let map;
+  if (existingMap) {
+    map = existingMap;
+    map.setView([CENTER_LAT, CENTER_LON], 16);
+    (window._loadingLayers || []).forEach(l => { try { map.removeLayer(l); } catch(e){} });
+    window._loadingLayers = [];
+  } else {
+    map = L.map('map').setView([CENTER_LAT, CENTER_LON], 16);
+    window._wizardMap = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+  }
 
-  // Airbnb pin + radius circle
   const homeIcon = L.divIcon({
     html: '<div class="map-pin map-pin-home">🏠</div>',
     className: '',
@@ -37,16 +45,33 @@
   const homeMarker = L.marker([CENTER_LAT, CENTER_LON], { icon: homeIcon })
     .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
     .addTo(map);
+
+  const uncertaintyRadius = CONFIDENCE === 'high' ? 80 : 220;
   L.circle([CENTER_LAT, CENTER_LON], {
-    radius: 400,
-    color: '#1a6b3c', weight: 1.5, opacity: 0.5,
-    fillColor: '#1a6b3c', fillOpacity: 0.05, interactive: false,
+    radius: uncertaintyRadius,
+    color: '#f97316', weight: 1, opacity: 0.9,
+    fillColor: '#f97316', fillOpacity: 0.12, interactive: false,
   }).addTo(map);
+
+  [
+    { r: 1200, fillOpacity: 0.03 },
+    { r: 800,  fillOpacity: 0.05 },
+    { r: 400,  fillOpacity: 0.09 },
+  ].forEach(function(c) {
+    L.circle([CENTER_LAT, CENTER_LON], {
+      radius: c.r,
+      color: '#1a6b3c', weight: 1, opacity: 0.4,
+      fillColor: '#1a6b3c', fillOpacity: c.fillOpacity, interactive: false,
+    }).addTo(map);
+  });
 
   const legend = L.control({ position: 'bottomright' });
   legend.onAdd = function() {
     const div = L.DomUtil.create('div', 'map-legend');
-    div.innerHTML = '<span class="map-legend-circle"></span><span>~5 min walk (400 m)</span>';
+    div.innerHTML =
+      '<span class="map-legend-circle" style="opacity:0.9"></span><span>5 min (400 m)</span>' +
+      '<br><span class="map-legend-circle" style="opacity:0.55"></span><span>10 min (800 m)</span>' +
+      '<br><span class="map-legend-circle" style="opacity:0.35"></span><span>15 min (1.2 km)</span>';
     return div;
   };
   legend.addTo(map);
@@ -95,11 +120,13 @@
     if (props.opening_hours?.raw) h += '<br>🕐 ' + props.opening_hours.raw;
     if (props.phone) h += '<br>📞 ' + props.phone;
     if (props.website) h += '<br><a href="' + props.website + '" target="_blank" rel="noopener">🔗 Website</a>';
-    h += '<div class="popup-actions">';
-    h += '<button class="popup-action-btn popup-status-btn" onclick="window.toggleSecondaryFromPopup(\'' + id + '\')" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '">'
-       + (isSec ? '○ Secondary' : '● Primary') + '</button>';
-    h += '<button class="popup-action-btn popup-remove-btn" onclick="window.removePoi(\'' + id + '\');window._wizardMap?.closePopup();" title="Remove from map">✕ Remove</button>';
-    h += '</div>';
+    if (!READONLY) {
+      h += '<div class="popup-actions">';
+      h += '<button class="popup-action-btn popup-status-btn" onclick="window.toggleSecondaryFromPopup(\'' + id + '\')" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '">'
+         + (isSec ? '○ Secondary' : '● Primary') + '</button>';
+      h += '<button class="popup-action-btn popup-remove-btn" onclick="window.removePoi(\'' + id + '\');window._wizardMap?.closePopup();" title="Remove from map">✕ Remove</button>';
+      h += '</div>';
+    }
     return h;
   }
 
@@ -141,9 +168,9 @@
         const color = catColors[f.properties.category] || '#6b7280';
         row.innerHTML =
           '<span class="poi-dot" style="background:' + color + '"></span>' +
-          '<button type="button" class="poi-status-btn" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '" onclick="toggleSecondary(\'' + f.id + '\')">' + (isSec ? '○' : '●') + '</button>' +
+          (READONLY ? '' : '<button type="button" class="poi-status-btn" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '" onclick="toggleSecondary(\'' + f.id + '\')">' + (isSec ? '○' : '●') + '</button>') +
           '<span class="poi-name">' + f.properties.name + '</span>' +
-          '<button type="button" class="poi-remove-btn" title="Remove from map" onclick="removePoi(\'' + f.id + '\')">✕</button>';
+          (READONLY ? '' : '<button type="button" class="poi-remove-btn" title="Remove from map" onclick="removePoi(\'' + f.id + '\')">✕</button>');
         group.appendChild(row);
       });
       list.appendChild(group);
@@ -346,33 +373,39 @@
       <strong id="poi-count">{{ n_pois }}</strong> places
     </span>
   </div>
+  {% if not readonly %}
   <div class="cat-bulk-actions">
     <button type="button" class="btn-cat-bulk" id="btn-select-all">Select all</button>
     <button type="button" class="btn-cat-bulk" id="btn-select-none">Select none</button>
   </div>
+  {% endif %}
   <div class="category-toggles" id="category-toggles">
     {% for key, cat in categories.items() %}
     <label class="category-toggle-row" data-cat="{{ cat.label }}">
-      <input type="checkbox" class="cat-checkbox" data-cat="{{ cat.label }}" checked>
+      {% if not readonly %}<input type="checkbox" class="cat-checkbox" data-cat="{{ cat.label }}" checked>{% endif %}
       <span class="cat-icon">{{ cat.icon }}</span>
       <span class="cat-label">{{ cat.label }}</span>
       <span class="cat-count badge" id="cat-count-{{ loop.index }}">–</span>
     </label>
     {% endfor %}
   </div>
+  {% if not readonly %}
   <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--text-muted); margin-top:0.6rem; cursor:pointer; user-select:none;">
     <input type="checkbox" id="show-secondary" checked style="width:auto; cursor:pointer;">
     Show secondary markers
   </label>
+  {% endif %}
 </div>
 
 <!-- OOB: populate POI list in right sidebar -->
 <div id="poi-list-wrapper" hx-swap-oob="outerHTML">
   <div class="block-label" style="margin-bottom:0.5rem;">
     📍 Places
+    {% if not readonly %}
     <span class="muted" style="font-weight:400; font-size:0.78rem; text-transform:none; letter-spacing:0;">
       · ● / ○ primary / secondary
     </span>
+    {% endif %}
   </div>
   {% if listing_title or listing_photo %}
   <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; font-size:0.8rem; color:var(--text-muted);">
@@ -391,7 +424,8 @@
   <div class="poi-list" id="poi-list"></div>
 </div>
 
-<!-- OOB: show publish/download buttons in step1 card -->
+<!-- OOB: show publish/download buttons in left card (edit mode only) -->
+{% if not readonly %}
 <div id="publish-area" hx-swap-oob="outerHTML"
      style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
   <div style="display:flex; gap:0.5rem;">
@@ -403,6 +437,31 @@
             onclick="openPublishModal()">📤 Publish →</button>
   </div>
 </div>
+{% endif %}
+
+<!-- OOB: show left overlay, hide loading pill -->
+<div id="left-overlay" hx-swap-oob="outerHTML" class="map-overlay left-overlay">
+  <div class="overlay-card">
+    <div class="block-label">🏠 Le Quartier</div>
+    {% if listing_title %}
+    <p style="font-size:0.82rem; font-weight:600; margin-bottom:0.25rem;">{{ listing_title }}</p>
+    {% endif %}
+    {% if location.get("neighbourhood") or location.get("city") %}
+    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.5rem;">
+      📍 {{ location.get("neighbourhood", "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ location.get("city", "") }}
+    </p>
+    {% endif %}
+    {% if readonly %}
+    <a href="/airbnb/{{ listing_id }}/edit" class="btn btn-primary" style="width:100%; font-size:0.88rem; margin-bottom:0.5rem;">✏️ Edit map →</a>
+    {% endif %}
+    <a href="/" class="btn btn-outline" style="width:100%; font-size:0.88rem;">← New search</a>
+    <div id="publish-area" style="{{ 'display:none' if readonly else '' }}"></div>
+  </div>
+  <div id="categories-area" class="overlay-card"></div>
+</div>
+
+<!-- OOB: hide loading pill -->
+<div id="loading-pill" hx-swap-oob="outerHTML" style="display:none;"></div>
 
 <!-- OOB: hide loading bar -->
 <div id="loading-bar" hx-swap-oob="outerHTML" style="display:none;"></div>

@@ -4,17 +4,21 @@ import base64
 import json
 import random
 import re
+import subprocess
 import time
+from pathlib import Path
 
 import requests as http_requests
 from flask import (
     Blueprint,
     Response,
+    abort,
     current_app,
     jsonify,
     redirect,
     render_template,
     request,
+    send_file,
     session,
     url_for,
 )
@@ -74,6 +78,9 @@ def _fetch_task(
         cfg        = poi_engine.get_cfg()
         categories = cfg.default_categories if cfg else []
 
+        task_mod.store.update(task.task_id,
+                              partial_lat=rlat, partial_lon=rlon, partial_confidence=confidence)
+
         if not force:
             task_mod.store.update(task.task_id, progress="Checking cache…", progress_pct=18)
             cached = cache_mod.get(listing_id, rlat, rlon, categories,
@@ -94,10 +101,13 @@ def _fetch_task(
         def _prog(pct, msg):
             task_mod.store.update(task.task_id, progress=msg, progress_pct=pct)
 
+        def _partial(partial_gj):
+            task_mod.store.update(task.task_id, partial_geojson=partial_gj)
+
         task_mod.store.update(task.task_id, progress="Reverse geocoding…", progress_pct=22)
 
         _filtered, geojson, location, listing_id = poi_engine.fetch_all(
-            airbnb_url, rlat, rlon, progress_cb=_prog
+            airbnb_url, rlat, rlon, progress_cb=_prog, partial_cb=_partial
         )
 
         n_pois = len(geojson.get("features", []))
@@ -184,11 +194,10 @@ def step1_submit():
         return render_template("index.html", error="Could not parse an Airbnb listing ID from that URL.", bg_city=_random_city())
 
     task = task_mod.run_in_thread(_fetch_task, airbnb_url, gmaps_url, lat, lon, force)
-    return redirect(url_for("wizard.airbnb_page", listing_id=listing_id, task_id=task.task_id))
+    return redirect(url_for("wizard.airbnb_edit_page", listing_id=listing_id, task_id=task.task_id))
 
 
-@wizard.get("/tasks/<task_id>/poll/fetch")
-def poll_fetch(task_id: str):
+def _poll_task(task_id: str, readonly: bool = False):
     task = task_mod.store.get(task_id)
     if not task:
         return render_template("fragments/error_block.html", error="Task not found.")
@@ -196,12 +205,13 @@ def poll_fetch(task_id: str):
     if task.status == task_mod.Status.ERROR:
         return render_template("fragments/loading_fetch.html",
                                task_id=task_id, pct=100,
-                               progress=task.error, error=True)
+                               progress=task.error, error=True, readonly=readonly)
 
     if task.status == task_mod.Status.DONE:
         r   = task.result
         cfg = poi_engine.get_cfg()
-        session["active_result"] = r
+        if not readonly:
+            session["active_result"] = r
         return render_template(
             "fragments/step2_map.html",
             task_id=task_id,
@@ -217,21 +227,56 @@ def poll_fetch(task_id: str):
             categories=cfg.categories if cfg else {},
             listing_title=r.get("listing_title"),
             listing_photo=r.get("listing_photo"),
+            readonly=readonly,
         )
 
     return render_template("fragments/loading_fetch.html",
                            task_id=task_id,
                            pct=task.progress_pct,
                            progress=task.progress,
-                           error=False)
+                           error=False, readonly=readonly)
 
 
-def _render_airbnb_map(r: dict) -> str:
+@wizard.get("/tasks/<task_id>/poll/fetch")
+def poll_fetch(task_id: str):
+    return _poll_task(task_id, readonly=False)
+
+
+@wizard.get("/tasks/<task_id>/poll/view")
+def poll_view(task_id: str):
+    return _poll_task(task_id, readonly=True)
+
+
+@wizard.get("/tasks/<task_id>/map-state")
+def task_map_state(task_id: str):
+    task = task_mod.store.get(task_id)
+    if not task:
+        return jsonify({}), 404
+    return jsonify({
+        "lat":         task.partial_lat,
+        "lon":         task.partial_lon,
+        "confidence":  task.partial_confidence,
+        "features":    task.partial_geojson.get("features", []) if task.partial_geojson else [],
+        "progress_pct": task.progress_pct,
+        "progress":    task.progress,
+        "done":        task.status == task_mod.Status.DONE,
+        "error":       task.error if task.status == task_mod.Status.ERROR else None,
+    })
+
+
+_PREVIEWS_DIR = Path(__file__).parent.parent / "static" / "img" / "previews"
+_SCRIPTS_DIR  = Path(__file__).parent.parent.parent.parent / "scripts"
+
+
+def _render_airbnb_map(r: dict, readonly: bool = False, embed: bool = False) -> str:
     cfg = poi_engine.get_cfg()
-    session["active_result"] = r
+    if not readonly:
+        session["active_result"] = r
     return render_template(
         "airbnb.html",
         mode="map",
+        readonly=readonly,
+        embed=embed,
         listing_id=r["listing_id"],
         lat=r["lat"],
         lon=r["lon"],
@@ -249,23 +294,70 @@ def _render_airbnb_map(r: dict) -> str:
 
 @wizard.get("/airbnb/<listing_id>")
 def airbnb_page(listing_id: str):
+    """Read-only map view — no editing UI."""
     task_id = request.args.get("task_id")
 
     if task_id:
         task = task_mod.store.get(task_id)
         if task and task.status == task_mod.Status.DONE:
-            return _render_airbnb_map(task.result)
+            return _render_airbnb_map(task.result, readonly=True)
         if task and task.status == task_mod.Status.ERROR:
-            return render_template("airbnb.html", mode="error", listing_id=listing_id, error=task.error)
-        return render_template("airbnb.html", mode="loading", listing_id=listing_id, task_id=task_id)
+            return render_template("airbnb.html", mode="error", listing_id=listing_id,
+                                   error=task.error, readonly=True)
+        return render_template("airbnb.html", mode="loading", listing_id=listing_id,
+                               task_id=task_id, readonly=True)
 
     cached = cache_mod.get(listing_id)
     if cached:
-        return _render_airbnb_map(cached)
+        return _render_airbnb_map(cached, readonly=True)
 
     airbnb_url = f"https://www.airbnb.com/rooms/{listing_id}"
     task = task_mod.run_in_thread(_fetch_task, airbnb_url, None, None, None, False)
     return redirect(url_for("wizard.airbnb_page", listing_id=listing_id, task_id=task.task_id))
+
+
+@wizard.get("/airbnb/<listing_id>/edit")
+def airbnb_edit_page(listing_id: str):
+    """Full interactive editor."""
+    task_id = request.args.get("task_id")
+    embed   = request.args.get("embed") == "1"
+
+    if task_id:
+        task = task_mod.store.get(task_id)
+        if task and task.status == task_mod.Status.DONE:
+            return _render_airbnb_map(task.result, readonly=False, embed=embed)
+        if task and task.status == task_mod.Status.ERROR:
+            return render_template("airbnb.html", mode="error", listing_id=listing_id,
+                                   error=task.error, readonly=False, embed=embed)
+        return render_template("airbnb.html", mode="loading", listing_id=listing_id,
+                               task_id=task_id, readonly=False, embed=embed)
+
+    cached = cache_mod.get(listing_id)
+    if cached:
+        return _render_airbnb_map(cached, readonly=False, embed=embed)
+
+    airbnb_url = f"https://www.airbnb.com/rooms/{listing_id}"
+    task = task_mod.run_in_thread(_fetch_task, airbnb_url, None, None, None, False)
+    return redirect(url_for("wizard.airbnb_edit_page", listing_id=listing_id, task_id=task.task_id))
+
+
+@wizard.get("/airbnb/<listing_id>.jpg")
+def airbnb_preview_jpg(listing_id: str):
+    """Static map preview — generated on first request via Playwright."""
+    _PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
+    preview_path = _PREVIEWS_DIR / f"{listing_id}.jpg"
+    if not preview_path.exists():
+        script = _SCRIPTS_DIR / "generate-preview.js"
+        if not script.exists():
+            abort(404)
+        result = subprocess.run(
+            ["node", str(script), listing_id],
+            capture_output=True, timeout=90,
+            cwd=str(_SCRIPTS_DIR.parent),
+        )
+        if result.returncode != 0 or not preview_path.exists():
+            abort(404)
+    return send_file(preview_path, mimetype="image/jpeg")
 
 
 @wizard.get("/airbnb/<listing_id>.geojson")

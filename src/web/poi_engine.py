@@ -59,6 +59,7 @@ def fetch_all(
     categories: list[str] | None = None,
     radius: float | None = None,
     progress_cb=None,
+    partial_cb=None,
 ) -> tuple[dict, dict, dict, str]:
     cfg = lib.get_config()
     cats   = categories or cfg.default_categories
@@ -68,8 +69,24 @@ def fetch_all(
         if progress_cb:
             progress_cb(pct, msg)
 
+    def _emit_partial(filtered_partial, listing_id, location_partial=None):
+        if not partial_cb:
+            return
+        slug = f"airbnb/{listing_id}"
+        partial_gj = lib.build_geojson(
+            airbnb_url, lat, lon, filtered_partial, radius, slug,
+            location=location_partial or {},
+        )
+        partial_cb(partial_gj)
+
+    listing_id = lib.listing_id_from_url(airbnb_url)
+
     _prog(30, "Querying OSM Overpass…")
     osm = lib.query_overpass(cats, lat, lon, radius)
+
+    if osm:
+        osm_filtered = lib.filter_and_limit(lib.merge_results(osm, None), lat, lon)
+        _emit_partial(osm_filtered, listing_id)
 
     api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
     google  = None
@@ -85,7 +102,6 @@ def fetch_all(
 
     _prog(90, "Building GeoJSON…")
     location   = lib.reverse_geocode(lat, lon)
-    listing_id = lib.listing_id_from_url(airbnb_url)
     slug       = f"airbnb/{listing_id}"
     geojson    = lib.build_geojson(airbnb_url, lat, lon, filtered, radius, slug,
                                    location=location)

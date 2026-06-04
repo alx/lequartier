@@ -10,31 +10,51 @@
   {%- endif -%}
 {% endblock %}
 
+{% block og_title %}
+  {%- if mode == 'map' and listing_title -%}{{ listing_title }} — Le Quartier
+  {%- elif mode == 'map' -%}Airbnb {{ listing_id }} — Le Quartier
+  {%- else -%}Le Quartier — Loading…
+  {%- endif -%}
+{% endblock %}
+
+{% block og_description %}
+  {%- if mode == 'map' -%}
+    {%- if location and (location.get('neighbourhood') or location.get('city')) -%}
+      {{ location.get('neighbourhood', '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ location.get('city', '') }} — neighbourhood map with {{ n_pois }} places
+    {%- else -%}
+      Airbnb {{ listing_id }} — neighbourhood map with {{ n_pois }} places
+    {%- endif -%}
+  {%- else -%}
+    Generate a neighbourhood map for any rental listing — supermarkets, parks, transit, restaurants and more.
+  {%- endif -%}
+{% endblock %}
+
+{% block og_image %}https://lequartier.girard-davila.net/airbnb/{{ listing_id }}.jpg{% endblock %}
+{% block og_url %}https://lequartier.girard-davila.net/airbnb/{{ listing_id }}{% if not readonly %}/edit{% endif %}{% endblock %}
+
 {% block content %}
 
 {% if mode == 'loading' or mode == 'error' %}
 
-<!-- Centered loading / error card -->
-<div class="center-overlay" id="loading-overlay">
-  <div class="overlay-card">
-    <div class="block-label">🏠 Le Quartier</div>
-    <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.75rem;">
-      airbnb.com/rooms/{{ listing_id }}
-    </p>
+<!-- Floating progress pill (visible over map during loading) -->
+<div class="loading-pill" id="loading-pill">
+  <div class="block-label" style="margin-bottom:0.4rem;">🏠 Le Quartier</div>
+  <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.6rem;">
+    airbnb.com/rooms/{{ listing_id }}
+  </p>
 
-    {% if mode == 'error' %}
-    <div class="alert alert-error">{{ error }}</div>
-    {% else %}
-    <div id="loading-bar" style="display:block;">
-      <div class="progress-bar-outer">
-        <div class="progress-bar-inner" style="width:5%"></div>
-      </div>
-      <p class="progress-label">Starting…</p>
+  {% if mode == 'error' %}
+  <div class="alert alert-error" style="margin-bottom:0.5rem;">{{ error }}</div>
+  {% else %}
+  <div id="loading-bar" style="display:block;">
+    <div class="progress-bar-outer">
+      <div class="progress-bar-inner" style="width:5%"></div>
     </div>
-    {% endif %}
-
-    <a href="/" class="btn btn-outline" style="width:100%; margin-top:1rem;">← Start over</a>
+    <p class="progress-label">Starting…</p>
   </div>
+  {% endif %}
+
+  <a href="/" class="btn btn-outline" style="width:100%; margin-top:0.75rem; font-size:0.82rem;">← Start over</a>
 </div>
 
 <!-- Left overlay skeleton (hidden, populated by OOB swaps when map loads) -->
@@ -57,7 +77,7 @@
 <!-- Hidden HTMX polling area -->
 {% if mode == 'loading' %}
 <div id="step2-area" style="display:none;">
-  <div hx-get="/tasks/{{ task_id }}/poll/fetch"
+  <div hx-get="/tasks/{{ task_id }}/poll/{{ 'view' if readonly else 'fetch' }}"
        hx-trigger="load, every 1s"
        hx-swap="innerHTML"
        hx-target="#step2-area"></div>
@@ -68,6 +88,7 @@
 
 {% elif mode == 'map' %}
 
+{% if not embed %}
 <!-- Left overlay with categories -->
 <div class="map-overlay left-overlay" id="left-overlay">
   <div class="overlay-card">
@@ -80,7 +101,11 @@
       📍 {{ location.get('neighbourhood', '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ location.get('city', '') }}
     </p>
     {% endif %}
+    {% if readonly %}
+    <a href="/airbnb/{{ listing_id }}/edit" class="btn btn-primary" style="width:100%; font-size:0.88rem; margin-bottom:0.5rem;">✏️ Edit map →</a>
+    {% endif %}
     <a href="/" class="btn btn-outline" style="width:100%; font-size:0.88rem;">← New search</a>
+    {% if not readonly %}
     <div id="publish-area" style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
       <div style="display:flex; gap:0.5rem;">
         <button class="btn btn-outline"
@@ -91,6 +116,7 @@
                 onclick="openPublishModal()">📤 Publish →</button>
       </div>
     </div>
+    {% endif %}
   </div>
 
   <div id="categories-area" class="overlay-card">
@@ -103,24 +129,28 @@
       <div class="block-label" style="margin-bottom:0;">🗂 Categories</div>
       <span class="badge"><strong id="poi-count">{{ n_pois }}</strong> places</span>
     </div>
+    {% if not readonly %}
     <div class="cat-bulk-actions">
       <button type="button" class="btn-cat-bulk" id="btn-select-all">Select all</button>
       <button type="button" class="btn-cat-bulk" id="btn-select-none">Select none</button>
     </div>
+    {% endif %}
     <div class="category-toggles" id="category-toggles">
       {% for key, cat in categories.items() %}
       <label class="category-toggle-row" data-cat="{{ cat.label }}">
-        <input type="checkbox" class="cat-checkbox" data-cat="{{ cat.label }}" checked>
+        {% if not readonly %}<input type="checkbox" class="cat-checkbox" data-cat="{{ cat.label }}" checked>{% endif %}
         <span class="cat-icon">{{ cat.icon }}</span>
         <span class="cat-label">{{ cat.label }}</span>
         <span class="cat-count badge" id="cat-count-{{ loop.index }}">–</span>
       </label>
       {% endfor %}
     </div>
+    {% if not readonly %}
     <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--text-muted); margin-top:0.6rem; cursor:pointer; user-select:none;">
       <input type="checkbox" id="show-secondary" checked style="width:auto; cursor:pointer;">
       Show secondary markers
     </label>
+    {% endif %}
   </div>
 </div>
 
@@ -130,9 +160,11 @@
     <div id="poi-list-wrapper">
       <div class="block-label" style="margin-bottom:0.5rem;">
         📍 Places
+        {% if not readonly %}
         <span class="muted" style="font-weight:400; font-size:0.78rem; text-transform:none; letter-spacing:0;">
           · ● / ○ primary / secondary
         </span>
+        {% endif %}
       </div>
       {% if listing_title or listing_photo %}
       <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; font-size:0.8rem; color:var(--text-muted);">
@@ -152,6 +184,7 @@
     </div>
   </div>
 </div>
+{% endif %}{# end if not embed #}
 
 <!-- GeoJSON data + map init -->
 <div id="step2-area">
@@ -164,18 +197,31 @@
   const AIRBNB_URL   = {{ airbnb_url | tojson }};
   const LISTING_ID   = {{ listing_id | tojson }};
 
+  const READONLY = {{ 'true' if readonly else 'false' }};
+  const CONFIDENCE = {{ confidence | tojson }};
+
   document.getElementById('map').classList.add('map-active');
-  document.getElementById('right-overlay').style.display = '';
+  const rightOverlay = document.getElementById('right-overlay');
+  if (rightOverlay) rightOverlay.style.display = '';
 
   const notifyInput = document.getElementById('notify-listing-id');
   if (notifyInput) notifyInput.value = LISTING_ID;
 
-  const map = L.map('map').setView([CENTER_LAT, CENTER_LON], 16);
-  window._wizardMap = map;
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19,
-  }).addTo(map);
+  const existingMap = window._wizardMap;
+  let map;
+  if (existingMap) {
+    map = existingMap;
+    map.setView([CENTER_LAT, CENTER_LON], 16);
+    (window._loadingLayers || []).forEach(l => { try { map.removeLayer(l); } catch(e){} });
+    window._loadingLayers = [];
+  } else {
+    map = L.map('map').setView([CENTER_LAT, CENTER_LON], 16);
+    window._wizardMap = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+  }
 
   const homeIcon = L.divIcon({
     html: '<div class="map-pin map-pin-home">🏠</div>',
@@ -186,16 +232,33 @@
   const homeMarker = L.marker([CENTER_LAT, CENTER_LON], { icon: homeIcon })
     .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
     .addTo(map);
+
+  const uncertaintyRadius = CONFIDENCE === 'high' ? 80 : 220;
   L.circle([CENTER_LAT, CENTER_LON], {
-    radius: 400,
-    color: '#1a6b3c', weight: 1.5, opacity: 0.5,
-    fillColor: '#1a6b3c', fillOpacity: 0.05, interactive: false,
+    radius: uncertaintyRadius,
+    color: '#f97316', weight: 1, opacity: 0.9,
+    fillColor: '#f97316', fillOpacity: 0.12, interactive: false,
   }).addTo(map);
+
+  [
+    { r: 1200, fillOpacity: 0.03 },
+    { r: 800,  fillOpacity: 0.05 },
+    { r: 400,  fillOpacity: 0.09 },
+  ].forEach(function(c) {
+    L.circle([CENTER_LAT, CENTER_LON], {
+      radius: c.r,
+      color: '#1a6b3c', weight: 1, opacity: 0.4,
+      fillColor: '#1a6b3c', fillOpacity: c.fillOpacity, interactive: false,
+    }).addTo(map);
+  });
 
   const legend = L.control({ position: 'bottomright' });
   legend.onAdd = function() {
     const div = L.DomUtil.create('div', 'map-legend');
-    div.innerHTML = '<span class="map-legend-circle"></span><span>~5 min walk (400 m)</span>';
+    div.innerHTML =
+      '<span class="map-legend-circle" style="opacity:0.9"></span><span>5 min (400 m)</span>' +
+      '<br><span class="map-legend-circle" style="opacity:0.55"></span><span>10 min (800 m)</span>' +
+      '<br><span class="map-legend-circle" style="opacity:0.35"></span><span>15 min (1.2 km)</span>';
     return div;
   };
   legend.addTo(map);
@@ -243,11 +306,13 @@
     if (props.opening_hours?.raw) h += '<br>🕐 ' + props.opening_hours.raw;
     if (props.phone) h += '<br>📞 ' + props.phone;
     if (props.website) h += '<br><a href="' + props.website + '" target="_blank" rel="noopener">🔗 Website</a>';
-    h += '<div class="popup-actions">';
-    h += '<button class="popup-action-btn popup-status-btn" onclick="window.toggleSecondaryFromPopup(\'' + id + '\')" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '">'
-       + (isSec ? '○ Secondary' : '● Primary') + '</button>';
-    h += '<button class="popup-action-btn popup-remove-btn" onclick="window.removePoi(\'' + id + '\');window._wizardMap?.closePopup();" title="Remove from map">✕ Remove</button>';
-    h += '</div>';
+    if (!READONLY) {
+      h += '<div class="popup-actions">';
+      h += '<button class="popup-action-btn popup-status-btn" onclick="window.toggleSecondaryFromPopup(\'' + id + '\')" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '">'
+         + (isSec ? '○ Secondary' : '● Primary') + '</button>';
+      h += '<button class="popup-action-btn popup-remove-btn" onclick="window.removePoi(\'' + id + '\');window._wizardMap?.closePopup();" title="Remove from map">✕ Remove</button>';
+      h += '</div>';
+    }
     return h;
   }
 
@@ -288,9 +353,9 @@
         const color = catColors[f.properties.category] || '#6b7280';
         row.innerHTML =
           '<span class="poi-dot" style="background:' + color + '"></span>' +
-          '<button type="button" class="poi-status-btn" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '" onclick="toggleSecondary(\'' + f.id + '\')">' + (isSec ? '○' : '●') + '</button>' +
+          (READONLY ? '' : '<button type="button" class="poi-status-btn" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '" onclick="toggleSecondary(\'' + f.id + '\')">' + (isSec ? '○' : '●') + '</button>') +
           '<span class="poi-name">' + f.properties.name + '</span>' +
-          '<button type="button" class="poi-remove-btn" title="Remove from map" onclick="removePoi(\'' + f.id + '\')">✕</button>';
+          (READONLY ? '' : '<button type="button" class="poi-remove-btn" title="Remove from map" onclick="removePoi(\'' + f.id + '\')">✕</button>');
         group.appendChild(row);
       });
       list.appendChild(group);
@@ -511,18 +576,121 @@ window.closePublishModal = function() { document.getElementById('publish-modal')
 
 {% if mode == 'loading' %}
 (function() {
-  var mapEl = document.getElementById('map');
-  var loadingOverlay = document.getElementById('loading-overlay');
-  var leftOverlay = document.getElementById('left-overlay');
-  if (!mapEl || !loadingOverlay) return;
+  var TASK_ID = {{ task_id | tojson }};
+  var PALETTE = [
+    '#16a34a','#2563eb','#f97316','#9333ea','#dc2626',
+    '#0891b2','#ca8a04','#be185d','#15803d','#1d4ed8',
+    '#ea580c','#7c3aed','#b91c1c','#0e7490',
+  ];
+  var catColorMap = {};
+  var catIdx = 0;
+
+  document.getElementById('map').classList.add('map-active');
+
+  var map = L.map('map').setView([20, 0], 2);
+  window._wizardMap = map;
+  window._loadingLayers = [];
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
+  }).addTo(map);
+
+  var seenIds = new Set();
+  var mapInitialized = false;
+  var polling = true;
+
+  function addHomeAndCircles(lat, lon, confidence) {
+    var homeIcon = L.divIcon({
+      html: '<div class="map-pin map-pin-home">🏠</div>',
+      className: '', iconSize: [32, 32], iconAnchor: [16, 16],
+    });
+    var hm = L.marker([lat, lon], { icon: homeIcon }).addTo(map);
+    window._loadingLayers.push(hm);
+
+    var uRadius = confidence === 'high' ? 80 : 220;
+    var uc = L.circle([lat, lon], {
+      radius: uRadius, color: '#f97316', weight: 1, opacity: 0.9,
+      fillColor: '#f97316', fillOpacity: 0.12, interactive: false,
+    }).addTo(map);
+    window._loadingLayers.push(uc);
+
+    [{ r: 1200, fo: 0.03 }, { r: 800, fo: 0.05 }, { r: 400, fo: 0.09 }].forEach(function(c) {
+      var wc = L.circle([lat, lon], {
+        radius: c.r, color: '#1a6b3c', weight: 1, opacity: 0.4,
+        fillColor: '#1a6b3c', fillOpacity: c.fo, interactive: false,
+      }).addTo(map);
+      window._loadingLayers.push(wc);
+    });
+  }
+
+  function addPartialFeatures(features) {
+    features.forEach(function(f) {
+      if (seenIds.has(f.id)) return;
+      seenIds.add(f.id);
+      var cat = f.properties && f.properties.category;
+      if (cat && !catColorMap[cat]) {
+        catColorMap[cat] = PALETTE[catIdx % PALETTE.length];
+        catIdx++;
+      }
+      var color = catColorMap[cat] || '#6b7280';
+      var icon = L.divIcon({
+        html: '<div class="map-pin" style="background:' + color + ';width:20px;height:20px;font-size:10px;border-color:#ccc;opacity:0.8">' + ((f.properties && f.properties.icon) || '📍') + '</div>',
+        className: '', iconSize: [20, 20], iconAnchor: [10, 10],
+      });
+      var coords = f.geometry && f.geometry.coordinates;
+      if (!coords) return;
+      var m = L.marker([coords[1], coords[0]], { icon: icon }).addTo(map);
+      window._loadingLayers.push(m);
+    });
+  }
+
+  async function pollMapState() {
+    if (!polling) return;
+    try {
+      var r = await fetch('/tasks/' + TASK_ID + '/map-state').then(function(res) { return res.json(); });
+
+      var bar = document.getElementById('loading-bar');
+      if (bar) {
+        var inner = bar.querySelector('.progress-bar-inner');
+        var label = bar.querySelector('.progress-label');
+        if (inner) inner.style.width = (r.progress_pct || 5) + '%';
+        if (label) label.textContent = r.progress || 'Starting…';
+      }
+
+      if (r.lat && r.lon && !mapInitialized) {
+        mapInitialized = true;
+        map.setView([r.lat, r.lon], 15);
+        addHomeAndCircles(r.lat, r.lon, r.confidence || 'low');
+      }
+
+      if (r.features && r.features.length) {
+        addPartialFeatures(r.features);
+      }
+
+      if (r.done || r.error) {
+        polling = false;
+        var pill = document.getElementById('loading-pill');
+        if (pill && r.done) pill.style.display = 'none';
+        return;
+      }
+    } catch(e) {}
+    setTimeout(pollMapState, 1000);
+  }
+
+  // Hide pill when left overlay becomes visible (HTMX swap completed)
   var obs = new MutationObserver(function() {
-    if (mapEl.classList.contains('map-active')) {
-      loadingOverlay.style.display = 'none';
-      if (leftOverlay) leftOverlay.style.display = '';
+    var leftOverlay = document.getElementById('left-overlay');
+    if (leftOverlay && leftOverlay.style.display !== 'none' && leftOverlay.style.display !== '') {
+      polling = false;
+      var pill = document.getElementById('loading-pill');
+      if (pill) pill.style.display = 'none';
       obs.disconnect();
     }
   });
-  obs.observe(mapEl, { attributes: true, attributeFilter: ['class'] });
+  var leftOverlay = document.getElementById('left-overlay');
+  if (leftOverlay) obs.observe(leftOverlay, { attributes: true, attributeFilter: ['style'] });
+
+  pollMapState();
 })();
 {% endif %}
 </script>

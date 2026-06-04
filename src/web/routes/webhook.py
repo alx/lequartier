@@ -1,10 +1,12 @@
 import hashlib
 import hmac
+import json
 import logging
 import os
 import subprocess
 import threading
 from pathlib import Path
+from urllib.parse import parse_qs
 
 from flask import Blueprint, current_app, request
 
@@ -37,9 +39,24 @@ def github_webhook():
     if event != "push":
         return {"message": f"Event '{event}' ignored"}, 200
 
+    # GitHub can send either JSON or form-encoded (payload= field)
+    content_type = request.content_type or ""
+    if "application/x-www-form-urlencoded" in content_type:
+        form = parse_qs(payload_bytes.decode("utf-8", errors="replace"))
+        payload_str = form.get("payload", ["{}"])[0]
+        try:
+            data = json.loads(payload_str)
+        except json.JSONDecodeError:
+            return {"error": "Malformed form payload"}, 400
+    else:
+        try:
+            data = json.loads(payload_bytes)
+        except json.JSONDecodeError:
+            return {"error": "Malformed JSON payload"}, 400
+
     try:
-        ref = request.get_json(force=True)["ref"]
-    except (TypeError, KeyError):
+        ref = data["ref"]
+    except KeyError:
         return {"error": "Unexpected payload shape"}, 400
 
     if ref != "refs/heads/main":

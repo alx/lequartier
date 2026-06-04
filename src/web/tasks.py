@@ -16,13 +16,17 @@ class Status(str, Enum):
 
 @dataclass
 class TaskState:
-    task_id:      str
-    status:       Status = Status.PENDING
-    progress:     str    = ""
-    progress_pct: int    = 0
-    result:       dict   = field(default_factory=dict)
-    error:        str    = ""
-    created_at:   float  = field(default_factory=time.time)
+    task_id:          str
+    status:           Status     = Status.PENDING
+    progress:         str        = ""
+    progress_pct:     int        = 0
+    result:           dict       = field(default_factory=dict)
+    error:            str        = ""
+    created_at:       float      = field(default_factory=time.time)
+    partial_lat:      float | None = None
+    partial_lon:      float | None = None
+    partial_confidence: str      = "low"
+    partial_geojson:  dict       = field(default_factory=dict)
 
 
 class TaskStore:
