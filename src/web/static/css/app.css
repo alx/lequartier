@@ -178,7 +178,6 @@ main { max-width: 100%; padding: 0; margin: 0; }
 }
 
 /* ── Forms ──────────────────────────── */
-.form-group { margin-bottom: 1rem; }
 label {
   display: block;
   margin-bottom: 0.35rem;
@@ -659,6 +658,7 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
+  margin-top: 1rem;
   margin-bottom: 0.5rem;
 }
 .example-cards {
