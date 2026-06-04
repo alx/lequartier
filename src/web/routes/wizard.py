@@ -307,6 +307,7 @@ def _render_airbnb_map(r: dict, readonly: bool = False, embed: bool = False) -> 
 def airbnb_page(listing_id: str):
     """Read-only map view — no editing UI."""
     task_id = request.args.get("task_id")
+    refresh = request.args.get("refresh") == "1"
 
     if task_id:
         task = task_mod.store.get(task_id)
@@ -318,12 +319,13 @@ def airbnb_page(listing_id: str):
         return render_template("airbnb.html", mode="loading", listing_id=listing_id,
                                task_id=task_id, readonly=True)
 
-    cached = cache_mod.get(listing_id)
-    if cached:
-        return _render_airbnb_map(cached, readonly=True)
+    if not refresh:
+        cached = cache_mod.get(listing_id)
+        if cached:
+            return _render_airbnb_map(cached, readonly=True)
 
     airbnb_url = f"https://www.airbnb.com/rooms/{listing_id}"
-    task = task_mod.run_in_thread(_fetch_task, airbnb_url, None, None, None, False)
+    task = task_mod.run_in_thread(_fetch_task, airbnb_url, None, None, None, refresh)
     return redirect(url_for("wizard.airbnb_page", listing_id=listing_id, task_id=task.task_id))
 
 
