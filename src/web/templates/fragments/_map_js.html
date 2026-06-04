@@ -114,6 +114,7 @@
   const layerByCat = {};
   let selectedCatFilter = null;
   let showSecondary = true;
+  const categoryOverrides = {};
 
   const PALETTE = [
     '#16a34a','#2563eb','#f97316','#9333ea','#dc2626',
@@ -233,6 +234,7 @@
     Object.entries(byCat).forEach(([cat, pois]) => {
       const group = document.createElement('div');
       group.className = 'poi-group';
+      group.dataset.cat = cat;
       group.innerHTML = '<div class="poi-group-header"><button type="button" class="poi-group-toggle" title="Hide/show" onclick="togglePoiGroup(this)"><i class="fa-solid fa-chevron-down"></i></button>' + (catMeta[cat]?.icon || '') + ' ' + cat + '</div>';
       pois.forEach(f => {
         const row = document.createElement('div');
@@ -252,7 +254,59 @@
           '</div>' +
           (hasMeta ? '<div class="poi-meta-panel" data-id="' + f.id + '" hidden>' + meta + '</div>' : '');
         group.appendChild(row);
+        if (!READONLY) {
+          const summary = row.querySelector('.poi-row-summary');
+          if (summary) {
+            summary.draggable = true;
+            summary.addEventListener('dragstart', function(e) {
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', f.id);
+              row.classList.add('poi-row-dragging');
+            });
+            summary.addEventListener('dragend', function() {
+              row.classList.remove('poi-row-dragging');
+              document.querySelectorAll('.poi-group-drop-target')
+                .forEach(function(g) { g.classList.remove('poi-group-drop-target'); });
+            });
+          }
+        }
       });
+      if (!READONLY) {
+        group.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          group.classList.add('poi-group-drop-target');
+        });
+        group.addEventListener('dragleave', function(e) {
+          if (!group.contains(e.relatedTarget)) {
+            group.classList.remove('poi-group-drop-target');
+          }
+        });
+        group.addEventListener('drop', function(e) {
+          e.preventDefault();
+          group.classList.remove('poi-group-drop-target');
+          const featureId = e.dataTransfer.getData('text/plain');
+          const targetCat = group.dataset.cat;
+          if (!featureId || !targetCat || !catMeta[targetCat]) return;
+          const feature = RAW_GEOJSON.features.find(function(x) { return x.id === featureId; });
+          if (!feature) return;
+          const oldCat = feature.properties.category;
+          if (oldCat === targetCat) return;
+          feature.properties.category = targetCat;
+          categoryOverrides[featureId] = targetCat;
+          const marker = markerMap[featureId];
+          if (marker) {
+            if (layerByCat[oldCat]) layerByCat[oldCat].removeLayer(marker);
+            if (!layerByCat[targetCat]) layerByCat[targetCat] = L.layerGroup().addTo(map);
+            marker.setIcon(makeIcon(feature));
+            marker.setPopupContent(popupHtml(feature));
+            if (activePois.has(featureId) && (!secondaryPois.has(featureId) || showSecondary)) {
+              layerByCat[targetCat].addLayer(marker);
+            }
+          }
+          window.renderPoiList();
+        });
+      }
       list.appendChild(group);
     });
     updatePoiCount();
@@ -458,10 +512,11 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          active_ids:    [...activePois],
-          secondary_ids: [...secondaryPois],
-          center_lat:    centerLat,
-          center_lon:    centerLon,
+          active_ids:         [...activePois],
+          secondary_ids:      [...secondaryPois],
+          center_lat:         centerLat,
+          center_lon:         centerLon,
+          category_overrides: Object.keys(categoryOverrides).length ? categoryOverrides : undefined,
         }),
       });
       const data = await resp.json();

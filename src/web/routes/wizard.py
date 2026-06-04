@@ -411,23 +411,28 @@ def airbnb_geojson(listing_id: str):
 
 @wizard.post("/airbnb/<listing_id>/save-curated")
 def save_curated(listing_id: str):
-    data          = request.get_json(force=True) or {}
-    active_ids    = set(data.get("active_ids", []))
-    secondary_ids = set(data.get("secondary_ids", []))
-    center_lat    = data.get("center_lat")
-    center_lon    = data.get("center_lon")
+    data               = request.get_json(force=True) or {}
+    active_ids         = set(data.get("active_ids", []))
+    secondary_ids      = set(data.get("secondary_ids", []))
+    center_lat         = data.get("center_lat")
+    center_lon         = data.get("center_lon")
+    category_overrides = data.get("category_overrides") or {}
 
     cached = cache_mod.get(listing_id)
     if not cached:
         return jsonify({"ok": False, "error": "Listing not in cache"}), 404
 
     all_features = cached.get("geojson", {}).get("features", [])
+    known_cats   = {f["properties"].get("category") for f in all_features if f.get("properties")}
     features = []
     for f in all_features:
         if f.get("id") not in active_ids:
             continue
-        f = {**f, "properties": {**f["properties"],
-             "status": "secondary" if f["id"] in secondary_ids else "primary"}}
+        props = {**f["properties"],
+                 "status": "secondary" if f["id"] in secondary_ids else "primary"}
+        if f["id"] in category_overrides and category_overrides[f["id"]] in known_cats:
+            props["category"] = category_overrides[f["id"]]
+        f = {**f, "properties": props}
         features.append(f)
 
     updated_geojson = {**cached["geojson"], "features": features}
