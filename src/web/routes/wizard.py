@@ -27,8 +27,9 @@ from .. import cache as cache_mod
 from .. import tasks as task_mod
 from .. import poi_engine
 
-_GH_API  = "https://api.github.com"
-_GH_REPO = "alx/travel-guide"
+_GH_API      = "https://api.github.com"
+_GH_REPO     = "alx/travel-guide"
+_CURATED_DIR = Path(__file__).parent.parent / "curated"
 
 
 def _gh_headers(token: str) -> dict:
@@ -384,6 +385,58 @@ def airbnb_geojson(listing_id: str):
     if request.args.get("download") == "1":
         headers["Content-Disposition"] = f'attachment; filename="{listing_id}.geojson"'
     return Response(body, headers=headers)
+
+
+@wizard.post("/airbnb/<listing_id>/save-curated")
+def save_curated(listing_id: str):
+    data          = request.get_json(force=True) or {}
+    active_ids    = set(data.get("active_ids", []))
+    secondary_ids = set(data.get("secondary_ids", []))
+    center_lat    = data.get("center_lat")
+    center_lon    = data.get("center_lon")
+
+    cached = cache_mod.get(listing_id)
+    if not cached:
+        return jsonify({"ok": False, "error": "Listing not in cache"}), 404
+
+    all_features = cached.get("geojson", {}).get("features", [])
+    features = []
+    for f in all_features:
+        if f.get("id") not in active_ids:
+            continue
+        f = {**f, "properties": {**f["properties"],
+             "status": "secondary" if f["id"] in secondary_ids else "primary"}}
+        features.append(f)
+
+    updated_geojson = {**cached["geojson"], "features": features}
+    lat: float = center_lat if center_lat is not None else cached["lat"]
+    lon: float = center_lon if center_lon is not None else cached["lon"]
+    updated_result  = {**cached, "lat": lat, "lon": lon,
+                       "geojson": updated_geojson, "n_pois": len(features)}
+
+    curated_file = _CURATED_DIR / f"{listing_id}.json"
+    categories: list[str] = []
+    if curated_file.exists():
+        try:
+            categories = json.loads(curated_file.read_text(encoding="utf-8")).get("categories", [])
+        except Exception:
+            pass
+    if not categories:
+        cfg = poi_engine.get_cfg()
+        categories = sorted(cfg.default_categories if cfg else [])
+
+    _CURATED_DIR.mkdir(exist_ok=True)
+    seed_data = {"listing_id": listing_id, "lat": lat, "lon": lon,
+                 "categories": categories, "result": updated_result}
+    curated_file.write_text(
+        json.dumps(seed_data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+    cache_mod.invalidate(listing_id)
+    cache_mod.put(listing_id, lat, lon, categories,
+                  {**updated_result, "from_cache": False})
+
+    return jsonify({"ok": True, "n_pois": len(features)})
 
 
 @wizard.post("/step2/continue")

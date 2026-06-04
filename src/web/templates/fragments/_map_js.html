@@ -2,27 +2,23 @@
 <script>
 (function () {
   const RAW_GEOJSON  = JSON.parse(document.getElementById('geojson-data').textContent);
-  const CENTER_LAT   = {{ lat }};
-  const CENTER_LON   = {{ lon }};
+  let centerLat      = {{ lat }};
+  let centerLon      = {{ lon }};
   const AIRBNB_URL   = {{ airbnb_url | tojson }};
   const LISTING_ID   = {{ listing_id | tojson }};
   const READONLY     = {{ 'true' if readonly else 'false' }};
-  const CONFIDENCE   = {{ confidence | tojson }};
 
   document.getElementById('map').classList.add('map-active');
-
-  const notifyInput = document.getElementById('notify-listing-id');
-  if (notifyInput) notifyInput.value = LISTING_ID;
 
   const existingMap = window._wizardMap;
   let map;
   if (existingMap) {
     map = existingMap;
-    map.setView([CENTER_LAT, CENTER_LON], 16);
+    map.setView([centerLat, centerLon], 16);
     (window._loadingLayers || []).forEach(l => { try { map.removeLayer(l); } catch(e){} });
     window._loadingLayers = [];
   } else {
-    map = L.map('map').setView([CENTER_LAT, CENTER_LON], 16);
+    map = L.map('map').setView([centerLat, centerLon], 16);
     window._wizardMap = map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
@@ -36,39 +32,49 @@
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   });
-  const homeMarker = L.marker([CENTER_LAT, CENTER_LON], { icon: homeIcon })
+  let homeMarker = L.marker([centerLat, centerLon], { icon: homeIcon })
     .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
     .addTo(map);
 
-  const uncertaintyRadius = CONFIDENCE === 'high' ? 80 : 220;
-  L.circle([CENTER_LAT, CENTER_LON], {
-    radius: uncertaintyRadius,
-    color: '#f97316', weight: 1, opacity: 0.9,
-    fillColor: '#f97316', fillOpacity: 0.12, interactive: false,
-  }).addTo(map);
+  // Pick-location mode
+  let _pickMode = false;
 
-  [
-    { r: 1200, fillOpacity: 0.03 },
-    { r: 800,  fillOpacity: 0.05 },
-    { r: 400,  fillOpacity: 0.09 },
-  ].forEach(function(c) {
-    L.circle([CENTER_LAT, CENTER_LON], {
-      radius: c.r,
-      color: '#1a6b3c', weight: 1, opacity: 0.4,
-      fillColor: '#1a6b3c', fillOpacity: c.fillOpacity, interactive: false,
-    }).addTo(map);
+  window.activatePickLocation = function() {
+    _pickMode = true;
+    map.getContainer().style.cursor = 'crosshair';
+    let hint = document.getElementById('pick-location-hint');
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.id = 'pick-location-hint';
+      hint.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:rgba(0,0,0,0.75);color:#fff;padding:0.4rem 0.9rem;border-radius:20px;font-size:0.82rem;pointer-events:none;white-space:nowrap;';
+      hint.textContent = 'Click on map to set new location — Esc to cancel';
+      map.getContainer().appendChild(hint);
+    }
+    hint.style.display = 'block';
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && _pickMode) {
+      _pickMode = false;
+      map.getContainer().style.cursor = '';
+      const hint = document.getElementById('pick-location-hint');
+      if (hint) hint.style.display = 'none';
+    }
   });
 
-  const legend = L.control({ position: 'bottomright' });
-  legend.onAdd = function() {
-    const div = L.DomUtil.create('div', 'map-legend');
-    div.innerHTML =
-      '<span class="map-legend-circle" style="opacity:0.9"></span><span>5 min (400 m)</span>' +
-      '<br><span class="map-legend-circle" style="opacity:0.55"></span><span>10 min (800 m)</span>' +
-      '<br><span class="map-legend-circle" style="opacity:0.35"></span><span>15 min (1.2 km)</span>';
-    return div;
-  };
-  legend.addTo(map);
+  map.on('click', function(e) {
+    if (!_pickMode) return;
+    _pickMode = false;
+    map.getContainer().style.cursor = '';
+    const hint = document.getElementById('pick-location-hint');
+    if (hint) hint.style.display = 'none';
+    centerLat = e.latlng.lat;
+    centerLon = e.latlng.lng;
+    map.removeLayer(homeMarker);
+    homeMarker = L.marker([centerLat, centerLon], { icon: homeIcon })
+      .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
+      .addTo(map);
+  });
 
   const activePois    = new Set(RAW_GEOJSON.features.map(f => f.id));
   const secondaryPois = new Set(RAW_GEOJSON.features.filter(f => f.properties.status === 'secondary').map(f => f.id));
@@ -269,6 +275,7 @@
     if (marker && f && layerByCat[f.properties.category]) {
       layerByCat[f.properties.category].removeLayer(marker);
     }
+    delete markerMap[id];
     const row = document.querySelector('.poi-row[data-id="' + id + '"]');
     if (row) row.remove();
     updatePoiCount();
@@ -367,20 +374,33 @@
     }
   });
 
-  window.downloadGeoJSON = function() {
-    if (typeof gtag !== 'undefined') gtag('event', 'geojson_downloaded', {poi_count: activePois.size});
-    const active = {
-      ...RAW_GEOJSON,
-      features: RAW_GEOJSON.features
-        .filter(f => activePois.has(f.id))
-        .map(f => ({ ...f, properties: { ...f.properties, status: secondaryPois.has(f.id) ? 'secondary' : 'primary' } })),
-    };
-    const blob = new Blob([JSON.stringify(active, null, 2)], { type: 'application/geo+json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = 'airbnb-{{ listing_id }}-locations.geojson';
-    a.click();
-    URL.revokeObjectURL(url);
+  window.saveChanges = async function() {
+    const btn = document.getElementById('btn-save-changes');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+      const resp = await fetch('/airbnb/' + LISTING_ID + '/save-curated', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          active_ids:    [...activePois],
+          secondary_ids: [...secondaryPois],
+          center_lat:    centerLat,
+          center_lon:    centerLon,
+        }),
+      });
+      const data = await resp.json();
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = data.ok ? '✓ Saved' : '⚠ Error';
+        setTimeout(function() { if (btn) btn.textContent = '💾 Save changes'; }, 2500);
+      }
+    } catch(e) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '⚠ Error';
+        setTimeout(function() { if (btn) btn.textContent = '💾 Save changes'; }, 2500);
+      }
+    }
   };
 
   setTimeout(function() {
