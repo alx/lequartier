@@ -272,6 +272,10 @@ def _render_airbnb_map(r: dict, readonly: bool = False, embed: bool = False) -> 
     cfg = poi_engine.get_cfg()
     if not readonly:
         session["active_result"] = r
+    location = dict(r.get("location", {}))
+    if r.get("custom_neighbourhood"):
+        location["neighbourhood"] = r["custom_neighbourhood"]
+    listing_title = r.get("custom_listing_title") or r.get("listing_title")
     return render_template(
         "airbnb.html",
         mode="map",
@@ -281,13 +285,13 @@ def _render_airbnb_map(r: dict, readonly: bool = False, embed: bool = False) -> 
         lat=r["lat"],
         lon=r["lon"],
         confidence=r.get("confidence", "high"),
-        location=r.get("location", {}),
+        location=location,
         geojson_json=json.dumps(r["geojson"], ensure_ascii=False),
         n_pois=r["n_pois"],
         airbnb_url=r["airbnb_url"],
         from_cache=r.get("from_cache", False),
         categories=cfg.categories if cfg else {},
-        listing_title=r.get("listing_title"),
+        listing_title=listing_title,
         listing_photo=r.get("listing_photo"),
     )
 

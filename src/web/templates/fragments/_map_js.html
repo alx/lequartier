@@ -182,8 +182,8 @@
           '<span class="poi-dot" style="background:' + color + '"></span>' +
           (READONLY ? '' : '<button type="button" class="poi-status-btn" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '" onclick="toggleSecondary(\'' + f.id + '\')">' + (isSec ? '○' : '●') + '</button>') +
           '<span class="poi-name poi-name-link" onclick="highlightPoi(\'' + f.id + '\')">' + f.properties.name + '</span>' +
-          (hasMeta ? '<button type="button" class="poi-meta-btn" data-id="' + f.id + '" onclick="togglePoiMeta(\'' + f.id + '\')">▼</button>' : '') +
           (READONLY ? '' : '<button type="button" class="poi-remove-btn" title="Remove from map" onclick="removePoi(\'' + f.id + '\')">✕</button>') +
+          (hasMeta ? '<button type="button" class="poi-meta-btn" data-id="' + f.id + '" onclick="togglePoiMeta(\'' + f.id + '\')"><i class="fa-solid fa-angle-down"></i></button>' : '') +
           '</div>' +
           (hasMeta ? '<div class="poi-meta-panel" data-id="' + f.id + '" hidden>' + meta + '</div>' : '');
         group.appendChild(row);
@@ -223,7 +223,7 @@
     const open = panel.hidden;
     panel.hidden = !open;
     const btn = document.querySelector('.poi-meta-btn[data-id="' + id + '"]');
-    if (btn) btn.textContent = open ? '▲' : '▼';
+    if (btn) btn.innerHTML = open ? '<i class="fa-solid fa-angle-up"></i>' : '<i class="fa-solid fa-angle-down"></i>';
   };
 
   function _doToggleSecondary(id) {

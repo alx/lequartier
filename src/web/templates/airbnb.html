@@ -86,7 +86,7 @@
 <!-- Left overlay with listing info + POI list -->
 <div class="map-overlay left-overlay" id="left-overlay">
   <div class="overlay-card">
-    <div class="block-label">🏠 Le Quartier</div>
+    <a href="/" class="block-label" style="text-decoration:none; display:block;">🏠 Le Quartier</a>
     {% if listing_photo %}
     <img src="{{ listing_photo }}" alt="{{ listing_title or '' }}"
          style="width:100%; height:100px; object-fit:cover; border-radius:8px; margin:0.4rem 0 0.35rem;">
@@ -94,14 +94,14 @@
     {% if listing_title %}
     <p style="font-size:0.82rem; font-weight:600; margin-bottom:0.2rem;">{{ listing_title }}</p>
     {% endif %}
-    {% if location.get('neighbourhood') or location.get('city') %}
-    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.35rem;">
-      📍 {{ location.get('neighbourhood', '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ location.get('city', '') }}
-    </p>
-    {% endif %}
-    <a href="{{ airbnb_url }}" target="_blank" rel="noopener"
-       style="font-size:0.78rem; color:var(--text-muted); text-decoration:none;"
-       onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb ↗</a>
+    <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.35rem;">
+      {% if location.get('neighbourhood') or location.get('city') %}
+      <span style="font-size:0.78rem; color:var(--text-muted);">📍 {{ location.get('neighbourhood', '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ location.get('city', '') }}</span>
+      {% endif %}
+      <a href="{{ airbnb_url }}" target="_blank" rel="noopener"
+         style="font-size:0.78rem; color:var(--text-muted); text-decoration:none; white-space:nowrap;"
+         onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb ↗</a>
+    </div>
     {% if not readonly %}
     <div id="publish-area" style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
       <div style="display:flex; gap:0.5rem;">
@@ -120,7 +120,7 @@
     <div id="poi-list-wrapper">
       <div class="block-label" style="margin-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between;">
         <span>📍 Places{% if not readonly %} <span class="muted" style="font-weight:400; font-size:0.78rem; text-transform:none; letter-spacing:0;">· ● / ○</span>{% endif %}</span>
-        <span class="badge"><strong id="poi-count">{{ n_pois }}</strong></span>
+        <strong id="poi-count" style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">{{ n_pois }}</strong>
       </div>
       <div class="poi-list" id="poi-list"></div>
     </div>

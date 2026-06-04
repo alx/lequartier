@@ -479,9 +479,7 @@ textarea { resize: vertical; min-height: 60px; }
   margin-bottom: 0.2rem;
 }
 .poi-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  display: block;
   gap: 0;
   padding: 0.15rem 0.25rem;
   border-radius: 4px;
@@ -540,7 +538,7 @@ textarea { resize: vertical; min-height: 60px; }
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   padding: 0.1rem 0.2rem;
   border-radius: 3px;

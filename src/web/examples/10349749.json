@@ -872,6 +872,8 @@
     "airbnb_url": "https://www.airbnb.fr/rooms/10349749",
     "from_cache": false,
     "listing_title": "Appartement en résidence · Toulouse · ★4,83 · 2 chambres · 4 lits · 1 salle de bain privée",
-    "listing_photo": "https://a0.muscache.com/im/pictures/miso/Hosting-10349749/original/d69f525d-47d5-4aa2-b819-ee668f22664e.jpeg?im_w=720&width=720&quality=70&auto=webp"
+    "listing_photo": "https://a0.muscache.com/im/pictures/miso/Hosting-10349749/original/d69f525d-47d5-4aa2-b819-ee668f22664e.jpeg?im_w=720&width=720&quality=70&auto=webp",
+    "custom_neighbourhood": "Saint Aubin",
+    "custom_listing_title": "★4,83 · 2 chambres · 4 lits · 1 salle de bain privée"
   }
 }
