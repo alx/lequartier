@@ -61,6 +61,7 @@ default_categories = [
 [categories.supermarket]
 label        = "Supermarket"
 icon         = "🛒"
+fa_icon      = "fa-cart-shopping"
 max          = 2
 dist_cap     = 700
 radius       = 600
@@ -78,6 +79,7 @@ google_types = ["supermarket", "grocery_store", "convenience_store"]
 [categories.bakery]
 label        = "Bakery & Food"
 icon         = "🥖"
+fa_icon      = "fa-bread-slice"
 max          = 4
 dist_cap     = 800
 radius       = 700
@@ -99,6 +101,7 @@ google_types = ["bakery"]
 [categories.market]
 label        = "Market"
 icon         = "🏪"
+fa_icon      = "fa-store"
 max          = 2
 dist_cap     = 1000
 radius       = 1000
@@ -116,6 +119,7 @@ google_types = ["market"]
 [categories.night_shop]
 label        = "Night Shop"
 icon         = "🌙"
+fa_icon      = "fa-moon"
 max          = 2
 dist_cap     = 500
 radius       = 500
@@ -128,6 +132,7 @@ google_types = ["convenience_store"]
 [categories.park]
 label        = "Park"
 icon         = "🌳"
+fa_icon      = "fa-tree"
 max          = 4
 dist_cap     = 1200
 radius       = 1000
@@ -141,6 +146,7 @@ google_types = ["park", "national_park"]
 [categories.playground]
 label        = "Playground"
 icon         = "🛝"
+fa_icon      = "fa-child-reaching"
 max          = 2
 dist_cap     = 900
 radius       = 1000
@@ -157,6 +163,7 @@ google_types = ["playground"]
 [categories.dog_park]
 label        = "Dog Park"
 icon         = "🐕"
+fa_icon      = "fa-dog"
 max          = 3
 dist_cap     = 1000
 radius       = 1000
@@ -170,6 +177,7 @@ google_types = []
 [categories.transit]
 label        = "Transit"
 icon         = "🚌"
+fa_icon      = "fa-bus"
 max          = 6
 dist_cap     = 900
 radius       = 800
@@ -184,6 +192,7 @@ google_types = ["bus_station", "train_station", "subway_station", "transit_stati
 [categories.activities]
 label        = "Activity"
 icon         = "🎠"
+fa_icon      = "fa-person-running"
 max          = 4
 dist_cap     = 1400
 radius       = 1000
@@ -203,6 +212,7 @@ google_types = ["museum", "aquarium", "amusement_park", "water_park", "swimming_
 [categories.culture]
 label        = "Culture"
 icon         = "🏛️"
+fa_icon      = "fa-landmark"
 max          = 6
 dist_cap     = 1200
 radius       = 1000
@@ -234,6 +244,7 @@ google_types = [
 [categories.wellness]
 label        = "Wellness"
 icon         = "🧘"
+fa_icon      = "fa-spa"
 max          = 3
 dist_cap     = 1200
 radius       = 1000
@@ -251,6 +262,7 @@ google_types = ["gym", "yoga_studio"]
 [categories.restaurant]
 label        = "Restaurant"
 icon         = "🍽️"
+fa_icon      = "fa-utensils"
 max          = 5
 dist_cap     = 900
 radius       = 800
@@ -267,6 +279,7 @@ google_types = ["restaurant", "cafe"]
 [categories.pharmacy]
 label        = "Health"
 icon         = "💊"
+fa_icon      = "fa-pills"
 max          = 3
 dist_cap     = 800
 radius       = 700
@@ -283,6 +296,7 @@ google_types = ["pharmacy", "dentist", "doctor"]
 [categories.bike_share]
 label        = "Bike Share"
 icon         = "🚲"
+fa_icon      = "fa-bicycle"
 max          = 3
 dist_cap     = 700
 radius       = 600

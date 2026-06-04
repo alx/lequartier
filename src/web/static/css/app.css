@@ -365,23 +365,10 @@ textarea { resize: vertical; min-height: 60px; }
 .map-meta-item { display: flex; align-items: center; gap: 0.3rem; }
 
 /* ── Map pins ───────────────────────── */
-.map-pin {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  border: 2px solid rgba(0,0,0,0.2);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+.leaflet-marker-icon .fa-stack {
   cursor: pointer;
-}
-.map-pin-home {
-  width: 32px;
-  height: 32px;
-  background: #ff5a5f;
-  font-size: 16px;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+  width: 2em;
 }
 .popup-cat { font-size: 0.82rem; color: var(--text-muted); }
 .popup-actions { display: flex; gap: 0.4rem; margin-top: 0.55rem; }
@@ -480,6 +467,9 @@ textarea { resize: vertical; min-height: 60px; }
 .poi-list { max-height: calc(100vh - 280px); overflow-y: auto; }
 .poi-group { margin-bottom: 0.5rem; }
 .poi-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -489,6 +479,18 @@ textarea { resize: vertical; min-height: 60px; }
   border-bottom: 1px solid var(--border);
   margin-bottom: 0.2rem;
 }
+.poi-group-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  padding: 0 0.15rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.poi-group-toggle:hover { color: var(--accent); }
+.poi-group-collapsed .poi-row { display: none; }
 .poi-row {
   display: block;
   gap: 0;

@@ -1030,6 +1030,7 @@ def build_geojson(
         label = CATEGORIES[cat_key]["label"]
         category_meta[label] = {
             "icon": CATEGORIES[cat_key]["icon"],
+            "fa_icon": CATEGORIES[cat_key].get("fa_icon", "fa-location-dot"),
             "color": COLOR_PALETTE[i % len(COLOR_PALETTE)],
         }
 
