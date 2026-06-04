@@ -9,3 +9,4 @@ build/
 cache/
 logs/
 gunicorn.pid
+.playwright-mcp/
