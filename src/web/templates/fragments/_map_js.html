@@ -31,13 +31,6 @@
 
   // Walking-distance rings
   window._ringLayers = window._ringLayers || [];
-  const coordConf = RAW_GEOJSON._meta?.coord_confidence || 'high';
-  const uncertaintyRadius = coordConf === 'high' ? 80 : 220;
-  window._ringLayers.push(L.circle([centerLat, centerLon], {
-    radius: uncertaintyRadius,
-    color: '#f97316', weight: 1, opacity: 0.9,
-    fillColor: '#f97316', fillOpacity: 0.12, interactive: false,
-  }).addTo(map));
   [
     { r: 1200, fillOpacity: 0.03 },
     { r: 800,  fillOpacity: 0.05 },
