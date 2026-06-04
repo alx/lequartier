@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 import logging
 import logging.handlers
 import os
@@ -84,6 +85,13 @@ def create_app(config: dict | None = None) -> Flask:
     app.config["GOOGLE_MAPS_API_KEY"] = os.environ.get("GOOGLE_MAPS_API_KEY", "")
     app.config["GITHUB_TOKEN"] = os.environ.get("GITHUB_TOKEN", "")
     app.config["GA_MEASUREMENT_ID"] = os.environ.get("GA_MEASUREMENT_ID", "")
+
+    top100_path = Path(__file__).parent / "static" / "data" / "top100.json"
+    try:
+        with open(top100_path, encoding="utf-8") as f:
+            app.config["TOP100_CITIES"] = json.load(f)["cities"]
+    except Exception:
+        app.config["TOP100_CITIES"] = []
 
     app.jinja_env.filters["urlencode"] = quote_plus
 

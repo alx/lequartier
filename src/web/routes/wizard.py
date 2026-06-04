@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import base64
 import json
+import random
 import re
 import time
 
 import requests as http_requests
 from flask import (
     Blueprint,
+    Response,
     current_app,
     jsonify,
+    redirect,
     render_template,
     request,
     session,
+    url_for,
 )
 
 from .. import cache as cache_mod
@@ -138,9 +142,14 @@ def _fetch_task(
                               error=str(exc), progress_pct=100)
 
 
+def _random_city() -> dict:
+    cities = current_app.config.get("TOP100_CITIES", [])
+    return random.choice(cities) if cities else {"lat": 48.8566, "lon": 2.3522, "name": "Paris", "country": "FR"}
+
+
 @wizard.get("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", bg_city=_random_city())
 
 
 @wizard.get("/api/listing-preview")
@@ -167,45 +176,15 @@ def step1_submit():
     lon = float(lon_s) if lon_s else None
 
     if not airbnb_url:
-        return render_template("fragments/error_block.html", error="Please enter an Airbnb URL.")
+        return render_template("index.html", error="Please enter an Airbnb URL.", bg_city=_random_city())
 
-    if not force and lat is not None and lon is not None:
+    try:
         listing_id = poi_engine.listing_id_from_url(airbnb_url)
-        cfg        = poi_engine.get_cfg()
-        cats       = cfg.default_categories if cfg else []
-        cached     = cache_mod.get(listing_id, lat, lon, cats,
-                                   ttl_days=cfg.cache_ttl_days if cfg else 7)
-        if cached:
-            session["fetch_task_id"] = None
-            session["airbnb_url"]    = airbnb_url
-            session["active_result"] = cached
-            listing_title = (cached.get("listing_title")
-                             or request.form.get("listing_title") or None)
-            listing_photo = (cached.get("listing_photo")
-                             or request.form.get("listing_photo") or None)
-            return render_template(
-                "fragments/step2_map.html",
-                task_id=None,
-                lat=cached["lat"],
-                lon=cached["lon"],
-                confidence=cached.get("confidence", "high"),
-                listing_id=cached["listing_id"],
-                location=cached.get("location", {}),
-                geojson_json=json.dumps(cached["geojson"], ensure_ascii=False),
-                n_pois=cached["n_pois"],
-                airbnb_url=cached["airbnb_url"],
-                from_cache=True,
-                categories=cfg.categories if cfg else {},
-                listing_title=listing_title,
-                listing_photo=listing_photo,
-            )
+    except Exception:
+        return render_template("index.html", error="Could not parse an Airbnb listing ID from that URL.", bg_city=_random_city())
 
     task = task_mod.run_in_thread(_fetch_task, airbnb_url, gmaps_url, lat, lon, force)
-    session["fetch_task_id"] = task.task_id
-    session["airbnb_url"]    = airbnb_url
-
-    return render_template("fragments/loading_fetch.html",
-                           task_id=task.task_id, pct=5, progress="Starting…", error=False)
+    return redirect(url_for("wizard.airbnb_page", listing_id=listing_id, task_id=task.task_id))
 
 
 @wizard.get("/tasks/<task_id>/poll/fetch")
@@ -245,6 +224,61 @@ def poll_fetch(task_id: str):
                            pct=task.progress_pct,
                            progress=task.progress,
                            error=False)
+
+
+def _render_airbnb_map(r: dict) -> str:
+    cfg = poi_engine.get_cfg()
+    session["active_result"] = r
+    return render_template(
+        "airbnb.html",
+        mode="map",
+        listing_id=r["listing_id"],
+        lat=r["lat"],
+        lon=r["lon"],
+        confidence=r.get("confidence", "high"),
+        location=r.get("location", {}),
+        geojson_json=json.dumps(r["geojson"], ensure_ascii=False),
+        n_pois=r["n_pois"],
+        airbnb_url=r["airbnb_url"],
+        from_cache=r.get("from_cache", False),
+        categories=cfg.categories if cfg else {},
+        listing_title=r.get("listing_title"),
+        listing_photo=r.get("listing_photo"),
+    )
+
+
+@wizard.get("/airbnb/<listing_id>")
+def airbnb_page(listing_id: str):
+    task_id = request.args.get("task_id")
+
+    if task_id:
+        task = task_mod.store.get(task_id)
+        if task and task.status == task_mod.Status.DONE:
+            return _render_airbnb_map(task.result)
+        if task and task.status == task_mod.Status.ERROR:
+            return render_template("airbnb.html", mode="error", listing_id=listing_id, error=task.error)
+        return render_template("airbnb.html", mode="loading", listing_id=listing_id, task_id=task_id)
+
+    cached = cache_mod.get(listing_id)
+    if cached:
+        return _render_airbnb_map(cached)
+
+    airbnb_url = f"https://www.airbnb.com/rooms/{listing_id}"
+    task = task_mod.run_in_thread(_fetch_task, airbnb_url, None, None, None, False)
+    return redirect(url_for("wizard.airbnb_page", listing_id=listing_id, task_id=task.task_id))
+
+
+@wizard.get("/airbnb/<listing_id>.geojson")
+def airbnb_geojson(listing_id: str):
+    cached = cache_mod.get(listing_id)
+    if not cached:
+        return jsonify({"error": "Not found"}), 404
+    geojson = cached.get("geojson", {})
+    body = json.dumps(geojson, ensure_ascii=False, indent=2)
+    headers = {"Content-Type": "application/geo+json"}
+    if request.args.get("download") == "1":
+        headers["Content-Disposition"] = f'attachment; filename="{listing_id}.geojson"'
+    return Response(body, headers=headers)
 
 
 @wizard.post("/step2/continue")
@@ -394,6 +428,16 @@ def step3_create_pr():
         return render_template("fragments/pr_result.html", error=str(exc), pr_url=None, email=email)
 
     return render_template("fragments/pr_result.html", error=None, pr_url=pr_url, email=email)
+
+
+@wizard.post("/step3/notify")
+def step3_notify():
+    email      = request.form.get("email", "").strip()
+    listing_id = request.form.get("listing_id", "").strip()
+    if not email:
+        return render_template("fragments/notify_result.html", email=None, error="Please enter an email address.")
+    current_app.logger.info("Publish notification request: listing=%s email=%s", listing_id, email)
+    return render_template("fragments/notify_result.html", email=email, error=None)
 
 
 @wizard.get("/cache")

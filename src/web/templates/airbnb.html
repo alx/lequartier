@@ -1,5 +1,160 @@
-<!-- Primary content for #step2-area: GeoJSON data + map init + state/function definitions -->
-<div>
+{% extends "base.html" %}
+
+{% block title %}
+  {%- if mode == 'map' -%}
+    {%- if listing_title -%}{{ listing_title }} — Le Quartier
+    {%- else -%}Airbnb {{ listing_id }} — Le Quartier
+    {%- endif -%}
+  {%- else -%}
+    Le Quartier — Loading…
+  {%- endif -%}
+{% endblock %}
+
+{% block content %}
+
+{% if mode == 'loading' or mode == 'error' %}
+
+<!-- Centered loading / error card -->
+<div class="center-overlay" id="loading-overlay">
+  <div class="overlay-card">
+    <div class="block-label">🏠 Le Quartier</div>
+    <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.75rem;">
+      airbnb.com/rooms/{{ listing_id }}
+    </p>
+
+    {% if mode == 'error' %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% else %}
+    <div id="loading-bar" style="display:block;">
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" style="width:5%"></div>
+      </div>
+      <p class="progress-label">Starting…</p>
+    </div>
+    {% endif %}
+
+    <a href="/" class="btn btn-outline" style="width:100%; margin-top:1rem;">← Start over</a>
+  </div>
+</div>
+
+<!-- Left overlay skeleton (hidden, populated by OOB swaps when map loads) -->
+<div class="map-overlay left-overlay" id="left-overlay" style="display:none;">
+  <div class="overlay-card">
+    <div class="block-label">🏠 Le Quartier</div>
+    <a href="/" class="btn btn-outline" style="width:100%; margin-top:0.5rem; font-size:0.88rem;">← New search</a>
+    <div id="publish-area" style="display:none;"></div>
+  </div>
+  <div id="categories-area" class="overlay-card" style="display:none;"></div>
+</div>
+
+<!-- Right overlay (hidden, shown by step2_map.html JS) -->
+<div class="map-overlay right-overlay" id="right-overlay" style="display:none;">
+  <div class="overlay-card scrollable">
+    <div id="poi-list-wrapper"></div>
+  </div>
+</div>
+
+<!-- Hidden HTMX polling area -->
+{% if mode == 'loading' %}
+<div id="step2-area" style="display:none;">
+  <div hx-get="/tasks/{{ task_id }}/poll/fetch"
+       hx-trigger="load, every 1s"
+       hx-swap="innerHTML"
+       hx-target="#step2-area"></div>
+</div>
+{% else %}
+<div id="step2-area" style="display:none;"></div>
+{% endif %}
+
+{% elif mode == 'map' %}
+
+<!-- Left overlay with categories -->
+<div class="map-overlay left-overlay" id="left-overlay">
+  <div class="overlay-card">
+    <div class="block-label">🏠 Le Quartier</div>
+    {% if listing_title %}
+    <p style="font-size:0.82rem; font-weight:600; margin-bottom:0.25rem;">{{ listing_title }}</p>
+    {% endif %}
+    {% if location.get('neighbourhood') or location.get('city') %}
+    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.5rem;">
+      📍 {{ location.get('neighbourhood', '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ location.get('city', '') }}
+    </p>
+    {% endif %}
+    <a href="/" class="btn btn-outline" style="width:100%; font-size:0.88rem;">← New search</a>
+    <div id="publish-area" style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn btn-outline"
+                style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
+                onclick="downloadGeoJSON()">⬇ GeoJSON</button>
+        <button class="btn btn-primary"
+                style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
+                onclick="openPublishModal()">📤 Publish →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="categories-area" class="overlay-card">
+    {% if from_cache %}
+    <div class="cache-banner" style="font-size:0.78rem; padding:0.4rem 0.7rem; margin-bottom:0.6rem;">
+      ⚡ From cache
+    </div>
+    {% endif %}
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+      <div class="block-label" style="margin-bottom:0;">🗂 Categories</div>
+      <span class="badge"><strong id="poi-count">{{ n_pois }}</strong> places</span>
+    </div>
+    <div class="cat-bulk-actions">
+      <button type="button" class="btn-cat-bulk" id="btn-select-all">Select all</button>
+      <button type="button" class="btn-cat-bulk" id="btn-select-none">Select none</button>
+    </div>
+    <div class="category-toggles" id="category-toggles">
+      {% for key, cat in categories.items() %}
+      <label class="category-toggle-row" data-cat="{{ cat.label }}">
+        <input type="checkbox" class="cat-checkbox" data-cat="{{ cat.label }}" checked>
+        <span class="cat-icon">{{ cat.icon }}</span>
+        <span class="cat-label">{{ cat.label }}</span>
+        <span class="cat-count badge" id="cat-count-{{ loop.index }}">–</span>
+      </label>
+      {% endfor %}
+    </div>
+    <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--text-muted); margin-top:0.6rem; cursor:pointer; user-select:none;">
+      <input type="checkbox" id="show-secondary" checked style="width:auto; cursor:pointer;">
+      Show secondary markers
+    </label>
+  </div>
+</div>
+
+<!-- Right overlay with POI list -->
+<div class="map-overlay right-overlay" id="right-overlay">
+  <div class="overlay-card scrollable">
+    <div id="poi-list-wrapper">
+      <div class="block-label" style="margin-bottom:0.5rem;">
+        📍 Places
+        <span class="muted" style="font-weight:400; font-size:0.78rem; text-transform:none; letter-spacing:0;">
+          · ● / ○ primary / secondary
+        </span>
+      </div>
+      {% if listing_title or listing_photo %}
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; font-size:0.8rem; color:var(--text-muted);">
+        {% if listing_photo %}
+        <img src="{{ listing_photo }}" alt="{{ listing_title or '' }}"
+             style="width:48px; height:34px; object-fit:cover; border-radius:4px; flex-shrink:0;">
+        {% endif %}
+        <div>
+          {% if listing_title %}<strong style="color:var(--text); font-size:0.82rem; display:block;">{{ listing_title }}</strong>{% endif %}
+          {% if location.get('neighbourhood') or location.get('city') %}
+          📍 {{ location.get('neighbourhood', '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ location.get('city', '') }}
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="poi-list" id="poi-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- GeoJSON data + map init -->
+<div id="step2-area">
 <script type="application/json" id="geojson-data">{{ geojson_json | safe }}</script>
 <script>
 (function () {
@@ -9,17 +164,12 @@
   const AIRBNB_URL   = {{ airbnb_url | tojson }};
   const LISTING_ID   = {{ listing_id | tojson }};
 
-  // Activate full-viewport map
   document.getElementById('map').classList.add('map-active');
-
-  // Show right sidebar
   document.getElementById('right-overlay').style.display = '';
 
-  // Set listing_id for publish modal
   const notifyInput = document.getElementById('notify-listing-id');
   if (notifyInput) notifyInput.value = LISTING_ID;
 
-  // Leaflet map
   const map = L.map('map').setView([CENTER_LAT, CENTER_LON], 16);
   window._wizardMap = map;
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -27,7 +177,6 @@
     maxZoom: 19,
   }).addTo(map);
 
-  // Airbnb pin + radius circle
   const homeIcon = L.divIcon({
     html: '<div class="map-pin map-pin-home">🏠</div>',
     className: '',
@@ -51,7 +200,6 @@
   };
   legend.addTo(map);
 
-  // State
   const activePois    = new Set(RAW_GEOJSON.features.map(f => f.id));
   const secondaryPois = new Set(RAW_GEOJSON.features.filter(f => f.properties.status === 'secondary').map(f => f.id));
   const markerMap  = {};
@@ -103,7 +251,6 @@
     return h;
   }
 
-  // Build markers
   RAW_GEOJSON.features.forEach(feature => {
     const [lon, lat] = feature.geometry.coordinates;
     const marker = L.marker([lat, lon], { icon: makeIcon(feature) })
@@ -169,7 +316,6 @@
   function _doToggleSecondary(id) {
     const f = RAW_GEOJSON.features.find(x => x.id === id);
     if (!f) return;
-    if (typeof gtag !== 'undefined') gtag('event', 'poi_toggled_secondary', {category: f.properties.category, to_secondary: !secondaryPois.has(id)});
     if (secondaryPois.has(id)) secondaryPois.delete(id);
     else secondaryPois.add(id);
     const oldMarker = markerMap[id];
@@ -252,7 +398,6 @@
     togglesDiv.insertAdjacentElement('afterend', header);
   };
 
-  // Event delegation — works even after OOB swaps add elements to DOM
   document.addEventListener('change', function(e) {
     if (e.target.classList.contains('cat-checkbox')) {
       selectedCatFilter = null;
@@ -309,7 +454,6 @@
   });
 
   window.downloadGeoJSON = function() {
-    if (typeof gtag !== 'undefined') gtag('event', 'geojson_downloaded', {poi_count: activePois.size});
     const active = {
       ...RAW_GEOJSON,
       features: RAW_GEOJSON.features
@@ -324,7 +468,6 @@
     URL.revokeObjectURL(url);
   };
 
-  // Defer initial render until OOB swaps have completed
   setTimeout(function() {
     window.segregateEmptyCategories();
     window.renderPoiList();
@@ -333,76 +476,54 @@
 </script>
 </div>
 
-<!-- OOB: populate and show categories card -->
-<div id="categories-area" hx-swap-oob="outerHTML" class="overlay-card">
-  {% if from_cache %}
-  <div class="cache-banner" style="font-size:0.78rem; padding:0.4rem 0.7rem; margin-bottom:0.6rem;">
-    ⚡ From cache — <a href="/" style="color:#92400e; font-weight:600;">refresh</a>
-  </div>
-  {% endif %}
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
-    <div class="block-label" style="margin-bottom:0;">🗂 Categories</div>
-    <span class="badge">
-      <strong id="poi-count">{{ n_pois }}</strong> places
-    </span>
-  </div>
-  <div class="cat-bulk-actions">
-    <button type="button" class="btn-cat-bulk" id="btn-select-all">Select all</button>
-    <button type="button" class="btn-cat-bulk" id="btn-select-none">Select none</button>
-  </div>
-  <div class="category-toggles" id="category-toggles">
-    {% for key, cat in categories.items() %}
-    <label class="category-toggle-row" data-cat="{{ cat.label }}">
-      <input type="checkbox" class="cat-checkbox" data-cat="{{ cat.label }}" checked>
-      <span class="cat-icon">{{ cat.icon }}</span>
-      <span class="cat-label">{{ cat.label }}</span>
-      <span class="cat-count badge" id="cat-count-{{ loop.index }}">–</span>
-    </label>
-    {% endfor %}
-  </div>
-  <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--text-muted); margin-top:0.6rem; cursor:pointer; user-select:none;">
-    <input type="checkbox" id="show-secondary" checked style="width:auto; cursor:pointer;">
-    Show secondary markers
-  </label>
-</div>
+{% endif %}
 
-<!-- OOB: populate POI list in right sidebar -->
-<div id="poi-list-wrapper" hx-swap-oob="outerHTML">
-  <div class="block-label" style="margin-bottom:0.5rem;">
-    📍 Places
-    <span class="muted" style="font-weight:400; font-size:0.78rem; text-transform:none; letter-spacing:0;">
-      · ● / ○ primary / secondary
-    </span>
-  </div>
-  {% if listing_title or listing_photo %}
-  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; font-size:0.8rem; color:var(--text-muted);">
-    {% if listing_photo %}
-    <img src="{{ listing_photo }}" alt="{{ listing_title or '' }}"
-         style="width:48px; height:34px; object-fit:cover; border-radius:4px; flex-shrink:0;">
-    {% endif %}
-    <div>
-      {% if listing_title %}<strong style="color:var(--text); font-size:0.82rem; display:block;">{{ listing_title }}</strong>{% endif %}
-      {% if location.get("neighbourhood") or location.get("city") %}
-      📍 {{ location.get("neighbourhood", "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ location.get("city", "") }}
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-  <div class="poi-list" id="poi-list"></div>
-</div>
-
-<!-- OOB: show publish/download buttons in step1 card -->
-<div id="publish-area" hx-swap-oob="outerHTML"
-     style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
-  <div style="display:flex; gap:0.5rem;">
-    <button class="btn btn-outline"
-            style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
-            onclick="downloadGeoJSON()">⬇ GeoJSON</button>
-    <button class="btn btn-primary"
-            style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
-            onclick="openPublishModal()">📤 Publish →</button>
+<!-- Publish modal -->
+<div id="publish-modal" class="modal-overlay" style="display:none;"
+     onclick="if(event.target===this) closePublishModal()">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closePublishModal()">✕</button>
+    <h3>📤 Publish your map</h3>
+    <p>Enter your email to be notified when your map goes live on maps.girard-davila.com.</p>
+    <form hx-post="/step3/notify"
+          hx-target="#notify-result"
+          hx-swap="innerHTML">
+      <input type="hidden" id="notify-listing-id" name="listing_id" value="{{ listing_id }}">
+      <div class="form-group" style="margin-bottom:0.75rem;">
+        <input type="email" name="email" placeholder="you@example.com" required
+               style="font-size:0.95rem;">
+      </div>
+      <div id="notify-result"></div>
+      <button class="btn btn-primary" type="submit" style="width:100%;">
+        <span class="htmx-indicator spinner"></span>
+        Notify me →
+      </button>
+    </form>
   </div>
 </div>
 
-<!-- OOB: hide loading bar -->
-<div id="loading-bar" hx-swap-oob="outerHTML" style="display:none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.openPublishModal = function() { document.getElementById('publish-modal').style.display = 'flex'; };
+window.closePublishModal = function() { document.getElementById('publish-modal').style.display = 'none'; };
+
+{% if mode == 'loading' %}
+(function() {
+  var mapEl = document.getElementById('map');
+  var loadingOverlay = document.getElementById('loading-overlay');
+  var leftOverlay = document.getElementById('left-overlay');
+  if (!mapEl || !loadingOverlay) return;
+  var obs = new MutationObserver(function() {
+    if (mapEl.classList.contains('map-active')) {
+      loadingOverlay.style.display = 'none';
+      if (leftOverlay) leftOverlay.style.display = '';
+      obs.disconnect();
+    }
+  });
+  obs.observe(mapEl, { attributes: true, attributeFilter: ['class'] });
+})();
+{% endif %}
+</script>
+{% endblock %}

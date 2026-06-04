@@ -31,6 +31,8 @@
   {% endif %}
 </head>
 <body>
+  <div id="map"></div>
+
   <main>
     {% block content %}{% endblock %}
   </main>
@@ -41,31 +43,9 @@
     <span class="footer-sep">·</span>
     <a href="{{ github_commit_url }}" target="_blank" rel="noopener" class="footer-commit">{{ commit_short }}</a>
     <span class="footer-sep">·</span>
-    <span class="footer-date">{{ commit_date }} {{ commit_time }}</span>
-    <span class="footer-sep">·</span>
-    <a href="https://lequartier.girard-davila.net" target="_blank" rel="noopener">lequartier.girard-davila.net</a>
-    <span class="footer-sep">·</span>
     <a href="/cache">⚡ cache</a>
   </footer>
   {% endif %}
-
-  <script>
-  document.body.addEventListener('htmx:afterSwap', function(evt) {
-    var target = evt.detail.target;
-    if (!target) return;
-    var stepAreas = ['step2-area', 'step3-area'];
-    if (stepAreas.indexOf(target.id) >= 0) {
-      setTimeout(function() {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 120);
-    }
-    if (typeof gtag !== 'undefined') {
-      if (target.id === 'step2-area') gtag('event', 'step2_loaded');
-      if (target.id === 'step3-area') gtag('event', 'step3_loaded');
-      if (target.id === 'pr-card')    gtag('event', 'pr_result_shown');
-    }
-  });
-  </script>
 
   {% block extra_js %}{% endblock %}
 </body>
