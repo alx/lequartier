@@ -29,21 +29,17 @@
     <div class="example-cards" id="example-cards">
       <button type="button" class="example-card" data-listing-id="686559818391956388" data-url="https://www.airbnb.com/rooms/686559818391956388" onclick="goToExample(this)">
         <div class="example-card-thumb-wrap">
-          <img class="example-card-thumb" id="ex-thumb-0" alt="" style="display:none;">
-          <div class="example-card-thumb-placeholder" id="ex-placeholder-0"></div>
+          <img class="example-card-thumb" src="{{ url_for('static', filename='img/airbnb_686559818391956388.png') }}" alt="">
         </div>
         <div class="example-card-body">
-          <div class="example-card-title" id="ex-title-0"><span class="skeleton-text"></span></div>
           <div class="example-card-url muted">airbnb.com · rooms/686559818391956388</div>
         </div>
       </button>
       <button type="button" class="example-card" data-listing-id="10349749" data-url="https://www.airbnb.fr/rooms/10349749" onclick="goToExample(this)">
         <div class="example-card-thumb-wrap">
-          <img class="example-card-thumb" id="ex-thumb-1" alt="" style="display:none;">
-          <div class="example-card-thumb-placeholder" id="ex-placeholder-1"></div>
+          <img class="example-card-thumb" src="{{ url_for('static', filename='img/airbnb_10349749.png') }}" alt="">
         </div>
         <div class="example-card-body">
-          <div class="example-card-title" id="ex-title-1"><span class="skeleton-text"></span></div>
           <div class="example-card-url muted">airbnb.fr · rooms/10349749</div>
         </div>
       </button>
@@ -60,30 +56,7 @@
 {% block extra_js %}
 <script>
 (function () {
-  var EXAMPLES = [
-    { url: 'https://www.airbnb.com/rooms/686559818391956388', i: 0 },
-    { url: 'https://www.airbnb.fr/rooms/10349749', i: 1 },
-  ];
-
-  function fetchPreview(ex) {
-    fetch('/api/listing-preview?url=' + encodeURIComponent(ex.url))
-      .then(function(r) { return r.ok ? r.json() : {}; })
-      .catch(function() { return {}; })
-      .then(function(data) {
-        var titleEl = document.getElementById('ex-title-' + ex.i);
-        if (titleEl) titleEl.textContent = data.title || '';
-        if (data.photo_url) {
-          var img = document.getElementById('ex-thumb-' + ex.i);
-          var ph  = document.getElementById('ex-placeholder-' + ex.i);
-          img.onload = function() { img.style.display = 'block'; if (ph) ph.style.display = 'none'; };
-          img.src = data.photo_url;
-        }
-      });
-  }
-
   document.addEventListener('DOMContentLoaded', function() {
-    EXAMPLES.forEach(fetchPreview);
-
     var map = L.map('map', {
       zoomControl: false,
       dragging: false,
