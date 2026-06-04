@@ -7,9 +7,19 @@
 <div class="center-overlay">
   <div class="overlay-card">
     <div class="block-label">🏠 Le Quartier</div>
-    <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.75rem;">
-      Generate a neighbourhood map for any Airbnb listing.
-    </p>
+
+    <form method="POST" action="/step1/submit">
+      <div class="form-group">
+	<label for="airbnb_url">Generate a neighbourhood map for any Airbnb listing:</labe>
+        <input type="url" id="airbnb_url" name="airbnb_url" required autofocus
+               placeholder="https://www.airbnb.com/rooms/686559818391956388"
+               style="font-size:0.95rem; padding:0.6rem 0.75rem;">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.4rem;">
+        🗺 Fetch Nearby Places →
+      </button>
+    </form>
 
     {% if error %}
     <div class="alert alert-error">{{ error }}</div>
@@ -38,19 +48,6 @@
         </div>
       </button>
     </div>
-
-    <form method="POST" action="/step1/submit">
-      <div class="form-group">
-        <label for="airbnb_url">Airbnb listing URL <span class="required">*</span></label>
-        <input type="url" id="airbnb_url" name="airbnb_url" required autofocus
-               placeholder="https://www.airbnb.com/rooms/686559818391956388"
-               style="font-size:0.95rem; padding:0.6rem 0.75rem;">
-      </div>
-
-      <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.4rem;">
-        🗺 Fetch Nearby Places →
-      </button>
-    </form>
   </div>
 
   <div style="text-align:center; font-size:0.75rem; color:rgba(255,255,255,0.75); margin-top:0.5rem; text-shadow:0 1px 3px rgba(0,0,0,0.5);">
