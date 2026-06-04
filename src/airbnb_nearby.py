@@ -607,7 +607,7 @@ def _overpass_query(category_key: str, lat: float, lon: float, radius: float) ->
         # B03 — handle unnamed POIs instead of silently skipping
         generated_name = False
         if not name:
-            name = f"{CATEGORIES[category_key]['label']} #{el['id']}"
+            name = CATEGORIES[category_key]['label']
             generated_name = True
         if el["type"] == "node":
             elat, elon = el["lat"], el["lon"]

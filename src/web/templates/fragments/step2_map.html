@@ -1,463 +1,52 @@
-<!-- Primary content for #step2-area: GeoJSON data + map init + state/function definitions -->
+<!-- Primary content for #step2-area: GeoJSON data + map init -->
 <div>
-<script type="application/json" id="geojson-data">{{ geojson_json | safe }}</script>
-<script>
-(function () {
-  const RAW_GEOJSON  = JSON.parse(document.getElementById('geojson-data').textContent);
-  const CENTER_LAT   = {{ lat }};
-  const CENTER_LON   = {{ lon }};
-  const AIRBNB_URL   = {{ airbnb_url | tojson }};
-  const LISTING_ID   = {{ listing_id | tojson }};
-  const READONLY     = {{ 'true' if readonly else 'false' }};
-  const CONFIDENCE   = {{ confidence | tojson }};
-
-  document.getElementById('map').classList.add('map-active');
-
-  const rightOverlay = document.getElementById('right-overlay');
-  if (rightOverlay) rightOverlay.style.display = '';
-
-  const notifyInput = document.getElementById('notify-listing-id');
-  if (notifyInput) notifyInput.value = LISTING_ID;
-
-  // Reuse existing map if created during loading phase
-  const existingMap = window._wizardMap;
-  let map;
-  if (existingMap) {
-    map = existingMap;
-    map.setView([CENTER_LAT, CENTER_LON], 16);
-    (window._loadingLayers || []).forEach(l => { try { map.removeLayer(l); } catch(e){} });
-    window._loadingLayers = [];
-  } else {
-    map = L.map('map').setView([CENTER_LAT, CENTER_LON], 16);
-    window._wizardMap = map;
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(map);
-  }
-
-  const homeIcon = L.divIcon({
-    html: '<div class="map-pin map-pin-home">🏠</div>',
-    className: '',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-  });
-  const homeMarker = L.marker([CENTER_LAT, CENTER_LON], { icon: homeIcon })
-    .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
-    .addTo(map);
-
-  const uncertaintyRadius = CONFIDENCE === 'high' ? 80 : 220;
-  L.circle([CENTER_LAT, CENTER_LON], {
-    radius: uncertaintyRadius,
-    color: '#f97316', weight: 1, opacity: 0.9,
-    fillColor: '#f97316', fillOpacity: 0.12, interactive: false,
-  }).addTo(map);
-
-  [
-    { r: 1200, fillOpacity: 0.03 },
-    { r: 800,  fillOpacity: 0.05 },
-    { r: 400,  fillOpacity: 0.09 },
-  ].forEach(function(c) {
-    L.circle([CENTER_LAT, CENTER_LON], {
-      radius: c.r,
-      color: '#1a6b3c', weight: 1, opacity: 0.4,
-      fillColor: '#1a6b3c', fillOpacity: c.fillOpacity, interactive: false,
-    }).addTo(map);
-  });
-
-  const legend = L.control({ position: 'bottomright' });
-  legend.onAdd = function() {
-    const div = L.DomUtil.create('div', 'map-legend');
-    div.innerHTML =
-      '<span class="map-legend-circle" style="opacity:0.9"></span><span>5 min (400 m)</span>' +
-      '<br><span class="map-legend-circle" style="opacity:0.55"></span><span>10 min (800 m)</span>' +
-      '<br><span class="map-legend-circle" style="opacity:0.35"></span><span>15 min (1.2 km)</span>';
-    return div;
-  };
-  legend.addTo(map);
-
-  // State
-  const activePois    = new Set(RAW_GEOJSON.features.map(f => f.id));
-  const secondaryPois = new Set(RAW_GEOJSON.features.filter(f => f.properties.status === 'secondary').map(f => f.id));
-  const markerMap  = {};
-  const layerByCat = {};
-  let selectedCatFilter = null;
-  let showSecondary = true;
-
-  const PALETTE = [
-    '#16a34a','#2563eb','#f97316','#9333ea','#dc2626',
-    '#0891b2','#ca8a04','#be185d','#15803d','#1d4ed8',
-    '#ea580c','#7c3aed','#b91c1c','#0e7490',
-  ];
-  const catColors = {};
-  const catMeta   = RAW_GEOJSON._meta?.category_meta || {};
-  Object.entries(catMeta).forEach(([label, m], i) => {
-    catColors[label] = m.color || PALETTE[i % PALETTE.length];
-  });
-
-  function makeIcon(poi) {
-    const color = catColors[poi.properties.category] || '#6b7280';
-    const secondary = secondaryPois.has(poi.id);
-    const size = secondary ? 20 : 28;
-    const fs   = secondary ? 10 : 14;
-    const border = secondary ? '#ccc' : 'white';
-    const opacity = secondary ? '0.55' : '1';
-    return L.divIcon({
-      html: '<div class="map-pin" style="background:' + color + ';width:' + size + 'px;height:' + size + 'px;font-size:' + fs + 'px;border-color:' + border + ';opacity:' + opacity + '">' + (poi.properties.icon || '📍') + '</div>',
-      className: '',
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2],
-    });
-  }
-
-  function popupHtml(feature) {
-    const props = feature.properties;
-    const id = feature.id;
-    const isSec = secondaryPois.has(id);
-    let h = '<strong>' + props.name + '</strong><br>';
-    h += '<span class="popup-cat">' + (props.icon || '') + ' ' + props.category + '</span>';
-    if (props.rating) h += '<br>⭐ ' + props.rating.toFixed(1);
-    if (props.opening_hours?.raw) h += '<br>🕐 ' + props.opening_hours.raw;
-    if (props.phone) h += '<br>📞 ' + props.phone;
-    if (props.website) h += '<br><a href="' + props.website + '" target="_blank" rel="noopener">🔗 Website</a>';
-    if (!READONLY) {
-      h += '<div class="popup-actions">';
-      h += '<button class="popup-action-btn popup-status-btn" onclick="window.toggleSecondaryFromPopup(\'' + id + '\')" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '">'
-         + (isSec ? '○ Secondary' : '● Primary') + '</button>';
-      h += '<button class="popup-action-btn popup-remove-btn" onclick="window.removePoi(\'' + id + '\');window._wizardMap?.closePopup();" title="Remove from map">✕ Remove</button>';
-      h += '</div>';
-    }
-    return h;
-  }
-
-  // Build markers
-  RAW_GEOJSON.features.forEach(feature => {
-    const [lon, lat] = feature.geometry.coordinates;
-    const marker = L.marker([lat, lon], { icon: makeIcon(feature) })
-      .bindPopup(popupHtml(feature));
-    if (!layerByCat[feature.properties.category]) {
-      layerByCat[feature.properties.category] = L.layerGroup().addTo(map);
-    }
-    layerByCat[feature.properties.category].addLayer(marker);
-    markerMap[feature.id] = marker;
-  });
-
-  window.renderPoiList = function() {
-    const list = document.getElementById('poi-list');
-    if (!list) return;
-    const active = RAW_GEOJSON.features.filter(f =>
-      activePois.has(f.id) &&
-      (selectedCatFilter === null || f.properties.category === selectedCatFilter)
-    );
-    list.innerHTML = '';
-    const byCat = {};
-    active.forEach(f => {
-      const cat = f.properties.category;
-      if (!byCat[cat]) byCat[cat] = [];
-      byCat[cat].push(f);
-    });
-    Object.entries(byCat).forEach(([cat, pois]) => {
-      const group = document.createElement('div');
-      group.className = 'poi-group';
-      group.innerHTML = '<div class="poi-group-header">' + (catMeta[cat]?.icon || '') + ' ' + cat + '</div>';
-      pois.forEach(f => {
-        const row = document.createElement('div');
-        const isSec = secondaryPois.has(f.id);
-        row.className = 'poi-row' + (isSec ? ' poi-secondary' : '');
-        row.dataset.id = f.id;
-        const color = catColors[f.properties.category] || '#6b7280';
-        row.innerHTML =
-          '<span class="poi-dot" style="background:' + color + '"></span>' +
-          (READONLY ? '' : '<button type="button" class="poi-status-btn" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '" onclick="toggleSecondary(\'' + f.id + '\')">' + (isSec ? '○' : '●') + '</button>') +
-          '<span class="poi-name">' + f.properties.name + '</span>' +
-          (READONLY ? '' : '<button type="button" class="poi-remove-btn" title="Remove from map" onclick="removePoi(\'' + f.id + '\')">✕</button>');
-        group.appendChild(row);
-      });
-      list.appendChild(group);
-    });
-    updatePoiCount();
-    updateCatCounts();
-  };
-
-  function updatePoiCount() {
-    const el = document.getElementById('poi-count');
-    if (el) el.textContent = activePois.size;
-  }
-
-  function updateCatCounts() {
-    document.querySelectorAll('.cat-checkbox').forEach(cb => {
-      const cat   = cb.dataset.cat;
-      const count = RAW_GEOJSON.features.filter(f => activePois.has(f.id) && f.properties.category === cat).length;
-      const badge = cb.closest('.category-toggle-row')?.querySelector('.cat-count');
-      if (badge) badge.textContent = count;
-    });
-  }
-
-  function _doToggleSecondary(id) {
-    const f = RAW_GEOJSON.features.find(x => x.id === id);
-    if (!f) return;
-    if (typeof gtag !== 'undefined') gtag('event', 'poi_toggled_secondary', {category: f.properties.category, to_secondary: !secondaryPois.has(id)});
-    if (secondaryPois.has(id)) secondaryPois.delete(id);
-    else secondaryPois.add(id);
-    const oldMarker = markerMap[id];
-    if (oldMarker) {
-      const [lon, lat] = f.geometry.coordinates;
-      const newMarker = L.marker([lat, lon], { icon: makeIcon(f) }).bindPopup(popupHtml(f));
-      if (layerByCat[f.properties.category]) {
-        layerByCat[f.properties.category].removeLayer(oldMarker);
-        if (showSecondary || !secondaryPois.has(id)) {
-          layerByCat[f.properties.category].addLayer(newMarker);
-        }
-      }
-      markerMap[id] = newMarker;
-    }
-    const row = document.querySelector('.poi-row[data-id="' + id + '"]');
-    if (row) {
-      const isSec = secondaryPois.has(id);
-      row.className = 'poi-row' + (isSec ? ' poi-secondary' : '');
-      const btn = row.querySelector('.poi-status-btn');
-      if (btn) { btn.textContent = isSec ? '○' : '●'; btn.title = isSec ? 'Promote to primary' : 'Demote to secondary'; }
-    }
-  }
-
-  window.toggleSecondary = _doToggleSecondary;
-
-  window.toggleSecondaryFromPopup = function(id) {
-    _doToggleSecondary(id);
-    const marker = markerMap[id];
-    if (marker) marker.openPopup();
-  };
-
-  window.removePoi = function(id) {
-    activePois.delete(id);
-    secondaryPois.delete(id);
-    const f = RAW_GEOJSON.features.find(x => x.id === id);
-    const marker = markerMap[id];
-    if (marker && f && layerByCat[f.properties.category]) {
-      layerByCat[f.properties.category].removeLayer(marker);
-    }
-    const row = document.querySelector('.poi-row[data-id="' + id + '"]');
-    if (row) row.remove();
-    updatePoiCount();
-    updateCatCounts();
-  };
-
-  function updateMarkerOpacity() {
-    homeMarker.setOpacity(1);
-    RAW_GEOJSON.features.forEach(f => {
-      const marker = markerMap[f.id];
-      if (!marker) return;
-      const sec = secondaryPois.has(f.id);
-      const dim = selectedCatFilter !== null && f.properties.category !== selectedCatFilter;
-      marker.setOpacity(dim ? (sec ? 0.3 : 0.5) : (sec ? 0.55 : 1));
-    });
-  }
-
-  window.segregateEmptyCategories = function() {
-    const togglesDiv = document.getElementById('category-toggles');
-    if (!togglesDiv) return;
-    const emptyRows = [];
-    togglesDiv.querySelectorAll('.category-toggle-row').forEach(row => {
-      if (!layerByCat[row.dataset.cat]) emptyRows.push(row);
-    });
-    if (!emptyRows.length) return;
-    emptyRows.forEach(row => {
-      row.remove();
-      const cb = row.querySelector('.cat-checkbox');
-      if (cb) { cb.disabled = true; cb.checked = false; }
-      const badge = row.querySelector('.cat-count');
-      if (badge) badge.textContent = '0';
-      row.classList.add('cat-row-not-found');
-    });
-    const header = document.createElement('div');
-    header.className = 'not-found-header';
-    header.textContent = 'Not found nearby';
-    const grid = document.createElement('div');
-    grid.className = 'category-toggles category-toggles-not-found';
-    emptyRows.forEach(row => grid.appendChild(row));
-    togglesDiv.insertAdjacentElement('afterend', grid);
-    togglesDiv.insertAdjacentElement('afterend', header);
-  };
-
-  // Event delegation — works even after OOB swaps add elements to DOM
-  document.addEventListener('change', function(e) {
-    if (e.target.classList.contains('cat-checkbox')) {
-      selectedCatFilter = null;
-      document.querySelectorAll('.category-toggle-row').forEach(r => r.classList.remove('cat-filter-active'));
-      updateMarkerOpacity();
-      const cat   = e.target.dataset.cat;
-      const layer = layerByCat[cat];
-      if (e.target.checked) {
-        if (layer) map.addLayer(layer);
-        RAW_GEOJSON.features.filter(f => f.properties.category === cat && markerMap[f.id])
-          .forEach(f => activePois.add(f.id));
-      } else {
-        if (layer) map.removeLayer(layer);
-        RAW_GEOJSON.features.filter(f => f.properties.category === cat)
-          .forEach(f => activePois.delete(f.id));
-      }
-      window.renderPoiList();
-    }
-    if (e.target.id === 'show-secondary') {
-      showSecondary = e.target.checked;
-      RAW_GEOJSON.features.forEach(f => {
-        if (!secondaryPois.has(f.id) || !activePois.has(f.id)) return;
-        const marker = markerMap[f.id];
-        const layer  = layerByCat[f.properties.category];
-        if (!marker || !layer) return;
-        if (showSecondary) layer.addLayer(marker);
-        else layer.removeLayer(marker);
-      });
-    }
-  });
-
-  document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('cat-label')) {
-      e.preventDefault();
-      e.stopPropagation();
-      const cat = e.target.closest('.category-toggle-row')?.dataset.cat;
-      if (!cat || !layerByCat[cat]) return;
-      selectedCatFilter = (selectedCatFilter === cat) ? null : cat;
-      document.querySelectorAll('.category-toggle-row').forEach(r =>
-        r.classList.toggle('cat-filter-active', r.dataset.cat === selectedCatFilter));
-      updateMarkerOpacity();
-      window.renderPoiList();
-    }
-    if (e.target.id === 'btn-select-all') {
-      document.querySelectorAll('.cat-checkbox:not(:disabled)').forEach(cb => {
-        if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
-      });
-    }
-    if (e.target.id === 'btn-select-none') {
-      document.querySelectorAll('.cat-checkbox:not(:disabled)').forEach(cb => {
-        if (cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change', { bubbles: true })); }
-      });
-    }
-  });
-
-  window.downloadGeoJSON = function() {
-    if (typeof gtag !== 'undefined') gtag('event', 'geojson_downloaded', {poi_count: activePois.size});
-    const active = {
-      ...RAW_GEOJSON,
-      features: RAW_GEOJSON.features
-        .filter(f => activePois.has(f.id))
-        .map(f => ({ ...f, properties: { ...f.properties, status: secondaryPois.has(f.id) ? 'secondary' : 'primary' } })),
-    };
-    const blob = new Blob([JSON.stringify(active, null, 2)], { type: 'application/geo+json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = 'airbnb-{{ listing_id }}-locations.geojson';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Defer initial render until OOB swaps have completed
-  setTimeout(function() {
-    window.segregateEmptyCategories();
-    window.renderPoiList();
-  }, 50);
-})();
-</script>
+{% include "fragments/_map_js.html" %}
 </div>
 
-<!-- OOB: populate and show categories card -->
-<div id="categories-area" hx-swap-oob="outerHTML" class="overlay-card">
-  {% if from_cache %}
-  <div class="cache-banner" style="font-size:0.78rem; padding:0.4rem 0.7rem; margin-bottom:0.6rem;">
-    ⚡ From cache — <a href="/" style="color:#92400e; font-weight:600;">refresh</a>
-  </div>
-  {% endif %}
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
-    <div class="block-label" style="margin-bottom:0;">🗂 Categories</div>
-    <span class="badge">
-      <strong id="poi-count">{{ n_pois }}</strong> places
-    </span>
-  </div>
-  {% if not readonly %}
-  <div class="cat-bulk-actions">
-    <button type="button" class="btn-cat-bulk" id="btn-select-all">Select all</button>
-    <button type="button" class="btn-cat-bulk" id="btn-select-none">Select none</button>
-  </div>
-  {% endif %}
-  <div class="category-toggles" id="category-toggles">
-    {% for key, cat in categories.items() %}
-    <label class="category-toggle-row" data-cat="{{ cat.label }}">
-      {% if not readonly %}<input type="checkbox" class="cat-checkbox" data-cat="{{ cat.label }}" checked>{% endif %}
-      <span class="cat-icon">{{ cat.icon }}</span>
-      <span class="cat-label">{{ cat.label }}</span>
-      <span class="cat-count badge" id="cat-count-{{ loop.index }}">–</span>
-    </label>
-    {% endfor %}
-  </div>
-  {% if not readonly %}
-  <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--text-muted); margin-top:0.6rem; cursor:pointer; user-select:none;">
-    <input type="checkbox" id="show-secondary" checked style="width:auto; cursor:pointer;">
-    Show secondary markers
-  </label>
-  {% endif %}
-</div>
-
-<!-- OOB: populate POI list in right sidebar -->
-<div id="poi-list-wrapper" hx-swap-oob="outerHTML">
-  <div class="block-label" style="margin-bottom:0.5rem;">
-    📍 Places
-    {% if not readonly %}
-    <span class="muted" style="font-weight:400; font-size:0.78rem; text-transform:none; letter-spacing:0;">
-      · ● / ○ primary / secondary
-    </span>
-    {% endif %}
-  </div>
-  {% if listing_title or listing_photo %}
-  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; font-size:0.8rem; color:var(--text-muted);">
-    {% if listing_photo %}
-    <img src="{{ listing_photo }}" alt="{{ listing_title or '' }}"
-         style="width:48px; height:34px; object-fit:cover; border-radius:4px; flex-shrink:0;">
-    {% endif %}
-    <div>
-      {% if listing_title %}<strong style="color:var(--text); font-size:0.82rem; display:block;">{{ listing_title }}</strong>{% endif %}
-      {% if location.get("neighbourhood") or location.get("city") %}
-      📍 {{ location.get("neighbourhood", "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ location.get("city", "") }}
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-  <div class="poi-list" id="poi-list"></div>
-</div>
-
-<!-- OOB: show publish/download buttons in left card (edit mode only) -->
-{% if not readonly %}
-<div id="publish-area" hx-swap-oob="outerHTML"
-     style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
-  <div style="display:flex; gap:0.5rem;">
-    <button class="btn btn-outline"
-            style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
-            onclick="downloadGeoJSON()">⬇ GeoJSON</button>
-    <button class="btn btn-primary"
-            style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
-            onclick="openPublishModal()">📤 Publish →</button>
-  </div>
-</div>
-{% endif %}
-
-<!-- OOB: show left overlay, hide loading pill -->
+<!-- OOB: show and populate left overlay (first card + POI list card) -->
 <div id="left-overlay" hx-swap-oob="outerHTML" class="map-overlay left-overlay">
   <div class="overlay-card">
     <div class="block-label">🏠 Le Quartier</div>
+    {% if listing_photo %}
+    <img src="{{ listing_photo }}" alt="{{ listing_title or '' }}"
+         style="width:100%; height:100px; object-fit:cover; border-radius:8px; margin:0.4rem 0 0.35rem;">
+    {% endif %}
     {% if listing_title %}
-    <p style="font-size:0.82rem; font-weight:600; margin-bottom:0.25rem;">{{ listing_title }}</p>
+    <p style="font-size:0.82rem; font-weight:600; margin-bottom:0.2rem;">{{ listing_title }}</p>
     {% endif %}
     {% if location.get("neighbourhood") or location.get("city") %}
-    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.5rem;">
+    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.35rem;">
       📍 {{ location.get("neighbourhood", "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ location.get("city", "") }}
     </p>
     {% endif %}
-    {% if readonly %}
-    <a href="/airbnb/{{ listing_id }}/edit" class="btn btn-primary" style="width:100%; font-size:0.88rem; margin-bottom:0.5rem;">✏️ Edit map →</a>
-    {% endif %}
-    <a href="/" class="btn btn-outline" style="width:100%; font-size:0.88rem;">← New search</a>
-    <div id="publish-area" style="{{ 'display:none' if readonly else '' }}"></div>
+    <a href="{{ airbnb_url }}" target="_blank" rel="noopener"
+       style="font-size:0.78rem; color:var(--text-muted); text-decoration:none;"
+       onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb ↗</a>
+    <div id="publish-area" style="{{ 'display:none' if readonly else '' }}">
+      {% if not readonly %}
+      <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
+        <div style="display:flex; gap:0.5rem;">
+          <button class="btn btn-outline"
+                  style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
+                  onclick="downloadGeoJSON()">⬇ GeoJSON</button>
+          <button class="btn btn-primary"
+                  style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
+                  onclick="openPublishModal()">📤 Publish →</button>
+        </div>
+      </div>
+      {% endif %}
+    </div>
   </div>
-  <div id="categories-area" class="overlay-card"></div>
+
+  <div class="overlay-card scrollable">
+    <div id="poi-list-wrapper">
+      <div class="block-label" style="margin-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between;">
+        <span>📍 Places{% if not readonly %} <span class="muted" style="font-weight:400; font-size:0.78rem; text-transform:none; letter-spacing:0;">· ● / ○</span>{% endif %}</span>
+        <span class="badge"><strong id="poi-count">{{ n_pois }}</strong></span>
+      </div>
+      <div class="poi-list" id="poi-list"></div>
+    </div>
+  </div>
 </div>
 
 <!-- OOB: hide loading pill -->

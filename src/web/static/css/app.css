@@ -466,7 +466,7 @@ textarea { resize: vertical; min-height: 60px; }
 }
 
 /* ── POI list ───────────────────────── */
-.poi-list { max-height: 320px; overflow-y: auto; }
+.poi-list { max-height: calc(100vh - 280px); overflow-y: auto; }
 .poi-group { margin-bottom: 0.5rem; }
 .poi-group-header {
   font-size: 0.75rem;
@@ -480,14 +480,22 @@ textarea { resize: vertical; min-height: 60px; }
 }
 .poi-row {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0.25rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0;
+  padding: 0.15rem 0.25rem;
   border-radius: 4px;
   font-size: 0.88rem;
   transition: background 0.1s;
 }
 .poi-row:hover { background: var(--surface2); }
+.poi-row-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.15rem 0;
+}
 .poi-dot {
   width: 10px;
   height: 10px;
@@ -495,6 +503,8 @@ textarea { resize: vertical; min-height: 60px; }
   flex-shrink: 0;
 }
 .poi-name { flex: 1; }
+.poi-name-link { cursor: pointer; }
+.poi-name-link:hover { text-decoration: underline; color: var(--accent); }
 .poi-remove-btn {
   background: none;
   border: none;
@@ -526,6 +536,31 @@ textarea { resize: vertical; min-height: 60px; }
 .poi-status-btn:hover { color: var(--accent); background: #ecfdf5; }
 .poi-secondary .poi-status-btn { color: #9ca3af; }
 .poi-secondary .poi-status-btn:hover { color: var(--accent); }
+.poi-meta-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  padding: 0.1rem 0.2rem;
+  border-radius: 3px;
+  transition: color 0.12s;
+  font-family: inherit;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.poi-meta-btn:hover { color: var(--accent); }
+.poi-meta-panel {
+  width: 100%;
+  padding: 0.35rem 0.5rem 0.35rem 1.4rem;
+  font-size: 0.79rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+  border-left: 2px solid var(--border);
+  margin: 0 0 0.15rem 0.6rem;
+}
+.poi-meta-panel a { color: var(--accent); text-decoration: none; }
+.poi-meta-panel a:hover { text-decoration: underline; }
 .secondary-toggle-bar {
   display: flex;
   align-items: center;
