@@ -70,6 +70,8 @@ wizard = Blueprint("wizard", __name__)
 def _require_edit_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        if os.environ.get("EDIT_ENABLED", "").strip().lower() != "true":
+            return Response("Not found.", 404)
         username = os.environ.get("EDIT_USERNAME", "")
         password = os.environ.get("EDIT_PASSWORD", "")
         if not username or not password:
@@ -412,6 +414,7 @@ def airbnb_geojson(listing_id: str):
 
 
 @wizard.post("/airbnb/<listing_id>/save-curated")
+@_require_edit_auth
 def save_curated(listing_id: str):
     data               = request.get_json(force=True) or {}
     active_ids         = set(data.get("active_ids", []))
@@ -713,6 +716,7 @@ def zillow_page(zillow_id: str):
 
 
 @wizard.post("/zillow/<path:zillow_id>/save-curated")
+@_require_edit_auth
 def zillow_save_curated(zillow_id: str):
     cache_key          = f"zillow/{zillow_id}"
     data               = request.get_json(force=True) or {}
