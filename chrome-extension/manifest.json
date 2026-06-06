@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Le Quartier for Zillow",
+  "version": "0.1.0",
+  "description": "Neighbourhood POI map on Zillow property listings",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.zillow.com/*",
+    "http://localhost:5010/*",
+    "https://lequartier.girard-davila.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.zillow.com/homedetails/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["libs/leaflet.js", "libs/leaflet.css", "map-init.js"],
+      "matches": ["https://www.zillow.com/*"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Le Quartier"
+  }
+}

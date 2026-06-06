@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Le Quartier</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      width: 280px;
+      padding: 14px 16px 16px;
+      margin: 0;
+      font-size: 14px;
+      color: #1f2937;
+    }
+    h1 {
+      font-size: 1rem;
+      color: #14532d;
+      margin: 0 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    input[type="url"] {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      box-sizing: border-box;
+      outline: none;
+    }
+    input[type="url"]:focus {
+      border-color: #1a6b3c;
+    }
+    button {
+      margin-top: 10px;
+      width: 100%;
+      background: #1a6b3c;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover {
+      background: #145530;
+    }
+    #status {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 6px;
+      text-align: center;
+      min-height: 1.2em;
+    }
+    .hint {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 14px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏘 Le Quartier</h1>
+  <label for="backend-url">Backend URL</label>
+  <input id="backend-url" type="url" placeholder="http://localhost:5010">
+  <button id="save-btn">Save</button>
+  <div id="status"></div>
+  <p class="hint">Open any Zillow property listing to see the neighbourhood map. Requires the Le Quartier server to be running.</p>
+  <script src="popup.js"></script>
+</body>
+</html>

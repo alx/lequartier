@@ -1,0 +1,123 @@
+/* All selectors scoped to #lq-zillow-map-root to avoid Zillow style collisions */
+
+#lq-zillow-map-root {
+  margin: 20px 0 24px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+#lq-map-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #f0fdf4;
+  border-left: 3px solid #1a6b3c;
+  border-radius: 0 6px 0 0;
+  padding: 8px 12px;
+  margin-bottom: 0;
+}
+
+#lq-map-header > span:first-child {
+  font-weight: 600;
+  color: #14532d;
+}
+
+.lq-status-text {
+  font-size: 0.82em;
+  color: #6b7280;
+  margin-left: auto;
+}
+
+.lq-view-link {
+  font-size: 0.82em;
+  color: #1a6b3c;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.lq-view-link:hover {
+  text-decoration: underline;
+}
+
+#lq-map-el {
+  height: 400px;
+  border: 1px solid #d1d5db;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  background: #f0fdf4;
+  position: relative;
+}
+
+#lq-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #f0fdf4;
+  z-index: 10;
+  color: #4b7a5e;
+  font-size: 0.88em;
+}
+
+.lq-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #bbf7d0;
+  border-top-color: #1a6b3c;
+  border-radius: 50%;
+  animation: lq-spin 0.8s linear infinite;
+}
+
+@keyframes lq-spin {
+  to { transform: rotate(360deg); }
+}
+
+.lq-error-text {
+  color: #dc2626;
+  font-size: 0.88em;
+  text-align: center;
+  padding: 0 16px;
+}
+
+#lq-cat-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 2px 0;
+}
+
+.lq-cat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--lq-cat-color, #6b7280);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.78em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: inherit;
+}
+
+.lq-cat-btn:hover {
+  opacity: 0.85;
+}
+
+.lq-cat-btn--off {
+  opacity: 0.35;
+  background: #9ca3af !important;
+  color: #fff;
+}
+
+/* Ensure Leaflet controls sit above Zillow overlays */
+#lq-map-el .leaflet-top,
+#lq-map-el .leaflet-bottom {
+  z-index: 1000;
+}

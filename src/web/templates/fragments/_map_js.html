@@ -4,9 +4,10 @@
   const RAW_GEOJSON  = JSON.parse(document.getElementById('geojson-data').textContent);
   let centerLat      = {{ lat }};
   let centerLon      = {{ lon }};
-  const AIRBNB_URL   = {{ airbnb_url | tojson }};
-  const LISTING_ID   = {{ listing_id | tojson }};
-  const READONLY     = {{ 'true' if readonly else 'false' }};
+  const AIRBNB_URL        = {{ airbnb_url | tojson }};
+  const LISTING_ID        = {{ listing_id | tojson }};
+  const LISTING_ID_PREFIX = {{ (listing_id_prefix | default('airbnb')) | tojson }};
+  const READONLY          = {{ 'true' if readonly else 'false' }};
 
   document.getElementById('map').classList.add('map-active');
 
@@ -508,7 +509,7 @@
     const btn = document.getElementById('btn-save-changes');
     if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
     try {
-      const resp = await fetch('/airbnb/' + LISTING_ID + '/save-curated', {
+      const resp = await fetch('/' + LISTING_ID_PREFIX + '/' + LISTING_ID + '/save-curated', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

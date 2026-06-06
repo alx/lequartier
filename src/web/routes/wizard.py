@@ -29,10 +29,12 @@ from flask import (
 from .. import cache as cache_mod
 from .. import tasks as task_mod
 from .. import poi_engine
+from ... import airbnb_nearby as lib
 
-_GH_API      = "https://api.github.com"
-_GH_REPO     = "alx/travel-guide"
-_CURATED_DIR = Path(__file__).parent.parent / "curated"
+_GH_API             = "https://api.github.com"
+_GH_REPO            = "alx/travel-guide"
+_CURATED_DIR        = Path(__file__).parent.parent / "curated"
+_ZILLOW_CURATED_DIR = _CURATED_DIR / "zillow"
 
 
 def _gh_headers(token: str) -> dict:
@@ -642,3 +644,197 @@ def _active_result() -> dict | None:
     if task and task.status == task_mod.Status.DONE:
         return task.result
     return session.get("active_result")
+
+
+# ── Zillow routes ─────────────────────────────────────────────────────────────
+# Zillow IDs contain a slash (e.g. "23755-Clarendon-St.../19881430_zpid").
+# Flask's <path:> converter accepts slashes. More-specific routes (/edit,
+# .geojson) are registered before the catch-all so Werkzeug prefers them.
+
+def _render_zillow_map(zillow_id: str, r: dict, readonly: bool) -> str:
+    cfg = poi_engine.get_cfg()
+    if not readonly:
+        session["active_result"] = r
+    return render_template(
+        "airbnb.html",
+        mode="map",
+        readonly=readonly,
+        embed=False,
+        listing_id=zillow_id,
+        listing_id_prefix="zillow",
+        lat=r["lat"],
+        lon=r["lon"],
+        confidence=r.get("confidence", "high"),
+        location=r.get("location", {}),
+        geojson_json=json.dumps(r["geojson"], ensure_ascii=False),
+        n_pois=r["n_pois"],
+        airbnb_url=r.get("airbnb_url", ""),
+        from_cache=r.get("from_cache", False),
+        categories=cfg.categories if cfg else {},
+        listing_title=r.get("listing_title"),
+        listing_photo=r.get("listing_photo"),
+    )
+
+
+@wizard.get("/zillow/<path:zillow_id>/edit")
+@_require_edit_auth
+def zillow_edit_page(zillow_id: str):
+    cached = cache_mod.get(f"zillow/{zillow_id}")
+    if not cached:
+        return render_template(
+            "airbnb.html", mode="error", readonly=False,
+            error="No data cached for this listing yet. Open it on Zillow with the Le Quartier extension first.",
+        )
+    return _render_zillow_map(zillow_id, cached, readonly=False)
+
+
+@wizard.get("/zillow/<path:zillow_id>.geojson")
+def zillow_geojson(zillow_id: str):
+    cached = cache_mod.get(f"zillow/{zillow_id}")
+    if not cached:
+        return jsonify({"error": "Not found"}), 404
+    body = json.dumps(cached.get("geojson", {}), ensure_ascii=False, indent=2)
+    headers: dict = {"Content-Type": "application/geo+json"}
+    safe_name = zillow_id.replace("/", "--")
+    if request.args.get("download") == "1":
+        headers["Content-Disposition"] = f'attachment; filename="{safe_name}.geojson"'
+    return Response(body, headers=headers)
+
+
+@wizard.get("/zillow/<path:zillow_id>")
+def zillow_page(zillow_id: str):
+    cached = cache_mod.get(f"zillow/{zillow_id}")
+    if not cached:
+        return render_template(
+            "airbnb.html", mode="error", readonly=True,
+            error="No data cached for this listing yet. Open it on Zillow with the Le Quartier extension first.",
+        )
+    return _render_zillow_map(zillow_id, cached, readonly=True)
+
+
+@wizard.post("/zillow/<path:zillow_id>/save-curated")
+def zillow_save_curated(zillow_id: str):
+    cache_key          = f"zillow/{zillow_id}"
+    data               = request.get_json(force=True) or {}
+    active_ids         = set(data.get("active_ids", []))
+    secondary_ids      = set(data.get("secondary_ids", []))
+    center_lat         = data.get("center_lat")
+    center_lon         = data.get("center_lon")
+    category_overrides = data.get("category_overrides") or {}
+
+    cached = cache_mod.get(cache_key)
+    if not cached:
+        return jsonify({"ok": False, "error": "Listing not in cache"}), 404
+
+    all_features = cached.get("geojson", {}).get("features", [])
+    known_cats   = {f["properties"].get("category") for f in all_features if f.get("properties")}
+    features = []
+    for f in all_features:
+        if f.get("id") not in active_ids:
+            continue
+        props = {**f["properties"],
+                 "status": "secondary" if f["id"] in secondary_ids else "primary"}
+        if f["id"] in category_overrides and category_overrides[f["id"]] in known_cats:
+            props["category"] = category_overrides[f["id"]]
+        features.append({**f, "properties": props})
+
+    updated_geojson = {**cached["geojson"], "features": features}
+    lat: float = center_lat if center_lat is not None else cached["lat"]
+    lon: float = center_lon if center_lon is not None else cached["lon"]
+    updated_result  = {**cached, "lat": lat, "lon": lon,
+                       "geojson": updated_geojson, "n_pois": len(features)}
+
+    safe_name     = zillow_id.replace("/", "--")
+    curated_file  = _ZILLOW_CURATED_DIR / f"{safe_name}.json"
+    categories: list[str] = []
+    if curated_file.exists():
+        try:
+            categories = json.loads(curated_file.read_text(encoding="utf-8")).get("categories", [])
+        except Exception:
+            pass
+    if not categories:
+        cfg = poi_engine.get_cfg()
+        categories = sorted(cfg.default_categories if cfg else [])
+
+    _ZILLOW_CURATED_DIR.mkdir(parents=True, exist_ok=True)
+    seed_data = {"listing_id": cache_key, "lat": lat, "lon": lon,
+                 "categories": categories, "result": updated_result}
+    curated_file.write_text(json.dumps(seed_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    cache_mod.invalidate(cache_key)
+    cache_mod.put(cache_key, lat, lon, categories, {**updated_result, "from_cache": False})
+
+    return jsonify({"ok": True, "n_pois": len(features)})
+
+
+# ── /api/nearby ────────────────────────────────────────────────────────────────
+
+def _api_nearby_response(geojson: dict) -> Response:
+    resp = Response(json.dumps(geojson, ensure_ascii=False),
+                    content_type="application/geo+json")
+    origin = request.headers.get("Origin", "")
+    if origin.startswith("chrome-extension://") or current_app.debug:
+        resp.headers["Access-Control-Allow-Origin"] = origin or "*"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    return resp
+
+
+@wizard.route("/api/nearby", methods=["OPTIONS"])
+def api_nearby_preflight():
+    resp = Response("", status=204)
+    origin = request.headers.get("Origin", "")
+    if origin.startswith("chrome-extension://") or current_app.debug:
+        resp.headers["Access-Control-Allow-Origin"] = origin or "*"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        resp.headers["Access-Control-Max-Age"] = "86400"
+    return resp
+
+
+@wizard.get("/api/nearby")
+def api_nearby():
+    try:
+        lat = float(request.args.get("lat", ""))
+        lon = float(request.args.get("lon", ""))
+    except (TypeError, ValueError):
+        return jsonify({"error": "lat and lon query params are required"}), 400
+
+    radius    = int(request.args.get("radius", 1000))
+    zillow_id = request.args.get("zillow_id", "").strip() or None
+    cache_key = f"zillow/{zillow_id}" if zillow_id else None
+
+    if cache_key:
+        cached = cache_mod.get(cache_key)
+        if cached:
+            return _api_nearby_response(cached.get("geojson", {}))
+
+    cfg  = poi_engine.get_cfg()
+    cats = cfg.default_categories if cfg else []
+
+    try:
+        api_key  = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        osm      = lib.query_overpass(cats, lat, lon, radius)
+        google   = lib.query_google_nearby(api_key, cats, lat, lon, radius) if api_key else None
+        merged   = lib.merge_results(osm, google)
+        filtered = lib.filter_and_limit(merged, lat, lon)
+        location = lib.reverse_geocode(lat, lon)
+        source_url = (f"https://www.zillow.com/homedetails/{zillow_id}"
+                      if zillow_id else f"https://www.zillow.com/?ll={lat},{lon}")
+        geojson  = lib.build_geojson(
+            source_url, lat, lon, filtered, radius,
+            slug=f"zillow/{zillow_id or f'{lat:.4f},{lon:.4f}'}",
+            location=location,
+        )
+    except Exception as exc:
+        current_app.logger.error("api_nearby error: %s", exc)
+        return jsonify({"error": str(exc)}), 500
+
+    if cache_key:
+        result = {
+            "lat": lat, "lon": lon, "geojson": geojson,
+            "n_pois": len(filtered), "location": location,
+            "listing_id": cache_key, "airbnb_url": source_url,
+            "from_cache": False,
+        }
+        cache_mod.put(cache_key, lat, lon, cats, result)
+
+    return _api_nearby_response(geojson)

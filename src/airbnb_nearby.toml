@@ -174,6 +174,28 @@ way(around:{r},{lat},{lon})["leisure"="dog_park"];
 """
 google_types = []
 
+# ---------------------------------------------------------------------------
+# Education
+# Schools, kindergartens, daycares. Opt-in: targeted at family/real-estate use.
+# ---------------------------------------------------------------------------
+[categories.education]
+label        = "Education"
+icon         = "🏫"
+fa_icon      = "fa-school"
+max          = 5
+dist_cap     = 1500
+radius       = 1200
+default      = false    # opt-in: --categories education
+overpass     = """
+node(around:{r},{lat},{lon})["amenity"="school"];
+way(around:{r},{lat},{lon})["amenity"="school"];
+node(around:{r},{lat},{lon})["amenity"="kindergarten"];
+way(around:{r},{lat},{lon})["amenity"="kindergarten"];
+node(around:{r},{lat},{lon})["amenity"="childcare"];
+way(around:{r},{lat},{lon})["amenity"="childcare"];
+"""
+google_types = ["school", "preschool", "primary_school", "secondary_school"]
+
 [categories.transit]
 label        = "Transit"
 icon         = "🚌"
@@ -321,6 +343,7 @@ order = [
   "market",
   "playground",
   "dog_park",
+  "education",
   "park",
   "bike_share",
   "restaurant",

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 _EXAMPLES_DIR = Path(__file__).parent / "curated"
 
 EXAMPLE_COORDS: dict[str, tuple[float, float]] = {
-    "686559818391956388": (37.9767, 23.7184),
+    "686559818391956388": (9.4700, 100.0490),
     "10349749": (43.60498, 1.45783),
 }
 
