@@ -24,11 +24,12 @@
     (window._ringLayers || []).forEach(l => { try { map.removeLayer(l); } catch(e){} });
     window._ringLayers = [];
     if (window._ringLegend) { try { window._ringLegend.remove(); } catch(e){} window._ringLegend = null; }
+    if (window._showMoreCtrl) { try { window._showMoreCtrl.remove(); } catch(e){} window._showMoreCtrl = null; }
   } else {
     map = L.map('map').setView([displayLat, displayLon], 16);
     window._wizardMap = map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | 🌳🏠 <a href="https://lequartier.girard-davila.net">Le Quartier</a>',
       maxZoom: 19,
     }).addTo(map);
   }
@@ -58,6 +59,36 @@
   };
   window._ringLegend = legend;
   legend.addTo(map);
+
+  // "Show more locations" pill — toggled after init to hide if no hidden POIs
+  let _showingMore = false;
+  const showMoreCtrl = L.control({ position: 'topright' });
+  showMoreCtrl.onAdd = function() {
+    const div = L.DomUtil.create('div', 'show-more-pill');
+    div.innerHTML = '<button type="button">Show more locations…</button>';
+    L.DomEvent.disableClickPropagation(div);
+    div.querySelector('button').addEventListener('click', function() {
+      _showingMore = !_showingMore;
+      this.textContent = _showingMore ? 'Show fewer locations' : 'Show more locations…';
+      RAW_GEOJSON.features.forEach(function(f) {
+        if (DEFAULT_VISIBLE_CATS.has(f.properties.category)) return;
+        if (READONLY && secondaryPois.has(f.id)) return;
+        const layer = layerByCat[f.properties.category];
+        if (!layer) return;
+        if (_showingMore) {
+          if (markerMap[f.id]) activePois.add(f.id);
+          layer.addTo(map);
+        } else {
+          activePois.delete(f.id);
+          map.removeLayer(layer);
+        }
+      });
+      window.renderPoiList();
+    });
+    return div;
+  };
+  showMoreCtrl.addTo(map);
+  window._showMoreCtrl = showMoreCtrl;
 
   let homeIcon = null;
   let homeMarker;
@@ -116,7 +147,12 @@
       .addTo(map);
   });
 
-  const activePois    = new Set(RAW_GEOJSON.features.map(f => f.id));
+  const DEFAULT_VISIBLE_CATS = new Set(['Supermarket', 'Bakery & Food', 'Market']);
+  const activePois    = new Set(
+    RAW_GEOJSON.features
+      .filter(f => DEFAULT_VISIBLE_CATS.has(f.properties.category))
+      .map(f => f.id)
+  );
   const secondaryPois = new Set(RAW_GEOJSON.features.filter(f => f.properties.status === 'secondary').map(f => f.id));
   const markerMap  = {};
   const layerByCat = {};
@@ -166,12 +202,20 @@
     const secondary = secondaryPois.has(poi.id);
     const opacity   = secondary ? '0.55' : '1';
     const dark      = darkenHex(color);
-    const size      = secondary ? 20 : 28;
-    const fs        = secondary ? 11 : 15;
-    const emoji     = catMeta[poi.properties.category]?.icon || '📍';
+    const sz        = secondary ? 22 : 30;
+    const iconFs    = secondary ? 9 : 13;
+    const tailW     = secondary ? 5 : 7;
+    const tailH     = secondary ? 6 : 9;
+    const faClass   = catFaIcons[poi.properties.category] || 'fa-location-dot';
     const html =
-      '<div style="width:' + size + 'px;height:' + size + 'px;background:' + dark + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;opacity:' + opacity + ';border:1px solid rgba(0,0,0,0.2);">' + emoji + '</div>';
-    return L.divIcon({ html, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
+      '<div style="display:flex;flex-direction:column;align-items:center;opacity:' + opacity + ';">' +
+      '<div style="width:' + sz + 'px;height:' + sz + 'px;background:' + dark + ';border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.32);border:1.5px solid rgba(255,255,255,0.35);">' +
+      '<i class="fa-solid ' + faClass + '" style="color:#fff;font-size:' + iconFs + 'px;"></i>' +
+      '</div>' +
+      '<div style="width:0;height:0;border-left:' + tailW + 'px solid transparent;border-right:' + tailW + 'px solid transparent;border-top:' + tailH + 'px solid ' + dark + ';margin-top:-1px;"></div>' +
+      '</div>';
+    const totalH = sz + tailH;
+    return L.divIcon({ html, className: '', iconSize: [sz, totalH], iconAnchor: [sz / 2, totalH] });
   }
 
   function popupHtml(feature) {
@@ -199,10 +243,12 @@
     const [lon, lat] = feature.geometry.coordinates;
     const marker = L.marker([lat, lon], { icon: makeIcon(feature) })
       .bindPopup(popupHtml(feature));
-    if (!layerByCat[feature.properties.category]) {
-      layerByCat[feature.properties.category] = L.layerGroup().addTo(map);
+    const cat = feature.properties.category;
+    if (!layerByCat[cat]) {
+      layerByCat[cat] = L.layerGroup();
+      if (DEFAULT_VISIBLE_CATS.has(cat)) layerByCat[cat].addTo(map);
     }
-    layerByCat[feature.properties.category].addLayer(marker);
+    layerByCat[cat].addLayer(marker);
     markerMap[feature.id] = marker;
   });
 
@@ -542,6 +588,13 @@
   setTimeout(function() {
     window.segregateEmptyCategories();
     window.renderPoiList();
+    const hasHidden = RAW_GEOJSON.features.some(
+      f => !DEFAULT_VISIBLE_CATS.has(f.properties.category) && markerMap[f.id]
+    );
+    if (!hasHidden) {
+      const c = showMoreCtrl.getContainer();
+      if (c) c.style.display = 'none';
+    }
   }, 50);
 })();
 </script>
