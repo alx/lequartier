@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -649,6 +651,41 @@ def _active_result() -> dict | None:
     return session.get("active_result")
 
 
+def _privacy_offset(lat: float, lon: float) -> tuple[float, float]:
+    """Return a deterministic ~50 m offset of (lat, lon) for privacy mode."""
+    seed = int(hashlib.md5(f"{lat:.4f},{lon:.4f}".encode()).hexdigest()[:8], 16)
+    angle = (seed % 360) * math.pi / 180
+    dlat = 50 * math.cos(angle) / 111_000
+    dlon = 50 * math.sin(angle) / (111_000 * math.cos(math.radians(lat)))
+    return lat + dlat, lon + dlon
+
+
+def _render_map_page(r: dict, privacy_circle: bool, display_lat: float, display_lon: float) -> str:
+    cfg = poi_engine.get_cfg()
+    return render_template(
+        "airbnb.html",
+        mode="map",
+        readonly=True,
+        embed=False,
+        listing_id=f"{r['lat']:.4f},{r['lon']:.4f}",
+        listing_id_prefix="map",
+        lat=r["lat"],
+        lon=r["lon"],
+        confidence=r.get("confidence", "high"),
+        location=r.get("location", {}),
+        geojson_json=json.dumps(r["geojson"], ensure_ascii=False),
+        n_pois=r["n_pois"],
+        airbnb_url="",
+        from_cache=r.get("from_cache", False),
+        categories=cfg.categories if cfg else {},
+        listing_title=r.get("listing_title"),
+        listing_photo=None,
+        privacy_circle=privacy_circle,
+        display_lat=display_lat,
+        display_lon=display_lon,
+    )
+
+
 # ── Zillow routes ─────────────────────────────────────────────────────────────
 # Zillow IDs contain a slash (e.g. "23755-Clarendon-St.../19881430_zpid").
 # Flask's <path:> converter accepts slashes. More-specific routes (/edit,
@@ -842,3 +879,71 @@ def api_nearby():
         cache_mod.put(cache_key, lat, lon, cats, result)
 
     return _api_nearby_response(geojson)
+
+
+# ── /map ───────────────────────────────────────────────────────────────────────
+
+@wizard.get("/map")
+def map_page():
+    try:
+        lat = float(request.args["lat"])
+        lon = float(request.args["lon"])
+    except (KeyError, TypeError, ValueError):
+        return render_template(
+            "airbnb.html", mode="error", readonly=True,
+            error="lat and lon query parameters are required (e.g. /map?lat=48.85&lon=2.35).",
+        ), 400
+
+    if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+        return render_template(
+            "airbnb.html", mode="error", readonly=True,
+            error="lat must be in [-90, 90] and lon in [-180, 180].",
+        ), 400
+
+    radius  = max(100, min(int(request.args.get("radius", 1000)), 5000))
+    privacy = request.args.get("privacy") == "1"
+
+    display_lat, display_lon = _privacy_offset(lat, lon) if privacy else (lat, lon)
+
+    cache_key = f"map/{lat:.4f},{lon:.4f}"
+    cfg  = poi_engine.get_cfg()
+    cats = cfg.default_categories if cfg else []
+
+    cached = cache_mod.get(cache_key, lat, lon, cats)
+    if cached:
+        return _render_map_page(
+            {**cached, "from_cache": True},
+            privacy_circle=privacy,
+            display_lat=display_lat,
+            display_lon=display_lon,
+        )
+
+    try:
+        api_key  = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        osm      = lib.query_overpass(cats, lat, lon, radius)
+        google   = lib.query_google_nearby(api_key, cats, lat, lon, radius) if api_key else None
+        merged   = lib.merge_results(osm, google)
+        filtered = lib.filter_and_limit(merged, lat, lon)
+        location = lib.reverse_geocode(lat, lon)
+        geojson  = lib.build_geojson(
+            f"geo:{lat:.6f},{lon:.6f}", lat, lon, filtered, radius,
+            slug=f"map/{lat:.4f},{lon:.4f}",
+            location=location,
+        )
+    except Exception as exc:
+        current_app.logger.error("map_page error: %s", exc)
+        return render_template(
+            "airbnb.html", mode="error", readonly=True,
+            error=f"Could not fetch POIs: {exc}",
+        ), 500
+
+    result = {
+        "lat": lat, "lon": lon, "geojson": geojson,
+        "n_pois": len(filtered), "location": location,
+        "airbnb_url": "", "from_cache": False,
+    }
+    cache_mod.put(cache_key, lat, lon, cats, result)
+
+    return _render_map_page(
+        result, privacy_circle=privacy, display_lat=display_lat, display_lon=display_lon,
+    )

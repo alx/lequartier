@@ -4,6 +4,9 @@
   const RAW_GEOJSON  = JSON.parse(document.getElementById('geojson-data').textContent);
   let centerLat      = {{ lat }};
   let centerLon      = {{ lon }};
+  const PRIVACY_CIRCLE = {{ 'true' if privacy_circle is defined and privacy_circle else 'false' }};
+  const displayLat     = {{ display_lat if display_lat is defined else lat }};
+  const displayLon     = {{ display_lon if display_lon is defined else lon }};
   const AIRBNB_URL        = {{ airbnb_url | tojson }};
   const LISTING_ID        = {{ listing_id | tojson }};
   const LISTING_ID_PREFIX = {{ (listing_id_prefix | default('airbnb')) | tojson }};
@@ -15,14 +18,14 @@
   let map;
   if (existingMap) {
     map = existingMap;
-    map.setView([centerLat, centerLon], 16);
+    map.setView([displayLat, displayLon], 16);
     (window._loadingLayers || []).forEach(l => { try { map.removeLayer(l); } catch(e){} });
     window._loadingLayers = [];
     (window._ringLayers || []).forEach(l => { try { map.removeLayer(l); } catch(e){} });
     window._ringLayers = [];
     if (window._ringLegend) { try { window._ringLegend.remove(); } catch(e){} window._ringLegend = null; }
   } else {
-    map = L.map('map').setView([centerLat, centerLon], 16);
+    map = L.map('map').setView([displayLat, displayLon], 16);
     window._wizardMap = map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
@@ -37,7 +40,7 @@
     { r: 800,  fillOpacity: 0.05 },
     { r: 400,  fillOpacity: 0.09 },
   ].forEach(function(c) {
-    window._ringLayers.push(L.circle([centerLat, centerLon], {
+    window._ringLayers.push(L.circle([displayLat, displayLon], {
       radius: c.r,
       color: '#1a6b3c', weight: 1, opacity: 0.4,
       fillColor: '#1a6b3c', fillOpacity: c.fillOpacity, interactive: false,
@@ -56,18 +59,29 @@
   window._ringLegend = legend;
   legend.addTo(map);
 
-  const homeIcon = L.divIcon({
-    html: '<span class="fa-stack" style="font-size:16px">' +
-            '<i class="fa-solid fa-circle fa-stack-2x" style="color:#b33f43"></i>' +
-            '<i class="fa-solid fa-house fa-stack-1x" style="color:#CCC"></i>' +
-          '</span>',
-    className: '',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-  });
-  let homeMarker = L.marker([centerLat, centerLon], { icon: homeIcon })
-    .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
-    .addTo(map);
+  let homeIcon = null;
+  let homeMarker;
+  if (PRIVACY_CIRCLE) {
+    homeMarker = L.circle([displayLat, displayLon], {
+      radius: 50,
+      color: '#b33f43', weight: 1.5, opacity: 0.6,
+      fillColor: '#b33f43', fillOpacity: 0.15,
+      interactive: false,
+    }).addTo(map);
+  } else {
+    homeIcon = L.divIcon({
+      html: '<span class="fa-stack" style="font-size:16px">' +
+              '<i class="fa-solid fa-circle fa-stack-2x" style="color:#b33f43"></i>' +
+              '<i class="fa-solid fa-house fa-stack-1x" style="color:#CCC"></i>' +
+            '</span>',
+      className: '',
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
+    homeMarker = L.marker([centerLat, centerLon], { icon: homeIcon })
+      .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
+      .addTo(map);
+  }
 
   // Pick-location mode
   let _pickMode = false;
@@ -414,7 +428,7 @@
   };
 
   function updateMarkerOpacity() {
-    homeMarker.setOpacity(1);
+    if (homeMarker.setOpacity) homeMarker.setOpacity(1);
     RAW_GEOJSON.features.forEach(f => {
       const marker = markerMap[f.id];
       if (!marker) return;
