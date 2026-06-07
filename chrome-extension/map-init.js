@@ -31,7 +31,7 @@
     }).addTo(map);
     L.marker([centerLat + c.r / 111320, centerLon], {
       icon: L.divIcon({
-        html: '<span style="display:block;white-space:nowrap;transform:translateX(-50%);font-size:11px;font-weight:600;color:#5b8dd9;text-shadow:0 0 3px rgba(255,255,255,0.95),0 0 3px rgba(255,255,255,0.95)">' + c.label + '</span>',
+        html: '<div style="transform:translateX(-50%);display:inline-block;background:rgba(255,255,255,0.88);border:1px solid #5b8dd9;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:600;color:#5b8dd9;white-space:nowrap;backdrop-filter:blur(2px)">' + c.label + '</div>',
         className: '', iconSize: [0, 0], iconAnchor: [0, 0],
       }),
       interactive: false,

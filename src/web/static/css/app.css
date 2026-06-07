@@ -386,29 +386,6 @@ textarea { resize: vertical; min-height: 60px; }
 }
 .popup-action-btn:hover { background: #e5e7eb; }
 .popup-remove-btn:hover { background: #fef2f2; border-color: #fca5a5; color: var(--danger); }
-.map-legend {
-  background: rgba(255,255,255,0.88);
-  backdrop-filter: blur(4px);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.3rem 0.6rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  pointer-events: none;
-}
-.map-legend-circle {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1.5px solid #5b8dd9;
-  background: rgba(91,141,217,0.12);
-  flex-shrink: 0;
-}
-
 /* ── Show-more pill (map topright control) ── */
 .show-more-pill {
   pointer-events: auto;

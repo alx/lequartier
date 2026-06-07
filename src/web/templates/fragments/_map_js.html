@@ -48,24 +48,12 @@
     }).addTo(map));
     window._ringLayers.push(L.marker([displayLat + c.r / 111320, displayLon], {
       icon: L.divIcon({
-        html: '<span style="display:block;white-space:nowrap;transform:translateX(-50%);font-size:11px;font-weight:600;color:#5b8dd9;text-shadow:0 0 3px rgba(255,255,255,0.95),0 0 3px rgba(255,255,255,0.95)">' + c.label + '</span>',
+        html: '<div style="transform:translateX(-50%);display:inline-block;background:rgba(255,255,255,0.88);border:1px solid #5b8dd9;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:600;color:#5b8dd9;white-space:nowrap;backdrop-filter:blur(2px)">' + c.label + '</div>',
         className: '', iconSize: [0, 0], iconAnchor: [0, 0],
       }),
       interactive: false,
     }).addTo(map));
   });
-
-  const legend = L.control({ position: 'bottomright' });
-  legend.onAdd = function() {
-    const div = L.DomUtil.create('div', 'map-legend');
-    div.innerHTML =
-      '<span class="map-legend-circle" style="opacity:0.9"></span><span>5 min (400 m)</span>' +
-      '<br><span class="map-legend-circle" style="opacity:0.55"></span><span>10 min (800 m)</span>' +
-      '<br><span class="map-legend-circle" style="opacity:0.35"></span><span>15 min (1.2 km)</span>';
-    return div;
-  };
-  window._ringLegend = legend;
-  legend.addTo(map);
 
   // "Show more locations" pill — toggled after init to hide if no hidden POIs
   let _showingMore = false;
