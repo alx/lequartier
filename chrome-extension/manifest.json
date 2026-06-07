@@ -22,7 +22,12 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["libs/leaflet.js", "libs/leaflet.css", "map-init.js"],
+      "resources": [
+        "libs/leaflet.js", "libs/leaflet.css", "map-init.js",
+        "libs/fontawesome/css/fontawesome.min.css",
+        "libs/fontawesome/css/solid.min.css",
+        "libs/fontawesome/webfonts/fa-solid-900.woff2"
+      ],
       "matches": ["https://www.zillow.com/*"]
     }
   ],

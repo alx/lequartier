@@ -140,6 +140,19 @@ function injectMapContainer(anchor, zillow_id, backendBase) {
   }
 }
 
+// ── Font Awesome asset injection ───────────────────────────────────────────
+
+function injectFontAwesomeAssets() {
+  if (window.__lqFaReady) return;
+  ['libs/fontawesome/css/fontawesome.min.css', 'libs/fontawesome/css/solid.min.css'].forEach(path => {
+    const link = document.createElement('link');
+    link.rel  = 'stylesheet';
+    link.href = chrome.runtime.getURL(path);
+    document.head.appendChild(link);
+  });
+  window.__lqFaReady = true;
+}
+
 // ── Leaflet asset injection ────────────────────────────────────────────────
 
 function injectLeafletAssets() {
@@ -204,6 +217,7 @@ async function run() {
 
   // Placeholder container while we fetch — backendBase unknown yet
   injectMapContainer(anchor, zillow_id, '');
+  injectFontAwesomeAssets();
   await injectLeafletAssets();
 
   const statusEl = document.getElementById(LQ_STATUS_ID);

@@ -31,7 +31,7 @@
     }).addTo(map);
     L.marker([centerLat + c.r / 111320, centerLon], {
       icon: L.divIcon({
-        html: '<div style="transform:translateX(-50%);display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.88);border:1px solid #5b8dd9;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:600;color:#5b8dd9;white-space:nowrap;backdrop-filter:blur(2px)">🚶' + c.label + '</div>',
+        html: '<div style="transform:translateX(-50%);display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.88);border:1px solid #5b8dd9;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:600;color:#5b8dd9;white-space:nowrap;backdrop-filter:blur(2px)"><i class="fa-solid fa-person-walking" style="font-size:10px"></i>' + c.label + '</div>',
         className: '', iconSize: [0, 0], iconAnchor: [0, 0],
       }),
       interactive: false,
@@ -40,8 +40,11 @@
 
   // ── Home marker ───────────────────────────────────────────────────────────
   const homeIcon = L.divIcon({
-    html: '<div style="font-size:20px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">🏠</div>',
-    className: '', iconSize: [24, 24], iconAnchor: [12, 12],
+    html: '<span class="fa-stack" style="font-size:16px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">'
+        + '<i class="fa-solid fa-circle fa-stack-2x" style="color:#b33f43"></i>'
+        + '<i class="fa-solid fa-house fa-stack-1x" style="color:#CCC"></i>'
+        + '</span>',
+    className: '', iconSize: [32, 32], iconAnchor: [16, 16],
   });
   L.marker([centerLat, centerLon], { icon: homeIcon, zIndexOffset: 1000 })
    .bindPopup('<strong>This property</strong>')
@@ -96,7 +99,7 @@
     const lines = [
       `<strong>${p.name || '?'}</strong>`,
       `<span style="color:#6b7280;font-size:0.82em;">${p.icon || ''} ${cat}</span>`,
-      p.rating ? `⭐ ${p.rating.toFixed(1)}${p.user_rating_count ? ` (${p.user_rating_count})` : ''}` : '',
+      p.rating ? `<i class="fa-solid fa-star" style="color:#f59e0b"></i> ${p.rating.toFixed(1)}${p.user_rating_count ? ` (${p.user_rating_count})` : ''}` : '',
       (p.opening_hours && p.opening_hours.raw) ? `🕐 ${p.opening_hours.raw}` : '',
       p.website ? `<a href="${p.website}" target="_blank" rel="noopener" style="font-size:0.8em;">Website ↗</a>` : '',
     ].filter(Boolean).join('<br>');
@@ -110,15 +113,15 @@
   const catBar = document.getElementById('lq-cat-bar');
   if (catBar) {
     Object.entries(layerByCat).forEach(([cat, layer]) => {
-      const count = (geojson.features || []).filter(f => (f.properties || {}).category === cat).length;
-      const icon  = (catMeta[cat] && catMeta[cat].icon) || '';
-      const color = colorFor(cat);
+      const count  = (geojson.features || []).filter(f => (f.properties || {}).category === cat).length;
+      const faIcon = (catMeta[cat] && catMeta[cat].fa_icon) || 'fa-location-dot';
+      const color  = colorFor(cat);
 
       const btn = document.createElement('button');
       btn.className      = 'lq-cat-btn';
       btn.dataset.active = 'true';
       btn.style.setProperty('--lq-cat-color', color);
-      btn.textContent    = `${icon} ${cat} (${count})`;
+      btn.innerHTML = `<i class="fa-solid ${faIcon}"></i> ${cat} (${count})`;
 
       btn.addEventListener('click', () => {
         const active = btn.dataset.active === 'true';
