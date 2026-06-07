@@ -170,17 +170,14 @@
 
   function makeIcon(poi) {
     const color     = catColors[poi.properties.category] || '#6b7280';
-    const faIcon    = catFaIcons[poi.properties.category] || 'fa-location-dot';
     const secondary = secondaryPois.has(poi.id);
-    const fs        = secondary ? 10 : 14;
     const opacity   = secondary ? '0.55' : '1';
     const dark      = darkenHex(color);
     const size      = secondary ? 20 : 28;
+    const fs        = secondary ? 11 : 15;
+    const emoji     = catMeta[poi.properties.category]?.icon || '📍';
     const html =
-      '<span class="fa-stack" style="font-size:' + fs + 'px;opacity:' + opacity + '">' +
-        '<i class="fa-solid fa-circle fa-stack-2x" style="color:' + dark + '"></i>' +
-        '<i class="fa-solid ' + faIcon + ' fa-stack-1x" style="color:#CCC"></i>' +
-      '</span>';
+      '<div style="width:' + size + 'px;height:' + size + 'px;background:' + dark + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;opacity:' + opacity + ';border:1px solid rgba(0,0,0,0.2);">' + emoji + '</div>';
     return L.divIcon({ html, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
   }
 
