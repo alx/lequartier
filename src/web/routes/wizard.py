@@ -660,7 +660,7 @@ def _privacy_offset(lat: float, lon: float) -> tuple[float, float]:
     return lat + dlat, lon + dlon
 
 
-def _render_map_page(r: dict, privacy_circle: bool, display_lat: float, display_lon: float, hide_poi_list: bool = False) -> str:
+def _render_map_page(r: dict, privacy_circle: bool, display_lat: float, display_lon: float, hide_poi_list: bool = False, hide_overlay: bool = False) -> str:
     cfg = poi_engine.get_cfg()
     return render_template(
         "airbnb.html",
@@ -684,6 +684,7 @@ def _render_map_page(r: dict, privacy_circle: bool, display_lat: float, display_
         display_lat=display_lat,
         display_lon=display_lon,
         hide_poi_list=hide_poi_list,
+        hide_overlay=hide_overlay,
     )
 
 
@@ -904,6 +905,7 @@ def map_page():
     radius        = max(100, min(int(request.args.get("radius", 1000)), 5000))
     privacy       = request.args.get("privacy") == "1"
     hide_poi_list = request.args.get("no_pois") == "1"
+    hide_overlay  = request.args.get("no_overlay") == "1"
 
     display_lat, display_lon = _privacy_offset(lat, lon) if privacy else (lat, lon)
 
@@ -919,6 +921,7 @@ def map_page():
             display_lat=display_lat,
             display_lon=display_lon,
             hide_poi_list=hide_poi_list,
+            hide_overlay=hide_overlay,
         )
 
     try:
@@ -949,5 +952,5 @@ def map_page():
 
     return _render_map_page(
         result, privacy_circle=privacy, display_lat=display_lat, display_lon=display_lon,
-        hide_poi_list=hide_poi_list,
+        hide_poi_list=hide_poi_list, hide_overlay=hide_overlay,
     )
