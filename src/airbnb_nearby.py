@@ -205,6 +205,7 @@ class Config:
             result[key] = {
                 "label":        cat.get("label", key.title()),
                 "icon":         cat.get("icon", "📍"),
+                "fa_icon":      cat.get("fa_icon", "fa-location-dot"),
                 "overpass":     overpass_str,
                 "google_types": cat.get("google_types", []),
                 "max":          int(cat.get("max", self.max_per_category)),

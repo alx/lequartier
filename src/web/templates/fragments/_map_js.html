@@ -187,7 +187,9 @@
   const catMeta    = RAW_GEOJSON._meta?.category_meta || {};
   Object.entries(catMeta).forEach(([label, m], i) => {
     catColors[label]  = m.color || PALETTE[i % PALETTE.length];
-    catFaIcons[label] = m.fa_icon || FA_ICON_FALLBACK[label] || 'fa-location-dot';
+    catFaIcons[label] = (m.fa_icon && m.fa_icon !== 'fa-location-dot')
+      ? m.fa_icon
+      : FA_ICON_FALLBACK[label];
   });
 
   function darkenHex(hex, f = 0.8) {
