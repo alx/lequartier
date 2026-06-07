@@ -19,14 +19,14 @@
   }).addTo(map);
 
   // ── Walking-distance rings ────────────────────────────────────────────────
-  const ACCENT = '#1a6b3c';
+  const ACCENT = '#5b8dd9';
   [
-    { r: 1200, fillOpacity: 0.03 },
-    { r: 800,  fillOpacity: 0.05 },
-    { r: 400,  fillOpacity: 0.09 },
+    { r: 1200, fillOpacity: 0.05 },
+    { r: 800,  fillOpacity: 0.09 },
+    { r: 400,  fillOpacity: 0.15 },
   ].forEach(c => {
     L.circle([centerLat, centerLon], {
-      radius: c.r, color: ACCENT, weight: 1, opacity: 0.4,
+      radius: c.r, color: ACCENT, weight: 1.5, opacity: 0.55,
       fillColor: ACCENT, fillOpacity: c.fillOpacity, interactive: false,
     }).addTo(map);
   });
