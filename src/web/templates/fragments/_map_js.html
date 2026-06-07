@@ -61,14 +61,7 @@
 
   let homeIcon = null;
   let homeMarker;
-  if (PRIVACY_CIRCLE) {
-    homeMarker = L.circle([displayLat, displayLon], {
-      radius: 50,
-      color: '#b33f43', weight: 1.5, opacity: 0.6,
-      fillColor: '#b33f43', fillOpacity: 0.15,
-      interactive: false,
-    }).addTo(map);
-  } else {
+  if (!PRIVACY_CIRCLE) {
     homeIcon = L.divIcon({
       html: '<span class="fa-stack" style="font-size:16px">' +
               '<i class="fa-solid fa-circle fa-stack-2x" style="color:#b33f43"></i>' +

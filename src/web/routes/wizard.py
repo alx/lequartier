@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
-import math
 import os
 import random
 import re
@@ -651,16 +649,7 @@ def _active_result() -> dict | None:
     return session.get("active_result")
 
 
-def _privacy_offset(lat: float, lon: float) -> tuple[float, float]:
-    """Return a deterministic ~50 m offset of (lat, lon) for privacy mode."""
-    seed = int(hashlib.md5(f"{lat:.4f},{lon:.4f}".encode()).hexdigest()[:8], 16)
-    angle = (seed % 360) * math.pi / 180
-    dlat = 50 * math.cos(angle) / 111_000
-    dlon = 50 * math.sin(angle) / (111_000 * math.cos(math.radians(lat)))
-    return lat + dlat, lon + dlon
-
-
-def _render_map_page(r: dict, privacy_circle: bool, display_lat: float, display_lon: float, hide_poi_list: bool = False, hide_overlay: bool = False) -> str:
+def _render_map_page(r: dict, privacy_circle: bool, hide_poi_list: bool = False, hide_overlay: bool = False) -> str:
     cfg = poi_engine.get_cfg()
     return render_template(
         "airbnb.html",
@@ -681,8 +670,6 @@ def _render_map_page(r: dict, privacy_circle: bool, display_lat: float, display_
         listing_title=r.get("listing_title"),
         listing_photo=None,
         privacy_circle=privacy_circle,
-        display_lat=display_lat,
-        display_lon=display_lon,
         hide_poi_list=hide_poi_list,
         hide_overlay=hide_overlay,
     )
@@ -907,8 +894,6 @@ def map_page():
     hide_poi_list = request.args.get("no_pois") == "1"
     hide_overlay  = request.args.get("no_overlay") == "1"
 
-    display_lat, display_lon = _privacy_offset(lat, lon) if privacy else (lat, lon)
-
     cache_key = f"map/{lat:.4f},{lon:.4f}"
     cfg  = poi_engine.get_cfg()
     cats = cfg.default_categories if cfg else []
@@ -918,8 +903,6 @@ def map_page():
         return _render_map_page(
             {**cached, "from_cache": True},
             privacy_circle=privacy,
-            display_lat=display_lat,
-            display_lon=display_lon,
             hide_poi_list=hide_poi_list,
             hide_overlay=hide_overlay,
         )
@@ -951,6 +934,6 @@ def map_page():
     cache_mod.put(cache_key, lat, lon, cats, result)
 
     return _render_map_page(
-        result, privacy_circle=privacy, display_lat=display_lat, display_lon=display_lon,
+        result, privacy_circle=privacy,
         hide_poi_list=hide_poi_list, hide_overlay=hide_overlay,
     )
