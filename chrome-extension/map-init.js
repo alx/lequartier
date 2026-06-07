@@ -21,13 +21,20 @@
   // ── Walking-distance rings ────────────────────────────────────────────────
   const ACCENT = '#5b8dd9';
   [
-    { r: 1200, fillOpacity: 0.05 },
-    { r: 800,  fillOpacity: 0.09 },
-    { r: 400,  fillOpacity: 0.15 },
+    { r: 1200, fillOpacity: 0.05, label: '15min' },
+    { r: 800,  fillOpacity: 0.09, label: '10min' },
+    { r: 400,  fillOpacity: 0.15, label: '5min'  },
   ].forEach(c => {
     L.circle([centerLat, centerLon], {
       radius: c.r, color: ACCENT, weight: 1.5, opacity: 0.55,
       fillColor: ACCENT, fillOpacity: c.fillOpacity, interactive: false,
+    }).addTo(map);
+    L.marker([centerLat + c.r / 111320, centerLon], {
+      icon: L.divIcon({
+        html: '<span style="display:block;white-space:nowrap;transform:translateX(-50%);font-size:11px;font-weight:600;color:#5b8dd9;text-shadow:0 0 3px rgba(255,255,255,0.95),0 0 3px rgba(255,255,255,0.95)">' + c.label + '</span>',
+        className: '', iconSize: [0, 0], iconAnchor: [0, 0],
+      }),
+      interactive: false,
     }).addTo(map);
   });
 

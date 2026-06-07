@@ -37,14 +37,21 @@
   // Walking-distance rings
   window._ringLayers = window._ringLayers || [];
   [
-    { r: 1200, fillOpacity: 0.05 },
-    { r: 800,  fillOpacity: 0.09 },
-    { r: 400,  fillOpacity: 0.15 },
+    { r: 1200, fillOpacity: 0.05, label: '15min' },
+    { r: 800,  fillOpacity: 0.09, label: '10min' },
+    { r: 400,  fillOpacity: 0.15, label: '5min'  },
   ].forEach(function(c) {
     window._ringLayers.push(L.circle([displayLat, displayLon], {
       radius: c.r,
       color: '#5b8dd9', weight: 1.5, opacity: 0.55,
       fillColor: '#5b8dd9', fillOpacity: c.fillOpacity, interactive: false,
+    }).addTo(map));
+    window._ringLayers.push(L.marker([displayLat + c.r / 111320, displayLon], {
+      icon: L.divIcon({
+        html: '<span style="display:block;white-space:nowrap;transform:translateX(-50%);font-size:11px;font-weight:600;color:#5b8dd9;text-shadow:0 0 3px rgba(255,255,255,0.95),0 0 3px rgba(255,255,255,0.95)">' + c.label + '</span>',
+        className: '', iconSize: [0, 0], iconAnchor: [0, 0],
+      }),
+      interactive: false,
     }).addTo(map));
   });
 
