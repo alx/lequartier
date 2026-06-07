@@ -204,18 +204,12 @@
     const dark      = darkenHex(color);
     const sz        = secondary ? 22 : 30;
     const iconFs    = secondary ? 9 : 13;
-    const tailW     = secondary ? 5 : 7;
-    const tailH     = secondary ? 6 : 9;
     const faClass   = catFaIcons[poi.properties.category] || 'fa-location-dot';
     const html =
-      '<div style="display:flex;flex-direction:column;align-items:center;opacity:' + opacity + ';">' +
-      '<div style="width:' + sz + 'px;height:' + sz + 'px;background:' + dark + ';border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.32);border:1.5px solid rgba(255,255,255,0.35);">' +
+      '<div style="width:' + sz + 'px;height:' + sz + 'px;background:' + dark + ';border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.32);border:1.5px solid rgba(255,255,255,0.35);opacity:' + opacity + ';">' +
       '<i class="fa-solid ' + faClass + '" style="color:#fff;font-size:' + iconFs + 'px;"></i>' +
-      '</div>' +
-      '<div style="width:0;height:0;border-left:' + tailW + 'px solid transparent;border-right:' + tailW + 'px solid transparent;border-top:' + tailH + 'px solid ' + dark + ';margin-top:-1px;"></div>' +
       '</div>';
-    const totalH = sz + tailH;
-    return L.divIcon({ html, className: '', iconSize: [sz, totalH], iconAnchor: [sz / 2, totalH] });
+    return L.divIcon({ html, className: '', iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2] });
   }
 
   function popupHtml(feature) {
