@@ -16,11 +16,13 @@
     {% endif %}
     <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.35rem;">
       {% if location.get("neighbourhood") or location.get("city") %}
-      <span style="font-size:0.78rem; color:var(--text-muted);">📍 {{ location.get("neighbourhood", "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ location.get("city", "") }}</span>
+      <span style="font-size:0.78rem; color:var(--text-muted);">📍 {{ (location.get("neighbourhood") or "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ (location.get("city") or "") }}</span>
       {% endif %}
+      {% if airbnb_url and 'airbnb.com' in airbnb_url %}
       <a href="{{ airbnb_url }}" target="_blank" rel="noopener"
          style="font-size:0.78rem; color:var(--text-muted); text-decoration:none; white-space:nowrap; margin-left:auto;"
          onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb ↗</a>
+      {% endif %}
     </div>
     <div id="publish-area" style="{{ 'display:none' if readonly else '' }}">
       {% if not readonly %}

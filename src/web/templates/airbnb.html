@@ -20,7 +20,7 @@
 {% block og_description %}
   {%- if mode == 'map' -%}
     {%- if location and (location.get('neighbourhood') or location.get('city')) -%}
-      {{ location.get('neighbourhood', '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ location.get('city', '') }} — neighbourhood map with {{ n_pois }} places
+      {{ (location.get('neighbourhood') or '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ (location.get('city') or '') }} — neighbourhood map with {{ n_pois }} places
     {%- else -%}
       Airbnb {{ listing_id }} — neighbourhood map with {{ n_pois }} places
     {%- endif -%}
@@ -96,11 +96,13 @@
     {% endif %}
     <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.35rem;">
       {% if location.get('neighbourhood') or location.get('city') %}
-      <span style="font-size:0.78rem; color:var(--text-muted);">📍 {{ location.get('neighbourhood', '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ location.get('city', '') }}</span>
+      <span style="font-size:0.78rem; color:var(--text-muted);">📍 {{ (location.get('neighbourhood') or '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ (location.get('city') or '') }}</span>
       {% endif %}
+      {% if airbnb_url and 'airbnb.com' in airbnb_url %}
       <a href="{{ airbnb_url }}" target="_blank" rel="noopener"
          style="font-size:0.78rem; color:var(--text-muted); text-decoration:none; white-space:nowrap; margin-left:auto;"
          onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb ↗</a>
+      {% endif %}
     </div>
     {% if not readonly %}
     <div id="publish-area" style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
@@ -119,6 +121,7 @@
     {% endif %}
   </div>
 
+  {% if not hide_poi_list %}
   <div class="overlay-card scrollable">
     <div id="poi-list-wrapper">
       <div class="block-label" style="margin-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between;">
@@ -128,6 +131,7 @@
       <div class="poi-list" id="poi-list"></div>
     </div>
   </div>
+  {% endif %}
 </div>
 {% endif %}{# end if not embed #}
 

@@ -126,6 +126,7 @@ def create_app(config: dict | None = None) -> Flask:
             "in_git_repo": bool(commit_hash),
             "categories": cfg.categories if cfg else {},
             "ga_measurement_id": app.config.get("GA_MEASUREMENT_ID", ""),
+            "debug_mode": bool(os.environ.get("FLASK_DEBUG")),
         }
 
     from .routes.wizard import wizard

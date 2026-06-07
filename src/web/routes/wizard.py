@@ -660,7 +660,7 @@ def _privacy_offset(lat: float, lon: float) -> tuple[float, float]:
     return lat + dlat, lon + dlon
 
 
-def _render_map_page(r: dict, privacy_circle: bool, display_lat: float, display_lon: float) -> str:
+def _render_map_page(r: dict, privacy_circle: bool, display_lat: float, display_lon: float, hide_poi_list: bool = False) -> str:
     cfg = poi_engine.get_cfg()
     return render_template(
         "airbnb.html",
@@ -683,6 +683,7 @@ def _render_map_page(r: dict, privacy_circle: bool, display_lat: float, display_
         privacy_circle=privacy_circle,
         display_lat=display_lat,
         display_lon=display_lon,
+        hide_poi_list=hide_poi_list,
     )
 
 
@@ -900,8 +901,9 @@ def map_page():
             error="lat must be in [-90, 90] and lon in [-180, 180].",
         ), 400
 
-    radius  = max(100, min(int(request.args.get("radius", 1000)), 5000))
-    privacy = request.args.get("privacy") == "1"
+    radius        = max(100, min(int(request.args.get("radius", 1000)), 5000))
+    privacy       = request.args.get("privacy") == "1"
+    hide_poi_list = request.args.get("no_pois") == "1"
 
     display_lat, display_lon = _privacy_offset(lat, lon) if privacy else (lat, lon)
 
@@ -916,6 +918,7 @@ def map_page():
             privacy_circle=privacy,
             display_lat=display_lat,
             display_lon=display_lon,
+            hide_poi_list=hide_poi_list,
         )
 
     try:
@@ -946,4 +949,5 @@ def map_page():
 
     return _render_map_page(
         result, privacy_circle=privacy, display_lat=display_lat, display_lon=display_lon,
+        hide_poi_list=hide_poi_list,
     )

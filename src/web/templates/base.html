@@ -39,15 +39,15 @@
     {% block content %}{% endblock %}
   </main>
 
-  {% if commit_short %}
   <footer class="site-footer">
-    <span class="footer-label">Le Quartier</span>
+    <a href="https://lequartier.girard-davila.net" class="footer-label" style="text-decoration:none;">Le Quartier</a>
+    {% if debug_mode and commit_short %}
     <span class="footer-sep">·</span>
     <a href="{{ github_commit_url }}" target="_blank" rel="noopener" class="footer-commit">{{ commit_short }}</a>
     <span class="footer-sep">·</span>
     <a href="/cache">⚡ cache</a>
+    {% endif %}
   </footer>
-  {% endif %}
 
   {% block extra_js %}{% endblock %}
 </body>
