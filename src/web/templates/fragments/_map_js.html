@@ -65,11 +65,13 @@
   const showMoreCtrl = L.control({ position: 'topright' });
   showMoreCtrl.onAdd = function() {
     const div = L.DomUtil.create('div', 'show-more-pill');
-    div.innerHTML = '<button type="button">Show more locations…</button>';
+    div.innerHTML = '<button type="button" style="display:flex;align-items:center;gap:5px;">' +
+                    '<span class="pill-markers" style="display:flex;align-items:center;gap:3px;"></span>' +
+                    '<span class="pill-label">Show more locations…</span></button>';
     L.DomEvent.disableClickPropagation(div);
     div.querySelector('button').addEventListener('click', function() {
       _showingMore = !_showingMore;
-      this.textContent = _showingMore ? 'Show fewer locations' : 'Show more locations…';
+      this.querySelector('.pill-label').textContent = _showingMore ? 'Show fewer locations' : 'Show more locations…';
       RAW_GEOJSON.features.forEach(function(f) {
         if (DEFAULT_VISIBLE_CATS.has(f.properties.category)) return;
         if (READONLY && secondaryPois.has(f.id)) return;
@@ -590,6 +592,27 @@
     if (!hasHidden) {
       const c = showMoreCtrl.getContainer();
       if (c) c.style.display = 'none';
+    } else {
+      const pillMarkersEl = showMoreCtrl.getContainer()?.querySelector('.pill-markers');
+      if (pillMarkersEl) {
+        const hiddenCats = [...new Set(
+          RAW_GEOJSON.features
+            .filter(f => !DEFAULT_VISIBLE_CATS.has(f.properties.category) && catColors[f.properties.category])
+            .map(f => f.properties.category)
+        )];
+        const previewCats = hiddenCats.slice(0, 2);
+        let html = previewCats.map(function(cat) {
+          const dark = darkenHex(catColors[cat] || '#6b7280');
+          const fa = catFaIcons[cat] || 'fa-location-dot';
+          return '<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:' + dark + ';border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);border:1.5px solid rgba(255,255,255,0.4);">' +
+                 '<i class="fa-solid ' + fa + '" style="color:#fff;font-size:7px;line-height:1;"></i></span>';
+        }).join('');
+        if (hiddenCats.length > 2) {
+          html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:#9ca3af;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);border:1.5px solid rgba(255,255,255,0.4);">' +
+                  '<i class="fa-solid fa-ellipsis" style="color:#fff;font-size:7px;line-height:1;"></i></span>';
+        }
+        pillMarkersEl.innerHTML = html;
+      }
     }
   }, 50);
 })();
