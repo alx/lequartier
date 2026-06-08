@@ -10,3 +10,4 @@ cache/
 logs/
 gunicorn.pid
 .playwright-mcp/
+extensions/node_modules/

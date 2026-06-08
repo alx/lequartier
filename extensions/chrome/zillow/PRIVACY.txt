@@ -1,0 +1,96 @@
+PRIVACY POLICY
+Le Quartier for Zillow - Chrome Extension
+Last updated: June 8, 2026
+Contact: girard.davila@gmail.com
+
+------------------------------------------------------------------------
+
+OVERVIEW
+
+Le Quartier for Zillow is a browser extension that displays a
+neighbourhood points-of-interest (POI) map alongside Zillow property
+listing pages. This policy explains what data the extension reads,
+what it transmits, and to whom.
+
+------------------------------------------------------------------------
+
+DATA COLLECTED AND TRANSMITTED
+
+When you visit a Zillow property listing page, the extension reads the
+following data from the page in order to display the map:
+
+  - Zillow property identifier (extracted from the page URL path)
+  - Property latitude and longitude (read from structured data already
+    embedded in the Zillow page, such as JSON-LD or Next.js state)
+
+These two values are sent as query parameters to the Le Quartier
+backend server in a single HTTP request:
+
+  GET /api/nearby?lat=<latitude>&lon=<longitude>&zillow_id=<id>
+
+The backend URL defaults to http://localhost:5010 and can be changed
+by the user through the extension popup.
+
+No other data is collected, transmitted, or stored by this extension.
+
+------------------------------------------------------------------------
+
+WHAT IS NOT COLLECTED
+
+This extension does NOT collect or transmit:
+
+  - Your name, email address, or any account credentials
+  - Device identifiers, IP address, or browser fingerprint
+  - Browsing history outside of zillow.com/homedetails/* pages
+  - Analytics, telemetry, or crash reports
+  - Advertising identifiers or tracking pixels
+  - Any data after the POI response is received
+
+------------------------------------------------------------------------
+
+DATA STORAGE
+
+The extension uses Chrome sync storage exclusively to persist one
+user-configurable setting: the backend server URL. This single string
+value is synced by Chrome across your signed-in devices in the same
+way any Chrome extension preference is stored. No other data is
+written to local or sync storage.
+
+------------------------------------------------------------------------
+
+THIRD-PARTY SERVICES
+
+1. Le Quartier Backend Server
+   The extension sends property coordinates and Zillow ID to a
+   configurable backend (default: http://localhost:5010; production
+   instance: https://lequartier.girard-davila.net). The backend
+   returns GeoJSON POI data. Users running the backend locally control
+   their own data entirely. Refer to the server's own privacy
+   documentation for hosted deployments.
+
+2. OpenStreetMap Tile Servers
+   The interactive map renders tiles fetched directly by the Leaflet
+   library from https://{s}.tile.openstreetmap.org/. This causes the
+   browser to make standard tile requests to OpenStreetMap
+   infrastructure. OpenStreetMap's own privacy policy applies:
+   https://wiki.osmfoundation.org/wiki/Privacy_Policy
+
+------------------------------------------------------------------------
+
+USER RIGHTS AND CONTROLS
+
+  - You may change or remove the backend URL at any time via the
+    extension popup.
+  - Uninstalling the extension removes all stored preferences and
+    stops all data transmission immediately.
+  - No account registration is required; the extension holds no
+    user identity data to delete or export.
+
+------------------------------------------------------------------------
+
+CONTACT
+
+For questions or concerns about this privacy policy, contact:
+  girard.davila@gmail.com
+
+------------------------------------------------------------------------

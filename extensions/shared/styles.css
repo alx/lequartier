@@ -1,6 +1,6 @@
-/* All selectors scoped to #lq-zillow-map-root to avoid Zillow style collisions */
+/* All selectors scoped to #lq-map-root to avoid host-page style collisions */
 
-#lq-zillow-map-root {
+#lq-map-root {
   margin: 20px 0 24px;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 14px;

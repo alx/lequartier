@@ -58,6 +58,50 @@ console.log(`  OUT : ${outFile}`);
       console.log('  No Leaflet tiles detected — screenshotting as-is');
     }
 
+    // Inject "🌳🏠 Le Quartier" title overlay
+    await page.evaluate(() => {
+      const container = document.createElement('div');
+      container.style.cssText = `
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        pointer-events: none;
+        font-family: system-ui, -apple-system, sans-serif;
+      `;
+
+      const titleCard = document.createElement('div');
+      titleCard.style.cssText = `
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 20px 45px;
+        border-radius: 100px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+        border: 1px solid rgba(255,255,255,0.4);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      `;
+
+      titleCard.innerHTML = `
+        <span style="font-size: 52px; line-height: 1;">🌳🏠</span>
+        <h1 style="
+          margin: 0;
+          font-size: 72px;
+          font-weight: 800;
+          color: #1a6b3c;
+          letter-spacing: -0.04em;
+          line-height: 1;
+        ">Le Quartier</h1>
+      `;
+
+      container.appendChild(titleCard);
+      document.body.appendChild(container);
+    });
+
     await page.screenshot({ path: outFile, type: 'jpeg', quality: 90 });
     console.log('  Saved');
 

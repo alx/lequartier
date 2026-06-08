@@ -11,8 +11,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       const url = new URL('/api/nearby', base);
       url.searchParams.set('lat', message.lat);
       url.searchParams.set('lon', message.lon);
-      if (message.radius)    url.searchParams.set('radius', message.radius);
+      if (message.radius)    url.searchParams.set('radius',    message.radius);
       if (message.zillow_id) url.searchParams.set('zillow_id', message.zillow_id);
+      if (message.airbnb_id) url.searchParams.set('airbnb_id', message.airbnb_id);
 
       const resp = await fetch(url.toString());
       if (!resp.ok) {

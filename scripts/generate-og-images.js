@@ -109,7 +109,57 @@ if(pts.length>1){
 </html>`;
 }
 
-async function screenshotListing(id) {
+async function checkImageValid(url) {
+  if (!url) return false;
+  try {
+    const resp = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+    return resp.ok;
+  } catch (err) {
+    return false;
+  }
+}
+
+async function fetchFreshPhotoUrl(browser, airbnbUrl) {
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+  });
+  const page = await context.newPage();
+  try {
+    // networkidle is slower but essential to bypass Airbnb's placeholder injection for bots
+    await page.goto(airbnbUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    
+    let photoUrl = await page.evaluate(() => {
+      const meta = document.querySelector('meta[property="og:image"]');
+      return meta ? meta.getAttribute('content') : null;
+    });
+
+    // Known Airbnb "Dome" placeholder returned to bots
+    const PLACEHOLDER_UUID = 'fe7217ff-0b24-438d-880d-b94722c75bf5';
+    
+    if (!photoUrl || photoUrl.includes(PLACEHOLDER_UUID)) {
+      console.log('    [fetch] og:image is placeholder or missing, trying DOM fallback...');
+      photoUrl = await page.evaluate(() => {
+        // Find the first large muscache image on the page
+        const imgs = Array.from(document.querySelectorAll('img[src*="muscache.com"]'));
+        const listingImg = imgs.find(img => {
+          const src = img.src.toLowerCase();
+          return src.includes('/original/') || src.includes('/pictures/');
+        });
+        return listingImg ? listingImg.src : null;
+      });
+    }
+
+    return photoUrl;
+  } catch (err) {
+    console.error(`    [fetch] Warning: failed to fetch fresh photo from ${airbnbUrl}: ${err.message}`);
+    return null;
+  } finally {
+    await page.close();
+    await context.close();
+  }
+}
+
+async function screenshotListing(id, browser) {
   const jsonPath = path.join(CURATED_DIR, `${id}.json`);
   if (!fs.existsSync(jsonPath)) {
     throw new Error(`curated JSON not found: ${jsonPath}`);
@@ -122,45 +172,109 @@ async function screenshotListing(id) {
     throw new Error(`failed to parse JSON: ${e.message}`);
   }
 
-  const primaryCount = (data.result?.geojson?.features || [])
-    .filter(f => f.properties?.status === 'primary').length;
-  if (!primaryCount) {
-    console.warn(`  [${id}] no primary POIs — map will be centered at zoom 15`);
-  }
-
-  const html    = buildHtml(data);
-  const tmpFile = path.join(os.tmpdir(), `og-${id}.html`);
-  fs.writeFileSync(tmpFile, html, 'utf8');
-
-  const browser = await chromium.launch();
-  const page    = await browser.newPage();
+  let tmpFile = null;
 
   try {
-    await page.setViewportSize({ width: OG_W, height: OG_H });
-    await page.goto(`file://${tmpFile}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    // 1. Pre-flight photo verification
+    let photoUrl = data.result?.listing_photo;
+    let isValid  = await checkImageValid(photoUrl);
 
-    // Wait for cover image to finish loading or error out
-    await page.waitForFunction(() => {
-      const img = document.getElementById('cover-img');
-      if (!img) return true;
-      return img.complete || document.getElementById('fallback').style.display !== 'none';
-    }, { timeout: 15_000 }).catch(() => {});
-
-    // Wait for Leaflet tiles to render
-    try {
-      await page.waitForSelector('.leaflet-tile-loaded', { timeout: 10_000 });
-      await page.waitForTimeout(TILE_EXTRA);
-    } catch {
-      console.warn(`  [${id}] no Leaflet tiles detected — screenshotting as-is`);
-      await page.waitForTimeout(2_000);
+    // If invalid OR known placeholder, fetch fresh
+    const PLACEHOLDER_UUID = 'fe7217ff-0b24-438d-880d-b94722c75bf5';
+    if ((!isValid || (photoUrl && photoUrl.includes(PLACEHOLDER_UUID))) && data.result?.airbnb_url) {
+      console.log(`  [${id}] photo missing, invalid, or placeholder, fetching fresh URL...`);
+      const freshUrl = await fetchFreshPhotoUrl(browser, data.result.airbnb_url);
+      if (freshUrl) {
+        console.log(`  [${id}] found fresh photo: ${freshUrl.split('?')[0]}...`);
+        data.result.listing_photo = freshUrl;
+      }
     }
 
-    const outFile = path.join(OUT_DIR, `${id}.png`);
-    await page.screenshot({ path: outFile, type: 'png' });
-    console.log(`  saved → ${path.relative(process.cwd(), outFile)}`);
+    const primaryCount = (data.result?.geojson?.features || [])
+      .filter(f => f.properties?.status === 'primary').length;
+    if (!primaryCount) {
+      console.warn(`  [${id}] no primary POIs — map will be centered at zoom 15`);
+    }
+
+    const html = buildHtml(data);
+    tmpFile = path.join(os.tmpdir(), `og-${id}.html`);
+    fs.writeFileSync(tmpFile, html, 'utf8');
+
+    const page = await browser.newPage();
+    try {
+      await page.setViewportSize({ width: OG_W, height: OG_H });
+      await page.goto(`file://${tmpFile}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+
+      // Wait for cover image to finish loading or error out
+      await page.waitForFunction(() => {
+        const img = document.getElementById('cover-img');
+        if (!img) return true;
+        return img.complete || document.getElementById('fallback').style.display !== 'none';
+      }, { timeout: 15_000 }).catch(() => {});
+
+      // Wait for Leaflet tiles to render
+      try {
+        await page.waitForSelector('.leaflet-tile-loaded', { timeout: 10_000 });
+        await page.waitForTimeout(TILE_EXTRA);
+      } catch {
+        console.warn(`  [${id}] no Leaflet tiles detected — screenshotting as-is`);
+        await page.waitForTimeout(2_000);
+      }
+
+      // Inject "🌳🏠 Le Quartier" title overlay
+      await page.evaluate(() => {
+        const container = document.createElement('div');
+        container.style.cssText = `
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          pointer-events: none;
+          font-family: system-ui, -apple-system, sans-serif;
+        `;
+
+        const titleCard = document.createElement('div');
+        titleCard.style.cssText = `
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          padding: 20px 45px;
+          border-radius: 100px;
+          box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.4);
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        `;
+
+        titleCard.innerHTML = `
+          <span style="font-size: 52px; line-height: 1;">🌳🏠</span>
+          <h1 style="
+            margin: 0;
+            font-size: 72px;
+            font-weight: 800;
+            color: #1a6b3c;
+            letter-spacing: -0.04em;
+            line-height: 1;
+          ">Le Quartier</h1>
+        `;
+
+        container.appendChild(titleCard);
+        document.body.appendChild(container);
+      });
+
+      const outFile = path.join(OUT_DIR, `${id}.png`);
+      await page.screenshot({ path: outFile, type: 'png' });
+      console.log(`  saved → ${path.relative(process.cwd(), outFile)}`);
+    } finally {
+      await page.close();
+    }
   } finally {
-    await browser.close();
-    try { fs.unlinkSync(tmpFile); } catch {}
+    if (tmpFile) {
+      try { fs.unlinkSync(tmpFile); } catch {}
+    }
   }
 }
 
@@ -180,13 +294,20 @@ async function screenshotListing(id) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   console.log(`Generating OG images for: ${ids.join(', ')}\n`);
 
-  for (const id of ids) {
-    console.log(`[${id}]`);
-    try {
-      await screenshotListing(id);
-    } catch (err) {
-      console.error(`  FAILED: ${err.message}`);
-      process.exitCode = 1;
+  const browser = await chromium.launch({
+    args: ['--disable-blink-features=AutomationControlled']
+  });
+  try {
+    for (const id of ids) {
+      console.log(`[${id}]`);
+      try {
+        await screenshotListing(id, browser);
+      } catch (err) {
+        console.error(`  FAILED: ${err.message}`);
+        process.exitCode = 1;
+      }
     }
+  } finally {
+    await browser.close();
   }
 })();

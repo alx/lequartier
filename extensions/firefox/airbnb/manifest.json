@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Le Quartier for Airbnb",
+  "version": "0.2.0",
+  "description": "Neighbourhood POI map on Airbnb listing pages",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.airbnb.com/*",
+    "https://www.airbnb.fr/*",
+    "http://localhost:5010/*",
+    "https://lequartier.girard-davila.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.airbnb.com/rooms/*",
+        "https://www.airbnb.fr/rooms/*"
+      ],
+      "js": ["airbnb.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "libs/leaflet.js", "libs/leaflet.css", "map-init.js",
+        "libs/fontawesome/css/fontawesome.min.css",
+        "libs/fontawesome/css/solid.min.css",
+        "libs/fontawesome/webfonts/fa-solid-900.woff2"
+      ],
+      "matches": ["https://www.airbnb.com/*", "https://www.airbnb.fr/*"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Le Quartier"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "lequartier-airbnb@girard-davila.net",
+      "strict_min_version": "109.0"
+    }
+  }
+}

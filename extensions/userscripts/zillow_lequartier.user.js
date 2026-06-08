@@ -1,16 +1,15 @@
 // ==UserScript==
-// @name         Le Quartier – Airbnb Map
+// @name         Le Quartier – Zillow Map
 // @namespace    https://girard-davila.net
-// @version      2.1.0
-// @description  Embeds a neighbourhood POI map on Airbnb listing pages
+// @version      1.0.0
+// @description  Embeds a neighbourhood POI map on Zillow property listings
 // @author       Alexandre Girard-Davila
-// @match        https://www.airbnb.com/rooms/*
-// @match        https://www.airbnb.fr/rooms/*
+// @match        https://www.zillow.com/homedetails/*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
-// @resource     leafletJS   https://unpkg.com/leaflet@1.9.4/dist/leaflet.js
+// @require      https://unpkg.com/leaflet@1.9.4/dist/leaflet.js
 // @resource     leafletCSS  https://unpkg.com/leaflet@1.9.4/dist/leaflet.css
 // @resource     faCSS       https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/fontawesome.min.css
 // @resource     faSolidCSS  https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/solid.min.css
@@ -24,15 +23,12 @@
   const LQ_ROOT_ID   = 'lq-map-root';
   const LQ_STATUS_ID = 'lq-status';
 
-  // ── Load Leaflet (strip sourceMappingURL comment to avoid DevTools 404) ──
-  // (0, eval) is an indirect eval that runs in the global scope, same as @require
-  ;(0, eval)(GM_getResourceText('leafletJS').replace(/\/\/# sourceMappingURL=\S+[ \t]*$/m, ''));
-
   // ── Inject CSS assets ────────────────────────────────────────────────────
   GM_addStyle(GM_getResourceText('leafletCSS'));
   GM_addStyle(GM_getResourceText('faCSS'));
   GM_addStyle(GM_getResourceText('faSolidCSS'));
 
+  // Widget styles (equivalent to shared/styles.css)
   GM_addStyle(`
     #lq-map-root {
       margin: 20px 0 24px;
@@ -77,14 +73,14 @@
     #lq-map-el .leaflet-top, #lq-map-el .leaflet-bottom { z-index: 1000; }
   `);
 
-  // ── Config ────────────────────────────────────────────────────────────────
+  // ── Config (backend URL stored via GM_getValue/GM_setValue) ───────────────
   function getBackendUrl() {
     return GM_getValue('backendUrl', DEFAULT_BACKEND);
   }
 
   // ── Listing ID + coord extraction ─────────────────────────────────────────
   function extractListingId() {
-    const m = window.location.pathname.match(/\/rooms\/(\d+)/);
+    const m = window.location.pathname.match(/\/homedetails\/(.+?)\/?$/);
     return m ? m[1] : null;
   }
 
@@ -129,25 +125,13 @@
       const m = re.exec(text);
       if (m) { const lat = parseFloat(m[1]), lon = parseFloat(m[2]); if (isValidCoord(lat, lon)) return { lat, lon }; }
     }
-
-    const el = document.querySelector('[data-lat][data-lng]');
-    if (el) {
-      const lat = parseFloat(el.dataset.lat), lon = parseFloat(el.dataset.lng);
-      if (isValidCoord(lat, lon)) return { lat, lon };
-    }
-
     return null;
   }
 
   // ── Anchor detection ──────────────────────────────────────────────────────
   function findAnchor() {
-    const section =
-      document.querySelector('[data-section-id="LOCATION_DEFAULT"]') ||
-      document.querySelector('[data-plugin-in-point-id="LOCATION_DEFAULT"]');
-    if (section) return section;
     for (const h2 of document.querySelectorAll('h2')) {
-      const text = h2.textContent.trim();
-      if (text === "Where you'll be" || text === 'Où vous serez') return h2;
+      if (h2.textContent.trimStart().startsWith('Neighborhood:')) return h2;
     }
     return null;
   }
@@ -170,7 +154,7 @@
     if (document.getElementById(LQ_ROOT_ID)) return;
     const wrapper = document.createElement('div');
     wrapper.id = LQ_ROOT_ID;
-    const viewUrl = `${backendBase}/airbnb/${listing_id}`;
+    const viewUrl = `${backendBase}/zillow/${listing_id}`;
     wrapper.innerHTML = `
       <div id="lq-map-header">
         <span>🏘 Nearby Places (Le Quartier)</span>
@@ -182,63 +166,8 @@
       </div>
       <div id="lq-cat-bar"></div>
     `;
-    const section = anchor.closest('section, [data-section-id], [data-plugin-in-point-id]') || anchor.parentElement;
+    const section = anchor.closest('section, article, [data-testid]') || anchor.parentElement;
     (section?.parentElement ? section : anchor).after(wrapper);
-  }
-
-  // ── Title link ────────────────────────────────────────────────────────────
-  function findShareButton() {
-    for (const btn of document.querySelectorAll('button')) {
-      const text = (btn.innerText || btn.textContent || '').trim();
-      if (/partager|share/i.test(text)) return btn.parentElement || btn;
-    }
-    return null;
-  }
-
-  function waitForShareButton(timeoutMs = 10000) {
-    return new Promise(resolve => {
-      const found = findShareButton();
-      if (found) { resolve(found); return; }
-      const timer = setTimeout(() => { obs.disconnect(); resolve(null); }, timeoutMs);
-      const obs = new MutationObserver(() => {
-        const el = findShareButton();
-        if (el) { clearTimeout(timer); obs.disconnect(); resolve(el); }
-      });
-      obs.observe(document.body, { childList: true, subtree: true });
-    });
-  }
-
-  async function injectTitleLink() {
-    if (document.getElementById('lq-title-link')) return;
-    const listing_id = extractListingId();
-    if (!listing_id) return;
-
-    const shareContainer = await waitForShareButton();
-    if (!shareContainer || document.getElementById('lq-title-link')) return;
-
-    const externalUrl = `${getBackendUrl()}/airbnb/${listing_id}`;
-
-    const wrapper = document.createElement('div');
-    wrapper.id = 'lq-title-link';
-    wrapper.style.cssText = 'display:inline-flex;align-items:center;';
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.title = 'Le Quartier';
-    btn.className = 'b1iktwwp cn6bjj0 dir dir-ltr';
-    btn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:transparent;border:none;cursor:pointer;font-size:14px;font-weight:600;color:inherit;';
-    btn.innerHTML = '<span aria-hidden="true">🌳🏠</span><span style="text-decoration:underline;">Le Quartier</span>';
-    btn.addEventListener('click', () => {
-      const mapEl = document.getElementById(LQ_ROOT_ID);
-      if (mapEl) {
-        mapEl.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        window.open(externalUrl, '_blank', 'noopener,noreferrer');
-      }
-    });
-
-    wrapper.appendChild(btn);
-    shareContainer.insertAdjacentElement('beforebegin', wrapper);
   }
 
   // ── Map rendering (inline equivalent of shared/map-init.js) ───────────────
@@ -279,7 +208,7 @@
         className: '', iconSize: [32, 32], iconAnchor: [16, 16],
       }),
       zIndexOffset: 1000,
-    }).bindPopup('<strong>This listing</strong>').addTo(map);
+    }).bindPopup('<strong>This property</strong>').addTo(map);
 
     const PALETTE = ['#16a34a','#2563eb','#f97316','#9333ea','#dc2626',
                      '#0891b2','#ca8a04','#be185d','#15803d','#1d4ed8'];
@@ -357,17 +286,15 @@
     const listing_id = extractListingId();
     if (!listing_id) return;
 
-    injectTitleLink(); // fire-and-forget: appears as soon as Share button is found
-
     const coords = extractCoordinates();
     if (!coords) {
-      console.warn('[LeQuartier] Could not extract coordinates from this Airbnb page.');
+      console.warn('[LeQuartier] Could not extract coordinates from this Zillow page.');
       return;
     }
 
     const anchor = await waitForAnchor();
     if (!anchor) {
-      console.warn('[LeQuartier] Location section not found within timeout.');
+      console.warn('[LeQuartier] Neighborhood section not found within timeout.');
       return;
     }
 
@@ -378,7 +305,10 @@
     if (statusEl) statusEl.textContent = 'Fetching POIs…';
 
     try {
-      const url = new URL(`/airbnb/${listing_id}.geojson`, backendBase);
+      const url = new URL('/api/nearby', backendBase);
+      url.searchParams.set('lat', coords.lat);
+      url.searchParams.set('lon', coords.lon);
+      url.searchParams.set('zillow_id', listing_id);
 
       const resp = await fetch(url.toString());
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -397,14 +327,8 @@
   }
 
   // ── SPA navigation ────────────────────────────────────────────────────────
-  let _activePath = window.location.pathname;
-
   function onNavigate() {
-    const newPath = window.location.pathname;
-    if (newPath === _activePath) return; // ignore query-param-only changes (gallery, modals)
-    _activePath = newPath;
     document.getElementById(LQ_ROOT_ID)?.remove();
-    document.getElementById('lq-title-link')?.remove();
     delete window.__lqRan;
     setTimeout(run, 800);
   }
