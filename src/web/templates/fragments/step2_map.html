@@ -43,19 +43,16 @@
     </div>
   </div>
 
-  <div class="overlay-card" id="show-more-pill-card" style="display:none">
-    <div class="show-more-pill" id="show-more-pill">
-      <button type="button" style="display:flex;align-items:center;gap:5px;">
-        <span class="pill-markers" style="display:flex;align-items:center;gap:3px;"></span>
-        <span class="pill-label">Show more locations…</span>
-      </button>
-    </div>
-  </div>
   <div class="overlay-card scrollable">
     <div id="poi-list-wrapper">
       <div class="block-label" style="margin-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between;">
-        <span>📍 Places{% if not readonly %} <span class="muted" style="font-weight:400; font-size:0.78rem; text-transform:none; letter-spacing:0;">· ● / ○</span>{% endif %}</span>
-        <strong id="poi-count" style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">{{ n_pois }}</strong>
+        <div class="show-more-pill" id="show-more-pill" style="display:none">
+          <button type="button" style="display:flex;align-items:center;gap:3px;background:none;border:none;padding:0;cursor:pointer;font-size:0.78rem;color:var(--text-muted);font-weight:600;">
+            <span class="pill-markers" style="display:flex;align-items:center;gap:3px;"></span>
+            <span class="pill-label">Show more…</span>
+          </button>
+        </div>
+        <strong id="poi-count">{{ n_pois }}</strong>
       </div>
       <div class="poi-list" id="poi-list"></div>
     </div>

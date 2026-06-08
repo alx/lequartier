@@ -24,7 +24,7 @@
     (window._ringLayers || []).forEach(l => { try { map.removeLayer(l); } catch(e){} });
     window._ringLayers = [];
     if (window._ringLegend) { try { window._ringLegend.remove(); } catch(e){} window._ringLegend = null; }
-    // show-more-pill is now an overlay card, no Leaflet control to clean up
+    // show-more-pill is an inline control, no Leaflet control to clean up
   } else {
     map = L.map('map').setView([displayLat, displayLon], 16);
     window._wizardMap = map;
@@ -32,6 +32,10 @@
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | 🌳🏠 <a href="https://lequartier.girard-davila.net">Le Quartier</a>',
       maxZoom: 19,
     }).addTo(map);
+  }
+
+  if (window.innerWidth <= 768) {
+    map.panBy([0, window.innerHeight * 0.15], {animate: false});
   }
 
   // Walking-distance rings
@@ -55,7 +59,7 @@
     }).addTo(map));
   });
 
-  // "Show more locations" pill — driven by #show-more-pill-card in the left overlay
+  // "Show more locations" inline control — embedded in the poi-list block-label
   let _showingMore = false;
   const showMorePillEl = document.getElementById('show-more-pill');
   if (showMorePillEl) {
@@ -85,7 +89,7 @@
     homeIcon = L.divIcon({
       html: '<span class="fa-stack" style="font-size:16px">' +
               '<i class="fa-solid fa-circle fa-stack-2x" style="color:#b33f43"></i>' +
-              '<i class="fa-solid fa-house fa-stack-1x" style="color:#CCC"></i>' +
+              '<i class="fa-solid fa-house fa-stack-1x" style="color:#FFF"></i>' +
             '</span>',
       className: '',
       iconSize: [32, 32],
@@ -576,12 +580,11 @@
     const hasHidden = RAW_GEOJSON.features.some(
       f => !DEFAULT_VISIBLE_CATS.has(f.properties.category) && markerMap[f.id]
     );
-    const showMoreCard = document.getElementById('show-more-pill-card');
     if (!hasHidden) {
-      if (showMoreCard) showMoreCard.style.display = 'none';
+      if (showMorePillEl) showMorePillEl.style.display = 'none';
     } else {
-      if (showMoreCard) showMoreCard.style.display = '';
-      const pillMarkersEl = document.getElementById('show-more-pill')?.querySelector('.pill-markers');
+      if (showMorePillEl) showMorePillEl.style.display = '';
+      const pillMarkersEl = showMorePillEl?.querySelector('.pill-markers');
       if (pillMarkersEl) {
         const hiddenCats = [...new Set(
           RAW_GEOJSON.features

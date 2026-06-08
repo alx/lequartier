@@ -401,13 +401,24 @@ textarea { resize: vertical; min-height: 60px; }
   font-weight: 500;
   color: var(--text);
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  transition: background 0.12s, box-shadow 0.12s;
+  transition: background 0.12s;
   white-space: nowrap;
 }
 .show-more-pill button:hover {
   background: #fff;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+#poi-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.35rem;
+  background: var(--border);
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 /* ── Category toggles ───────────────── */
@@ -721,6 +732,12 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
   .right-overlay { display: none !important; }
   .overlay-card { border-radius: 0; }
   .left-overlay .overlay-card:first-child { border-radius: 12px 12px 0 0; }
+  .left-overlay .overlay-card:first-child img { display: none; }
+  .left-overlay .overlay-card.scrollable {
+    flex: unset;
+    min-height: unset;
+    overflow-y: visible;
+  }
 }
 @media (max-width: 600px) {
   .category-toggles { grid-template-columns: 1fr 1fr; }
