@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Le Quartier – Airbnb Map
 // @namespace    https://girard-davila.net
-// @version      2.1.0
+// @version      3.0.0
 // @description  Embeds a neighbourhood POI map on Airbnb listing pages
 // @author       Alexandre Girard-Davila
 // @match        https://www.airbnb.com/rooms/*
@@ -12,8 +12,6 @@
 // @grant        GM_addStyle
 // @resource     leafletJS   https://unpkg.com/leaflet@1.9.4/dist/leaflet.js
 // @resource     leafletCSS  https://unpkg.com/leaflet@1.9.4/dist/leaflet.css
-// @resource     faCSS       https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/fontawesome.min.css
-// @resource     faSolidCSS  https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/solid.min.css
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -30,8 +28,11 @@
 
   // ── Inject CSS assets ────────────────────────────────────────────────────
   GM_addStyle(GM_getResourceText('leafletCSS'));
-  GM_addStyle(GM_getResourceText('faCSS'));
-  GM_addStyle(GM_getResourceText('faSolidCSS'));
+
+  const faLink = document.createElement('link');
+  faLink.rel = 'stylesheet';
+  faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css';
+  document.head.appendChild(faLink);
 
   GM_addStyle(`
     #lq-map-root {
@@ -40,23 +41,18 @@
       font-size: 14px;
       line-height: 1.4;
     }
-    #lq-map-header {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      background: #f0fdf4; border-left: 3px solid #1a6b3c;
-      border-radius: 0 6px 0 0; padding: 8px 12px; margin-bottom: 0;
-    }
-    #lq-map-header > span:first-child { font-weight: 600; color: #14532d; }
     .lq-status-text { font-size: 0.82em; color: #6b7280; margin-left: auto; }
     .lq-view-link { font-size: 0.82em; color: #1a6b3c; text-decoration: none; white-space: nowrap; }
     .lq-view-link:hover { text-decoration: underline; }
     #lq-map-el {
       height: 400px; border: 1px solid #d1d5db; border-radius: 0 0 8px 8px;
-      overflow: hidden; background: #f0fdf4; position: relative;
+      overflow: hidden; background: #f0fdf4; position: relative; margin-top: 5px;
     }
     #lq-loading {
       position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 12px;
+      align-items: center; justify-content: center; gap: 10px;
       background: #f0fdf4; z-index: 10; color: #4b7a5e; font-size: 0.88em;
+      padding: 16px;
     }
     .lq-spinner {
       width: 32px; height: 32px; border: 3px solid #bbf7d0;
@@ -65,6 +61,25 @@
     }
     @keyframes lq-spin { to { transform: rotate(360deg); } }
     .lq-error-text { color: #dc2626; font-size: 0.88em; text-align: center; padding: 0 16px; }
+    .lq-progress-outer {
+      width: 220px; height: 6px; background: #e5e7eb;
+      border-radius: 99px; overflow: hidden;
+    }
+    .lq-progress-inner {
+      height: 100%; background: #1a6b3c; border-radius: 99px;
+      transition: width 0.4s ease;
+      background-image: linear-gradient(
+        45deg, rgba(255,255,255,.18) 25%, transparent 25%, transparent 50%,
+        rgba(255,255,255,.18) 50%, rgba(255,255,255,.18) 75%, transparent 75%, transparent
+      );
+      background-size: 1rem 1rem;
+      animation: lq-progress-stripes 1s linear infinite;
+    }
+    @keyframes lq-progress-stripes { from { background-position: 1rem 0; } to { background-position: 0 0; } }
+    .lq-activity-log {
+      font-size: 0.72em; color: #6b7280; font-family: monospace;
+      margin-top: 2px; text-align: left; max-height: 4.5em; overflow: hidden; width: 220px;
+    }
     #lq-cat-bar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 2px 0; }
     .lq-cat-btn {
       display: inline-flex; align-items: center; gap: 4px;
@@ -73,7 +88,7 @@
       cursor: pointer; transition: opacity 0.15s; font-family: inherit;
     }
     .lq-cat-btn:hover { opacity: 0.85; }
-    .lq-cat-btn--off { opacity: 0.35; background: #9ca3af !important; color: #fff; }
+    .lq-cat-btn--off { background: #e5e7eb !important; color: #374151 !important; }
     #lq-map-el .leaflet-top, #lq-map-el .leaflet-bottom { z-index: 1000; }
   `);
 
@@ -141,15 +156,10 @@
 
   // ── Anchor detection ──────────────────────────────────────────────────────
   function findAnchor() {
-    const section =
-      document.querySelector('[data-section-id="LOCATION_DEFAULT"]') ||
-      document.querySelector('[data-plugin-in-point-id="LOCATION_DEFAULT"]');
-    if (section) return section;
-    for (const h2 of document.querySelectorAll('h2')) {
-      const text = h2.textContent.trim();
-      if (text === "Where you'll be" || text === 'Où vous serez') return h2;
-    }
-    return null;
+    return (
+      document.querySelector('[data-section-id="BOOK_IT_SIDEBAR"]') ||
+      document.querySelector('[data-plugin-in-point-id="BOOK_IT_SIDEBAR"]')
+    );
   }
 
   function waitForAnchor(timeoutMs = 15000) {
@@ -166,24 +176,22 @@
   }
 
   // ── DOM injection ─────────────────────────────────────────────────────────
-  function injectMapContainer(anchor, listing_id, backendBase) {
-    if (document.getElementById(LQ_ROOT_ID)) return;
-    const wrapper = document.createElement('div');
-    wrapper.id = LQ_ROOT_ID;
-    const viewUrl = `${backendBase}/airbnb/${listing_id}`;
-    wrapper.innerHTML = `
-      <div id="lq-map-header">
-        <span>🏘 Nearby Places (Le Quartier)</span>
-        <span id="${LQ_STATUS_ID}" class="lq-status-text">Loading…</span>
-        <a href="${viewUrl}" target="_blank" rel="noopener" class="lq-view-link">View full map ↗</a>
-      </div>
-      <div id="lq-map-el">
-        <div id="lq-loading"><div class="lq-spinner"></div><span>Querying nearby places…</span></div>
-      </div>
-      <div id="lq-cat-bar"></div>
-    `;
-    const section = anchor.closest('section, [data-section-id], [data-plugin-in-point-id]') || anchor.parentElement;
-    (section?.parentElement ? section : anchor).after(wrapper);
+  let mapWrapper = null;
+
+  function ensureMapInSidebar(anchor, listing_id, backendBase) {
+    if (!mapWrapper) {
+      mapWrapper = document.createElement('div');
+      mapWrapper.id = LQ_ROOT_ID;
+      mapWrapper.innerHTML = `
+        <div id="lq-cat-bar"></div>
+        <div id="lq-map-el">
+          <div id="lq-loading"><div class="lq-spinner"></div><span>Querying nearby places…</span></div>
+        </div>
+      `;
+    }
+    if (anchor.lastElementChild !== mapWrapper) {
+      anchor.appendChild(mapWrapper);
+    }
   }
 
   // ── Title link ────────────────────────────────────────────────────────────
@@ -230,19 +238,91 @@
     btn.innerHTML = '<span aria-hidden="true">🌳🏠</span><span style="text-decoration:underline;">Le Quartier</span>';
     btn.addEventListener('click', () => {
       const mapEl = document.getElementById(LQ_ROOT_ID);
-      if (mapEl) {
-        mapEl.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        window.open(externalUrl, '_blank', 'noopener,noreferrer');
-      }
+      if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth' });
+      else window.open(externalUrl, '_blank', 'noopener,noreferrer');
     });
 
     wrapper.appendChild(btn);
     shareContainer.insertAdjacentElement('beforebegin', wrapper);
   }
 
+  // ── Generation with live progress ─────────────────────────────────────────
+  async function generateAndPoll(listing_id, lat, lon, backendBase) {
+    const loadingEl = document.getElementById('lq-loading');
+    if (loadingEl) {
+      loadingEl.innerHTML = `
+        <div class="lq-progress-outer"><div class="lq-progress-inner" id="lq-prog-inner" style="width:5%"></div></div>
+        <div class="lq-activity-log" id="lq-activity-log"></div>
+      `;
+    }
+
+    let taskId;
+    try {
+      const resp = await fetch(`${backendBase}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ site: 'airbnb', listing_id, lat, lon }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      taskId = (await resp.json()).task_id;
+    } catch (err) {
+      if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text">⚠ ${err.message}</span>`;
+      return null;
+    }
+
+    return taskId;
+  }
+
+  async function pollUntilDone(taskId, backendBase) {
+    let lastMsg = '';
+    let polling = true;
+
+    const autoIncr = setInterval(() => {
+      const inner = document.getElementById('lq-prog-inner');
+      if (!inner || !polling) { clearInterval(autoIncr); return; }
+      const cur = parseFloat(inner.style.width) || 5;
+      if (cur < 88) inner.style.width = (cur + 1.5) + '%';
+    }, 3000);
+
+    while (polling) {
+      await new Promise(r => setTimeout(r, 1000));
+      try {
+        const r = await fetch(`${backendBase}/tasks/${taskId}/map-state`).then(res => res.json());
+
+        const inner = document.getElementById('lq-prog-inner');
+        if (inner) inner.style.width = (r.progress_pct || 5) + '%';
+
+        if (r.progress && r.progress !== lastMsg) {
+          lastMsg = r.progress;
+          const log = document.getElementById('lq-activity-log');
+          if (log) {
+            const line = document.createElement('div');
+            line.textContent = r.progress;
+            log.insertBefore(line, log.firstChild);
+            while (log.children.length > 5) log.removeChild(log.lastChild);
+          }
+        }
+
+        if (r.error) {
+          polling = false;
+          clearInterval(autoIncr);
+          const loadingEl = document.getElementById('lq-loading');
+          if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text">⚠ ${r.error}</span>`;
+          return false;
+        }
+
+        if (r.done) {
+          polling = false;
+          clearInterval(autoIncr);
+          return true;
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
   // ── Map rendering (inline equivalent of shared/map-init.js) ───────────────
-  function renderMap(centerLat, centerLon, geojson) {
+  function renderMap(centerLat, centerLon, geojson, listing_id) {
     const mapEl = document.getElementById('lq-map-el');
     if (!mapEl || typeof L === 'undefined') return;
 
@@ -329,15 +409,20 @@
 
     const catBar = document.getElementById('lq-cat-bar');
     if (catBar) {
+      const DEFAULT_VISIBLE = ['Supermarket', 'Bakery & Food', 'Market'];
       Object.entries(layerByCat).forEach(([cat, layer]) => {
-        const count  = (geojson.features || []).filter(f => (f.properties || {}).category === cat).length;
-        const faIcon = (catMeta[cat] && catMeta[cat].fa_icon) || 'fa-location-dot';
-        const color  = colorFor(cat);
-        const btn    = document.createElement('button');
-        btn.className      = 'lq-cat-btn';
-        btn.dataset.active = 'true';
+        const count = (geojson.features || []).filter(f => (f.properties || {}).category === cat).length;
+        const color = colorFor(cat);
+        const isActive = DEFAULT_VISIBLE.includes(cat);
+        const btn = document.createElement('button');
+        btn.className = 'lq-cat-btn';
+        if (!isActive) {
+          btn.classList.add('lq-cat-btn--off');
+          map.removeLayer(layer);
+        }
+        btn.dataset.active = isActive ? 'true' : 'false';
         btn.style.setProperty('--lq-cat-color', color);
-        btn.innerHTML = `<i class="fa-solid ${faIcon}"></i> ${cat} (${count})`;
+        btn.textContent = `${cat} (${count})`;
         btn.addEventListener('click', () => {
           const active = btn.dataset.active === 'true';
           btn.dataset.active = active ? 'false' : 'true';
@@ -346,6 +431,15 @@
         });
         catBar.appendChild(btn);
       });
+
+      const openBtn = document.createElement('a');
+      openBtn.className = 'lq-cat-btn';
+      openBtn.href = `${getBackendUrl()}/airbnb/${listing_id}`;
+      openBtn.target = '_blank';
+      openBtn.rel = 'noopener';
+      openBtn.style.setProperty('--lq-cat-color', '#1a6b3c');
+      openBtn.innerHTML = '<i class="fa-solid fa-map-marked-alt"></i> Open in Le Quartier';
+      catBar.appendChild(openBtn);
     }
   }
 
@@ -357,7 +451,7 @@
     const listing_id = extractListingId();
     if (!listing_id) return;
 
-    injectTitleLink(); // fire-and-forget: appears as soon as Share button is found
+    injectTitleLink();
 
     const coords = extractCoordinates();
     if (!coords) {
@@ -365,34 +459,45 @@
       return;
     }
 
-    const anchor = await waitForAnchor();
-    if (!anchor) {
-      console.warn('[LeQuartier] Location section not found within timeout.');
-      return;
-    }
-
     const backendBase = getBackendUrl();
-    injectMapContainer(anchor, listing_id, backendBase);
 
-    const statusEl = document.getElementById(LQ_STATUS_ID);
-    if (statusEl) statusEl.textContent = 'Fetching POIs…';
+    new MutationObserver(() => {
+      const anchor = findAnchor();
+      if (anchor) ensureMapInSidebar(anchor, listing_id, backendBase);
+    }).observe(document.body, { childList: true, subtree: true });
+
+    const anchor = findAnchor();
+    if (anchor) ensureMapInSidebar(anchor, listing_id, backendBase);
 
     try {
-      const url = new URL(`/airbnb/${listing_id}.geojson`, backendBase);
+      const url = `${backendBase}/airbnb/${listing_id}.geojson`;
+      const resp = await fetch(url);
 
-      const resp = await fetch(url.toString());
+      if (resp.status === 404) {
+        const taskId = await generateAndPoll(listing_id, coords.lat, coords.lon, backendBase);
+        if (!taskId) return;
+        const ok = await pollUntilDone(taskId, backendBase);
+        if (!ok) return;
+        const geojsonResp = await fetch(url);
+        if (!geojsonResp.ok) throw new Error(`HTTP ${geojsonResp.status}`);
+        const geojson = await geojsonResp.json();
+        document.getElementById('lq-loading')?.remove();
+        renderMap(coords.lat, coords.lon, geojson, listing_id);
+        return;
+      }
+
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const geojson = await resp.json();
 
+      const statusEl = document.getElementById(LQ_STATUS_ID);
       const n = geojson?.features?.length ?? 0;
       if (statusEl) statusEl.textContent = `${n} place${n !== 1 ? 's' : ''}`;
 
       document.getElementById('lq-loading')?.remove();
-      renderMap(coords.lat, coords.lon, geojson);
+      renderMap(coords.lat, coords.lon, geojson, listing_id);
     } catch (err) {
       const loadingEl = document.getElementById('lq-loading');
       if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text">⚠ ${err.message}</span>`;
-      if (statusEl) { statusEl.textContent = 'Error'; statusEl.style.color = '#dc2626'; }
     }
   }
 
@@ -401,9 +506,10 @@
 
   function onNavigate() {
     const newPath = window.location.pathname;
-    if (newPath === _activePath) return; // ignore query-param-only changes (gallery, modals)
+    if (newPath === _activePath) return;
     _activePath = newPath;
     document.getElementById(LQ_ROOT_ID)?.remove();
+    mapWrapper = null;
     document.getElementById('lq-title-link')?.remove();
     delete window.__lqRan;
     setTimeout(run, 800);

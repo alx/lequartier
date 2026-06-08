@@ -139,6 +139,8 @@ def _fetch_task(
             airbnb_url, rlat, rlon, progress_cb=_prog, partial_cb=_partial, log_cb=_log
         )
 
+        task_mod.store.update(task.task_id, progress="Compressing GeoJSON…", progress_pct=93)
+
         n_pois = len(geojson.get("features", []))
         try:
             listing_title = poi_engine.title_from_airbnb_url(airbnb_url)
@@ -176,6 +178,130 @@ def _fetch_task(
         task_mod.store.update(task.task_id, status=task_mod.Status.ERROR,
                               error="Could not extract coordinates — paste the Google Maps URL too.",
                               progress_pct=100)
+    except Exception as exc:
+        task_mod.store.update(task.task_id, status=task_mod.Status.ERROR,
+                              error=str(exc), progress_pct=100)
+
+
+def _fetch_task_direct(
+    task: task_mod.TaskState,
+    site: str,
+    listing_id: str,
+    lat: float,
+    lon: float,
+) -> None:
+    """Task runner for userscript-triggered generation — coordinates already known."""
+    try:
+        cache_key  = f"zillow/{listing_id}" if site == "zillow" else listing_id
+        source_url = (f"https://www.airbnb.com/rooms/{listing_id}" if site == "airbnb"
+                      else f"https://www.zillow.com/homedetails/{listing_id}")
+
+        task_mod.store.update(
+            task.task_id, status=task_mod.Status.RUNNING,
+            progress="Checking cache…", progress_pct=15,
+            partial_lat=lat, partial_lon=lon, partial_confidence="high",
+        )
+
+        cfg        = poi_engine.get_cfg()
+        categories = cfg.default_categories if cfg else []
+        cached     = cache_mod.get(cache_key)
+        if cached:
+            features = cached.get("geojson", {}).get("features", [])
+            if features and "status" not in features[0].get("properties", {}):
+                poi_engine.apply_status_curation(features)
+            task_mod.store.update(
+                task.task_id,
+                status=task_mod.Status.DONE,
+                progress="Loaded from cache",
+                progress_pct=100,
+                result={**cached, "from_cache": True},
+            )
+            return
+
+        radius = cfg.search_radius_m if cfg else 1000
+
+        def _prog(pct, msg):
+            task_mod.store.update(task.task_id, progress=msg, progress_pct=pct)
+
+        def _partial(partial_gj):
+            task_mod.store.update(task.task_id, partial_geojson=partial_gj)
+
+        def _log(msg):
+            task_mod.store.update(task.task_id, progress=msg)
+
+        _prog(22, "Reverse geocoding…")
+        location = lib.reverse_geocode(lat, lon)
+
+        def _per_cat(cat_key):
+            label = lib.CATEGORIES.get(cat_key, {}).get("label", cat_key)
+            _log(f"Querying OSM for {label}…")
+
+        _prog(30, "Querying OSM…")
+        osm = lib.query_overpass(categories, lat, lon, radius, per_cat_cb=_per_cat)
+
+        if osm:
+            osm_filtered = lib.filter_and_limit(lib.merge_results(osm, None), lat, lon)
+            slug         = f"{site}/{listing_id}"
+            partial_gj   = lib.build_geojson(source_url, lat, lon, osm_filtered, radius, slug,
+                                             location=location)
+            _partial(partial_gj)
+
+        api_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        google  = None
+        if api_key:
+            _log("Querying Google Places…")
+            _prog(60, "Querying Google Places…")
+            google = lib.query_google_nearby(api_key, categories, lat, lon, radius)
+        else:
+            _prog(60, "OSM only (no Google Maps API key)")
+
+        _prog(80, "Filtering and deduplicating…")
+        merged   = lib.merge_results(osm, google)
+        filtered = lib.filter_and_limit(merged, lat, lon)
+
+        _prog(90, "Building GeoJSON…")
+        slug    = f"{site}/{listing_id}"
+        geojson = lib.build_geojson(source_url, lat, lon, filtered, radius, slug,
+                                    location=location)
+
+        _prog(93, "Compressing GeoJSON…")
+
+        listing_title = None
+        listing_photo = None
+        if site == "airbnb":
+            try:
+                listing_title = poi_engine.title_from_airbnb_url(source_url)
+            except Exception:
+                pass
+            try:
+                listing_photo = poi_engine.photo_from_airbnb_url(source_url)
+            except Exception:
+                pass
+
+        n_pois = len(filtered)
+        result = {
+            "lat":           lat,
+            "lon":           lon,
+            "confidence":    "high",
+            "listing_id":    cache_key,
+            "location":      location,
+            "geojson":       geojson,
+            "n_pois":        n_pois,
+            "airbnb_url":    source_url,
+            "from_cache":    False,
+            "listing_title": listing_title,
+            "listing_photo": listing_photo,
+        }
+
+        cache_mod.put(cache_key, lat, lon, categories, result)
+
+        task_mod.store.update(
+            task.task_id,
+            status=task_mod.Status.DONE,
+            progress="Done!",
+            progress_pct=100,
+            result=result,
+        )
     except Exception as exc:
         task_mod.store.update(task.task_id, status=task_mod.Status.ERROR,
                               error=str(exc), progress_pct=100)
@@ -350,9 +476,9 @@ def airbnb_page(listing_id: str):
             return _render_airbnb_map(task.result, readonly=True)
         if task and task.status == task_mod.Status.ERROR:
             return render_template("airbnb.html", mode="error", listing_id=listing_id,
-                                   error=task.error, readonly=True)
+                                   listing_id_prefix="airbnb", error=task.error, readonly=True)
         return render_template("airbnb.html", mode="loading", listing_id=listing_id,
-                               task_id=task_id, readonly=True)
+                               listing_id_prefix="airbnb", task_id=task_id, readonly=True)
 
     if not refresh:
         cached = cache_mod.get(listing_id)
@@ -377,9 +503,11 @@ def airbnb_edit_page(listing_id: str):
             return _render_airbnb_map(task.result, readonly=False, embed=embed)
         if task and task.status == task_mod.Status.ERROR:
             return render_template("airbnb.html", mode="error", listing_id=listing_id,
-                                   error=task.error, readonly=False, embed=embed)
+                                   listing_id_prefix="airbnb", error=task.error,
+                                   readonly=False, embed=embed)
         return render_template("airbnb.html", mode="loading", listing_id=listing_id,
-                               task_id=task_id, readonly=False, embed=embed)
+                               listing_id_prefix="airbnb", task_id=task_id,
+                               readonly=False, embed=embed)
 
     cached = cache_mod.get(listing_id)
     if cached:
@@ -718,10 +846,22 @@ def _render_zillow_map(zillow_id: str, r: dict, readonly: bool) -> str:
 @wizard.get("/zillow/<path:zillow_id>/edit")
 @_require_edit_auth
 def zillow_edit_page(zillow_id: str):
+    task_id = request.args.get("task_id")
+    if task_id:
+        task = task_mod.store.get(task_id)
+        if task and task.status == task_mod.Status.DONE:
+            return _render_zillow_map(zillow_id, task.result, readonly=False)
+        if task and task.status == task_mod.Status.ERROR:
+            return render_template("airbnb.html", mode="error", listing_id=zillow_id,
+                                   listing_id_prefix="zillow", error=task.error, readonly=False)
+        return render_template("airbnb.html", mode="loading", listing_id=zillow_id,
+                               listing_id_prefix="zillow", task_id=task_id, readonly=False)
+
     cached = cache_mod.get(f"zillow/{zillow_id}")
     if not cached:
         return render_template(
-            "airbnb.html", mode="error", readonly=False,
+            "airbnb.html", mode="error", listing_id=zillow_id, listing_id_prefix="zillow",
+            readonly=False,
             error="No data cached for this listing yet. Open it on Zillow with the Le Quartier extension first.",
         )
     return _render_zillow_map(zillow_id, cached, readonly=False)
@@ -742,11 +882,23 @@ def zillow_geojson(zillow_id: str):
 
 @wizard.get("/zillow/<path:zillow_id>")
 def zillow_page(zillow_id: str):
+    task_id = request.args.get("task_id")
+    if task_id:
+        task = task_mod.store.get(task_id)
+        if task and task.status == task_mod.Status.DONE:
+            return _render_zillow_map(zillow_id, task.result, readonly=True)
+        if task and task.status == task_mod.Status.ERROR:
+            return render_template("airbnb.html", mode="error", listing_id=zillow_id,
+                                   listing_id_prefix="zillow", error=task.error, readonly=True)
+        return render_template("airbnb.html", mode="loading", listing_id=zillow_id,
+                               listing_id_prefix="zillow", task_id=task_id, readonly=True)
+
     cached = cache_mod.get(f"zillow/{zillow_id}")
     if not cached:
         return render_template(
-            "airbnb.html", mode="error", readonly=True,
-            error="No data cached for this listing yet. Open it on Zillow with the Le Quartier extension first.",
+            "airbnb.html", mode="error", listing_id=zillow_id, listing_id_prefix="zillow",
+            readonly=True,
+            error="Not yet in Le Quartier. Open it on Zillow with the Le Quartier extension to generate the map.",
         )
     return _render_zillow_map(zillow_id, cached, readonly=True)
 
@@ -817,6 +969,27 @@ def _api_nearby_response(geojson: dict) -> Response:
 @wizard.route("/api/nearby", methods=["OPTIONS"])
 def api_nearby_preflight():
     return Response("", status=204)
+
+
+@wizard.post("/api/generate")
+def api_generate():
+    """Start a map-generation task from coordinates (called by userscripts on 404)."""
+    data       = request.get_json(force=True) or {}
+    site       = data.get("site", "").strip()
+    listing_id = data.get("listing_id", "").strip()
+    try:
+        lat = float(data["lat"])
+        lon = float(data["lon"])
+    except (KeyError, TypeError, ValueError):
+        return jsonify({"error": "lat and lon are required"}), 400
+
+    if site not in ("airbnb", "zillow"):
+        return jsonify({"error": "site must be 'airbnb' or 'zillow'"}), 400
+    if not listing_id:
+        return jsonify({"error": "listing_id is required"}), 400
+
+    task = task_mod.run_in_thread(_fetch_task_direct, site, listing_id, lat, lon)
+    return jsonify({"task_id": task.task_id})
 
 
 @wizard.get("/api/nearby")

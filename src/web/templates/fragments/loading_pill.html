@@ -1,0 +1,26 @@
+<!-- Floating progress pill (used by loading + error modes) -->
+<div class="loading-pill" id="loading-pill">
+  <div class="block-label" style="margin-bottom:0.4rem;">🏠 Le Quartier</div>
+  <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.6rem;">
+    {%- if listing_id_prefix == 'zillow' -%}
+      zillow.com/homedetails/{{ listing_id }}
+    {%- elif listing_id_prefix == 'map' -%}
+      {{ listing_id }}
+    {%- else -%}
+      airbnb.com/rooms/{{ listing_id }}
+    {%- endif -%}
+  </p>
+
+  {% if mode == 'error' %}
+  <div class="alert alert-error" style="margin-bottom:0.5rem;">{{ error }}</div>
+  {% else %}
+  <div id="loading-bar" style="display:block;">
+    <div class="progress-bar-outer">
+      <div class="progress-bar-inner" style="width:5%"></div>
+    </div>
+  </div>
+  <div id="activity-log" style="font-size:0.72rem; color:var(--text-muted); font-family:monospace; margin-top:0.35rem; text-align:left; max-height:4.5rem; overflow:hidden;"></div>
+  {% endif %}
+
+  <a href="/" class="btn btn-outline" style="width:100%; margin-top:0.75rem; font-size:0.82rem;">← Start over</a>
+</div>

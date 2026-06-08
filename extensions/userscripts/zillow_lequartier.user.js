@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Le Quartier – Zillow Map
 // @namespace    https://girard-davila.net
-// @version      1.0.0
+// @version      3.0.0
 // @description  Embeds a neighbourhood POI map on Zillow property listings
 // @author       Alexandre Girard-Davila
 // @match        https://www.zillow.com/homedetails/*
@@ -9,10 +9,8 @@
 // @grant        GM_setValue
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
-// @require      https://unpkg.com/leaflet@1.9.4/dist/leaflet.js
+// @resource     leafletJS   https://unpkg.com/leaflet@1.9.4/dist/leaflet.js
 // @resource     leafletCSS  https://unpkg.com/leaflet@1.9.4/dist/leaflet.css
-// @resource     faCSS       https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/fontawesome.min.css
-// @resource     faSolidCSS  https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/solid.min.css
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -21,38 +19,38 @@
 
   const DEFAULT_BACKEND = 'https://lequartier.girard-davila.net';
   const LQ_ROOT_ID   = 'lq-map-root';
-  const LQ_STATUS_ID = 'lq-status';
+
+  // ── Load Leaflet (strip sourceMappingURL comment to avoid DevTools 404) ──
+  // (0, eval) is an indirect eval that runs in the global scope, same as @require
+  ;(0, eval)(GM_getResourceText('leafletJS').replace(/\/\/# sourceMappingURL=\S+[ \t]*$/m, ''));
 
   // ── Inject CSS assets ────────────────────────────────────────────────────
   GM_addStyle(GM_getResourceText('leafletCSS'));
-  GM_addStyle(GM_getResourceText('faCSS'));
-  GM_addStyle(GM_getResourceText('faSolidCSS'));
 
-  // Widget styles (equivalent to shared/styles.css)
+  const faLink = document.createElement('link');
+  faLink.rel = 'stylesheet';
+  faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css';
+  document.head.appendChild(faLink);
+
   GM_addStyle(`
     #lq-map-root {
-      margin: 20px 0 24px;
       font-family: system-ui, -apple-system, sans-serif;
       font-size: 14px;
       line-height: 1.4;
+      overflow: hidden;
     }
-    #lq-map-header {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      background: #f0fdf4; border-left: 3px solid #1a6b3c;
-      border-radius: 0 6px 0 0; padding: 8px 12px; margin-bottom: 0;
-    }
-    #lq-map-header > span:first-child { font-weight: 600; color: #14532d; }
     .lq-status-text { font-size: 0.82em; color: #6b7280; margin-left: auto; }
     .lq-view-link { font-size: 0.82em; color: #1a6b3c; text-decoration: none; white-space: nowrap; }
     .lq-view-link:hover { text-decoration: underline; }
     #lq-map-el {
-      height: 400px; border: 1px solid #d1d5db; border-radius: 0 0 8px 8px;
-      overflow: hidden; background: #f0fdf4; position: relative;
+      height: 400px; border-top: 1px solid #d1d5db;
+      overflow: hidden; background: #f0fdf4; position: relative; margin-top: 5px;
     }
     #lq-loading {
       position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 12px;
+      align-items: center; justify-content: center; gap: 10px;
       background: #f0fdf4; z-index: 10; color: #4b7a5e; font-size: 0.88em;
+      padding: 16px;
     }
     .lq-spinner {
       width: 32px; height: 32px; border: 3px solid #bbf7d0;
@@ -61,19 +59,46 @@
     }
     @keyframes lq-spin { to { transform: rotate(360deg); } }
     .lq-error-text { color: #dc2626; font-size: 0.88em; text-align: center; padding: 0 16px; }
-    #lq-cat-bar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 2px 0; }
+    .lq-progress-outer {
+      width: 220px; height: 6px; background: #e5e7eb;
+      border-radius: 99px; overflow: hidden;
+    }
+    .lq-progress-inner {
+      height: 100%; background: #1a6b3c; border-radius: 99px;
+      transition: width 0.4s ease;
+      background-image: linear-gradient(
+        45deg, rgba(255,255,255,.18) 25%, transparent 25%, transparent 50%,
+        rgba(255,255,255,.18) 50%, rgba(255,255,255,.18) 75%, transparent 75%, transparent
+      );
+      background-size: 1rem 1rem;
+      animation: lq-progress-stripes 1s linear infinite;
+    }
+    @keyframes lq-progress-stripes { from { background-position: 1rem 0; } to { background-position: 0 0; } }
+    .lq-activity-log {
+      font-size: 0.72em; color: #6b7280; font-family: monospace;
+      margin-top: 2px; text-align: left; max-height: 4.5em; overflow: hidden; width: 220px;
+    }
+    #lq-cat-bar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 12px; }
     .lq-cat-btn {
       display: inline-flex; align-items: center; gap: 4px;
       background: var(--lq-cat-color, #6b7280); color: #fff; border: none;
       border-radius: 999px; padding: 3px 10px; font-size: 0.78em;
       cursor: pointer; transition: opacity 0.15s; font-family: inherit;
+      text-decoration: none;
     }
     .lq-cat-btn:hover { opacity: 0.85; }
-    .lq-cat-btn--off { opacity: 0.35; background: #9ca3af !important; color: #fff; }
+    .lq-cat-btn--off { background: #e5e7eb !important; color: #374151 !important; }
     #lq-map-el .leaflet-top, #lq-map-el .leaflet-bottom { z-index: 1000; }
+    #lq-title-link button {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; background: #f0fdf4; border: 1px solid #d1fae5;
+      border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 600;
+      color: #1a6b3c; white-space: nowrap;
+    }
+    #lq-title-link button:hover { background: #dcfce7; }
   `);
 
-  // ── Config (backend URL stored via GM_getValue/GM_setValue) ───────────────
+  // ── Config ────────────────────────────────────────────────────────────────
   function getBackendUrl() {
     return GM_getValue('backendUrl', DEFAULT_BACKEND);
   }
@@ -125,24 +150,26 @@
       const m = re.exec(text);
       if (m) { const lat = parseFloat(m[1]), lon = parseFloat(m[2]); if (isValidCoord(lat, lon)) return { lat, lon }; }
     }
+
     return null;
   }
 
-  // ── Anchor detection ──────────────────────────────────────────────────────
-  function findAnchor() {
-    for (const h2 of document.querySelectorAll('h2')) {
-      if (h2.textContent.trimStart().startsWith('Neighborhood:')) return h2;
-    }
-    return null;
+  // ── Sidebar container detection ───────────────────────────────────────────
+  function findSidebarContainer() {
+    const upsell = document.getElementById('upsell-container');
+    if (upsell?.parentElement) return upsell.parentElement;
+    const claim = document.getElementById('claim-cta');
+    if (claim?.parentElement) return claim.parentElement;
+    return document.querySelector('.nfs-d_flex.nfs-flex-d_column.nfs-jc_center');
   }
 
-  function waitForAnchor(timeoutMs = 15000) {
+  function waitForSidebarContainer(timeoutMs = 15000) {
     return new Promise(resolve => {
-      const found = findAnchor();
+      const found = findSidebarContainer();
       if (found) { resolve(found); return; }
       const timer = setTimeout(() => { obs.disconnect(); resolve(null); }, timeoutMs);
       const obs = new MutationObserver(() => {
-        const el = findAnchor();
+        const el = findSidebarContainer();
         if (el) { clearTimeout(timer); obs.disconnect(); resolve(el); }
       });
       obs.observe(document.body, { childList: true, subtree: true });
@@ -150,28 +177,165 @@
   }
 
   // ── DOM injection ─────────────────────────────────────────────────────────
-  function injectMapContainer(anchor, listing_id, backendBase) {
-    if (document.getElementById(LQ_ROOT_ID)) return;
+  let mapWrapper = null;
+
+  function ensureMapInSidebar(container) {
+    if (!mapWrapper) {
+      mapWrapper = document.createElement('div');
+      mapWrapper.id = LQ_ROOT_ID;
+      mapWrapper.innerHTML = `
+        <div id="lq-cat-bar"></div>
+        <div id="lq-map-el">
+          <div id="lq-loading"><div class="lq-spinner"></div><span>Querying nearby places…</span></div>
+        </div>
+      `;
+
+      const refCard = document.getElementById('upsell-container') || document.getElementById('claim-cta');
+      if (refCard) {
+        const s = window.getComputedStyle(refCard);
+        mapWrapper.style.border = s.border;
+        mapWrapper.style.borderRadius = s.borderRadius;
+        mapWrapper.style.marginTop = s.marginTop;
+      } else {
+        mapWrapper.style.cssText += 'border:1px solid #d1d5db;border-radius:8px;margin-top:16px;';
+      }
+    }
+    if (!container.contains(mapWrapper)) {
+      container.insertBefore(mapWrapper, container.firstChild);
+    }
+  }
+
+  // ── Title link ────────────────────────────────────────────────────────────
+  function findSaveButton() {
+    const byTestId = document.querySelector('[data-testid*="save"i], [data-testid*="favorite"i]');
+    if (byTestId) return byTestId.parentElement || byTestId;
+    const byAria = document.querySelector('[aria-label*="Save"i], [aria-label*="Favorite"i]');
+    if (byAria) return byAria.parentElement || byAria;
+    for (const btn of document.querySelectorAll('button')) {
+      const text = (btn.innerText || btn.textContent || '').trim();
+      if (/^save$/i.test(text)) return btn.parentElement || btn;
+    }
+    return document.querySelector('h1');
+  }
+
+  function waitForSaveButton(timeoutMs = 10000) {
+    return new Promise(resolve => {
+      const found = findSaveButton();
+      if (found) { resolve(found); return; }
+      const timer = setTimeout(() => { obs.disconnect(); resolve(null); }, timeoutMs);
+      const obs = new MutationObserver(() => {
+        const el = findSaveButton();
+        if (el) { clearTimeout(timer); obs.disconnect(); resolve(el); }
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    });
+  }
+
+  async function injectTitleLink() {
+    if (document.getElementById('lq-title-link')) return;
+    const listing_id = extractListingId();
+    if (!listing_id) return;
+
+    const anchor = await waitForSaveButton();
+    if (!anchor || document.getElementById('lq-title-link')) return;
+
+    const externalUrl = `${getBackendUrl()}/zillow/${listing_id}`;
+
     const wrapper = document.createElement('div');
-    wrapper.id = LQ_ROOT_ID;
-    const viewUrl = `${backendBase}/zillow/${listing_id}`;
-    wrapper.innerHTML = `
-      <div id="lq-map-header">
-        <span>🏘 Nearby Places (Le Quartier)</span>
-        <span id="${LQ_STATUS_ID}" class="lq-status-text">Loading…</span>
-        <a href="${viewUrl}" target="_blank" rel="noopener" class="lq-view-link">View full map ↗</a>
-      </div>
-      <div id="lq-map-el">
-        <div id="lq-loading"><div class="lq-spinner"></div><span>Querying nearby places…</span></div>
-      </div>
-      <div id="lq-cat-bar"></div>
-    `;
-    const section = anchor.closest('section, article, [data-testid]') || anchor.parentElement;
-    (section?.parentElement ? section : anchor).after(wrapper);
+    wrapper.id = 'lq-title-link';
+    wrapper.style.cssText = 'display:inline-flex;align-items:center;';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.title = 'Le Quartier';
+    btn.innerHTML = '<span aria-hidden="true">🌳🏠</span><span>Le Quartier</span>';
+    btn.addEventListener('click', () => {
+      const mapEl = document.getElementById(LQ_ROOT_ID);
+      if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth' });
+      else window.open(externalUrl, '_blank', 'noopener,noreferrer');
+    });
+
+    wrapper.appendChild(btn);
+    anchor.insertAdjacentElement('beforebegin', wrapper);
+  }
+
+  // ── Generation with live progress ─────────────────────────────────────────
+  async function generateAndPoll(listing_id, lat, lon, backendBase) {
+    const loadingEl = document.getElementById('lq-loading');
+    if (loadingEl) {
+      loadingEl.innerHTML = `
+        <div class="lq-progress-outer"><div class="lq-progress-inner" id="lq-prog-inner" style="width:5%"></div></div>
+        <div class="lq-activity-log" id="lq-activity-log"></div>
+      `;
+    }
+
+    let taskId;
+    try {
+      const resp = await fetch(`${backendBase}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ site: 'zillow', listing_id, lat, lon }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      taskId = (await resp.json()).task_id;
+    } catch (err) {
+      if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text">⚠ ${err.message}</span>`;
+      return null;
+    }
+
+    return taskId;
+  }
+
+  async function pollUntilDone(taskId, backendBase) {
+    let lastMsg = '';
+    let polling = true;
+
+    const autoIncr = setInterval(() => {
+      const inner = document.getElementById('lq-prog-inner');
+      if (!inner || !polling) { clearInterval(autoIncr); return; }
+      const cur = parseFloat(inner.style.width) || 5;
+      if (cur < 88) inner.style.width = (cur + 1.5) + '%';
+    }, 3000);
+
+    while (polling) {
+      await new Promise(r => setTimeout(r, 1000));
+      try {
+        const r = await fetch(`${backendBase}/tasks/${taskId}/map-state`).then(res => res.json());
+
+        const inner = document.getElementById('lq-prog-inner');
+        if (inner) inner.style.width = (r.progress_pct || 5) + '%';
+
+        if (r.progress && r.progress !== lastMsg) {
+          lastMsg = r.progress;
+          const log = document.getElementById('lq-activity-log');
+          if (log) {
+            const line = document.createElement('div');
+            line.textContent = r.progress;
+            log.insertBefore(line, log.firstChild);
+            while (log.children.length > 5) log.removeChild(log.lastChild);
+          }
+        }
+
+        if (r.error) {
+          polling = false;
+          clearInterval(autoIncr);
+          const loadingEl = document.getElementById('lq-loading');
+          if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text">⚠ ${r.error}</span>`;
+          return false;
+        }
+
+        if (r.done) {
+          polling = false;
+          clearInterval(autoIncr);
+          return true;
+        }
+      } catch (_) {}
+    }
+    return false;
   }
 
   // ── Map rendering (inline equivalent of shared/map-init.js) ───────────────
-  function renderMap(centerLat, centerLon, geojson) {
+  function renderMap(centerLat, centerLon, geojson, listing_id) {
     const mapEl = document.getElementById('lq-map-el');
     if (!mapEl || typeof L === 'undefined') return;
 
@@ -258,15 +422,20 @@
 
     const catBar = document.getElementById('lq-cat-bar');
     if (catBar) {
+      const DEFAULT_VISIBLE = ['Supermarket', 'Bakery & Food', 'Market'];
       Object.entries(layerByCat).forEach(([cat, layer]) => {
-        const count  = (geojson.features || []).filter(f => (f.properties || {}).category === cat).length;
-        const faIcon = (catMeta[cat] && catMeta[cat].fa_icon) || 'fa-location-dot';
-        const color  = colorFor(cat);
-        const btn    = document.createElement('button');
-        btn.className      = 'lq-cat-btn';
-        btn.dataset.active = 'true';
+        const count = (geojson.features || []).filter(f => (f.properties || {}).category === cat).length;
+        const color = colorFor(cat);
+        const isActive = DEFAULT_VISIBLE.includes(cat);
+        const btn = document.createElement('button');
+        btn.className = 'lq-cat-btn';
+        if (!isActive) {
+          btn.classList.add('lq-cat-btn--off');
+          map.removeLayer(layer);
+        }
+        btn.dataset.active = isActive ? 'true' : 'false';
         btn.style.setProperty('--lq-cat-color', color);
-        btn.innerHTML = `<i class="fa-solid ${faIcon}"></i> ${cat} (${count})`;
+        btn.textContent = `${cat} (${count})`;
         btn.addEventListener('click', () => {
           const active = btn.dataset.active === 'true';
           btn.dataset.active = active ? 'false' : 'true';
@@ -275,6 +444,15 @@
         });
         catBar.appendChild(btn);
       });
+
+      const openBtn = document.createElement('a');
+      openBtn.className = 'lq-cat-btn';
+      openBtn.href = `${getBackendUrl()}/zillow/${listing_id}`;
+      openBtn.target = '_blank';
+      openBtn.rel = 'noopener';
+      openBtn.style.setProperty('--lq-cat-color', '#1a6b3c');
+      openBtn.innerHTML = '<i class="fa-solid fa-map-marked-alt"></i> Open in Le Quartier';
+      catBar.appendChild(openBtn);
     }
   }
 
@@ -286,49 +464,66 @@
     const listing_id = extractListingId();
     if (!listing_id) return;
 
+    injectTitleLink();
+
     const coords = extractCoordinates();
     if (!coords) {
       console.warn('[LeQuartier] Could not extract coordinates from this Zillow page.');
       return;
     }
 
-    const anchor = await waitForAnchor();
-    if (!anchor) {
-      console.warn('[LeQuartier] Neighborhood section not found within timeout.');
+    const backendBase = getBackendUrl();
+
+    const container = await waitForSidebarContainer();
+    if (!container) {
+      console.warn('[LeQuartier] Sidebar container not found within timeout.');
       return;
     }
 
-    const backendBase = getBackendUrl();
-    injectMapContainer(anchor, listing_id, backendBase);
+    ensureMapInSidebar(container);
 
-    const statusEl = document.getElementById(LQ_STATUS_ID);
-    if (statusEl) statusEl.textContent = 'Fetching POIs…';
+    new MutationObserver(() => {
+      const c = findSidebarContainer();
+      if (c) ensureMapInSidebar(c);
+    }).observe(document.body, { childList: true, subtree: true });
 
     try {
-      const url = new URL('/api/nearby', backendBase);
-      url.searchParams.set('lat', coords.lat);
-      url.searchParams.set('lon', coords.lon);
-      url.searchParams.set('zillow_id', listing_id);
+      const url = `${backendBase}/zillow/${listing_id}.geojson`;
+      const resp = await fetch(url);
 
-      const resp = await fetch(url.toString());
+      if (resp.status === 404) {
+        const taskId = await generateAndPoll(listing_id, coords.lat, coords.lon, backendBase);
+        if (!taskId) return;
+        const ok = await pollUntilDone(taskId, backendBase);
+        if (!ok) return;
+        const geojsonResp = await fetch(url);
+        if (!geojsonResp.ok) throw new Error(`HTTP ${geojsonResp.status}`);
+        const geojson = await geojsonResp.json();
+        document.getElementById('lq-loading')?.remove();
+        renderMap(coords.lat, coords.lon, geojson, listing_id);
+        return;
+      }
+
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const geojson = await resp.json();
-
-      const n = geojson?.features?.length ?? 0;
-      if (statusEl) statusEl.textContent = `${n} place${n !== 1 ? 's' : ''}`;
-
       document.getElementById('lq-loading')?.remove();
-      renderMap(coords.lat, coords.lon, geojson);
+      renderMap(coords.lat, coords.lon, geojson, listing_id);
     } catch (err) {
       const loadingEl = document.getElementById('lq-loading');
       if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text">⚠ ${err.message}</span>`;
-      if (statusEl) { statusEl.textContent = 'Error'; statusEl.style.color = '#dc2626'; }
     }
   }
 
   // ── SPA navigation ────────────────────────────────────────────────────────
+  let _activePath = window.location.pathname;
+
   function onNavigate() {
+    const newPath = window.location.pathname;
+    if (newPath === _activePath) return;
+    _activePath = newPath;
     document.getElementById(LQ_ROOT_ID)?.remove();
+    mapWrapper = null;
+    document.getElementById('lq-title-link')?.remove();
     delete window.__lqRan;
     setTimeout(run, 800);
   }
