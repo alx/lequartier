@@ -298,7 +298,15 @@ def task_map_state(task_id: str):
 
 
 _PREVIEWS_DIR = Path(__file__).parent.parent / "static" / "img" / "previews"
+_OG_IMAGES_DIR = Path(__file__).parent.parent / "static" / "img" / "og"
 _SCRIPTS_DIR  = Path(__file__).parent.parent.parent.parent / "scripts"
+
+
+def _og_image_url(listing_id: str) -> str | None:
+    """Return an absolute URL to the pre-generated OG PNG, or None if absent."""
+    if (_OG_IMAGES_DIR / f"{listing_id}.png").exists():
+        return url_for("static", filename=f"img/og/{listing_id}.png", _external=True)
+    return None
 
 
 def _render_airbnb_map(r: dict, readonly: bool = False, embed: bool = False) -> str:
@@ -326,6 +334,7 @@ def _render_airbnb_map(r: dict, readonly: bool = False, embed: bool = False) -> 
         categories=cfg.categories if cfg else {},
         listing_title=listing_title,
         listing_photo=r.get("listing_photo"),
+        og_image_url=_og_image_url(r["listing_id"]),
     )
 
 
@@ -702,6 +711,7 @@ def _render_zillow_map(zillow_id: str, r: dict, readonly: bool) -> str:
         categories=cfg.categories if cfg else {},
         listing_title=r.get("listing_title"),
         listing_photo=r.get("listing_photo"),
+        og_image_url=_og_image_url(zillow_id),
     )
 
 

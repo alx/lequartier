@@ -29,7 +29,7 @@
   {%- endif -%}
 {% endblock %}
 
-{% block og_image %}https://lequartier.girard-davila.net/airbnb/{{ listing_id }}.jpg{% endblock %}
+{% block og_image %}{{ og_image_url or 'https://lequartier.girard-davila.net/airbnb/' ~ listing_id ~ '.jpg' }}{% endblock %}
 {% block og_url %}https://lequartier.girard-davila.net/airbnb/{{ listing_id }}{% if not readonly %}/edit{% endif %}{% endblock %}
 
 {% block content %}

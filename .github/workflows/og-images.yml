@@ -1,0 +1,71 @@
+name: Generate OG images
+
+on:
+  push:
+    paths:
+      - 'src/web/curated/*.json'
+
+permissions:
+  contents: write   # push screenshots back to branch
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ───────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 2   # need HEAD and HEAD~1 to detect changed files
+
+      # ── 2. Detect which listing IDs changed ───────────────────────────────
+      - name: Detect changed listing IDs
+        id: ids
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null \
+            | grep '^src/web/curated/.*\.json$' \
+            | sed 's|src/web/curated/||; s|\.json$||' \
+            | tr '\n' ' ' || true)
+
+          # Fallback to all IDs on first push or force-push (before SHA is all zeros)
+          if [ -z "$CHANGED" ]; then
+            echo "No diff detected — regenerating all curated listings."
+            CHANGED=$(ls src/web/curated/*.json 2>/dev/null \
+              | sed 's|src/web/curated/||; s|\.json$||' \
+              | tr '\n' ' ' || true)
+          fi
+
+          echo "ids=$CHANGED" >> $GITHUB_OUTPUT
+          echo "Changed listing IDs: $CHANGED"
+
+      # ── 3. Setup Node + Playwright ────────────────────────────────────────
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      # ── 4. Generate OG images ─────────────────────────────────────────────
+      - name: Generate OG images
+        run: node scripts/generate-og-images.js ${{ steps.ids.outputs.ids }}
+
+      # ── 5. Commit and push PNGs ───────────────────────────────────────────
+      - name: Commit OG images
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/web/static/img/og/
+          if git diff --cached --quiet; then
+            echo "No OG image changes to commit."
+          else
+            git commit -m "chore: regenerate OG images for ${{ steps.ids.outputs.ids }} [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin ${{ github.ref_name }}
+          fi

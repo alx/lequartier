@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "generate-preview": "node scripts/generate-preview.js"
+    "generate-preview": "node scripts/generate-preview.js",
+    "generate-og-images": "node scripts/generate-og-images.js"
   },
   "dependencies": {
     "playwright": "^1.44.0"
