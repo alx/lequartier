@@ -1,5 +1,5 @@
 {
-  "listing_id": "688796991005765901",
+  "listing_id": "898250921519049619",
   "lat": 9.469566515741354,
   "lon": 100.04941550094289,
   "categories": [
@@ -20,7 +20,7 @@
     "lat": 9.469566515741354,
     "lon": 100.04941550094289,
     "confidence": "medium",
-    "listing_id": "688796991005765901",
+    "listing_id": "898250921519049619",
     "location": {
       "neighbourhood": null,
       "city": "บ้านละไม",
@@ -32,8 +32,8 @@
       "_meta": {
         "crs": "EPSG:4326",
         "generated": "2026-06-04T05:54:04.558025+00:00",
-        "source": "OSM Overpass + Google Places — https://www.airbnb.com/rooms/688796991005765901",
-        "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+        "source": "OSM Overpass + Google Places — https://www.airbnb.com/rooms/898250921519049619",
+        "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
         "center": {
           "lat": 9.46867,
           "lon": 100.04881
@@ -110,7 +110,7 @@
       "features": [
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-001",
+          "id": "airbnb/898250921519049619-001",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -125,14 +125,14 @@
             "coord_source": "osm",
             "coord_accuracy": "high",
             "source": "osm",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "status": "primary"
           }
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-002",
+          "id": "airbnb/898250921519049619-002",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -147,7 +147,7 @@
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
             "source": "google",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": null,
@@ -163,7 +163,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-003",
+          "id": "airbnb/898250921519049619-003",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -178,7 +178,7 @@
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
             "source": "google",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "rating": 4.8,
             "user_rating_count": 22,
@@ -187,7 +187,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-005",
+          "id": "airbnb/898250921519049619-005",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -202,7 +202,7 @@
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
             "source": "google",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": null,
@@ -218,7 +218,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-007",
+          "id": "airbnb/898250921519049619-007",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -233,14 +233,14 @@
             "coord_source": "osm",
             "coord_accuracy": "high",
             "source": "osm",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": true,
             "status": "primary"
           }
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-009",
+          "id": "airbnb/898250921519049619-009",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -255,7 +255,7 @@
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
             "source": "google",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "rating": 4.3,
             "user_rating_count": 229,
@@ -264,7 +264,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-010",
+          "id": "airbnb/898250921519049619-010",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -279,7 +279,7 @@
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
             "source": "google",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": null,
@@ -295,7 +295,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-016",
+          "id": "airbnb/898250921519049619-016",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -310,7 +310,7 @@
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
             "source": "google",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": null,
@@ -325,7 +325,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-018",
+          "id": "airbnb/898250921519049619-018",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -340,7 +340,7 @@
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
             "source": "google",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": null,
@@ -354,7 +354,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-022",
+          "id": "airbnb/898250921519049619-022",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -369,7 +369,7 @@
             "coord_source": "osm",
             "coord_accuracy": "high",
             "source": "osm",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "Tu-Su 08:00-14:00",
@@ -382,7 +382,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-027",
+          "id": "airbnb/898250921519049619-027",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -397,7 +397,7 @@
             "coord_source": "osm",
             "coord_accuracy": "high",
             "source": "osm",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "phone": "0817283735",
             "status": "primary"
@@ -405,7 +405,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-028",
+          "id": "airbnb/898250921519049619-028",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -420,7 +420,7 @@
             "coord_source": "nominatim",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "07:00–14:00",
@@ -433,7 +433,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-029",
+          "id": "airbnb/898250921519049619-029",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -448,7 +448,7 @@
             "coord_source": "research",
             "coord_accuracy": "high",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "08:00–19:45",
@@ -462,7 +462,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-030",
+          "id": "airbnb/898250921519049619-030",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -477,7 +477,7 @@
             "coord_source": "research",
             "coord_accuracy": "high",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "09:00–18:00",
@@ -491,7 +491,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-031",
+          "id": "airbnb/898250921519049619-031",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -506,7 +506,7 @@
             "coord_source": "research",
             "coord_accuracy": "high",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "09:00–18:00 daily",
@@ -520,7 +520,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-032",
+          "id": "airbnb/898250921519049619-032",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -535,7 +535,7 @@
             "coord_source": "estimated",
             "coord_accuracy": "low",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "15:00–22:00",
@@ -547,7 +547,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-033",
+          "id": "airbnb/898250921519049619-033",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -562,7 +562,7 @@
             "coord_source": "nominatim",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "16:30–23:00",
@@ -575,7 +575,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-034",
+          "id": "airbnb/898250921519049619-034",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -590,14 +590,14 @@
             "coord_source": "estimated",
             "coord_accuracy": "low",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "status": "primary"
           }
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-035",
+          "id": "airbnb/898250921519049619-035",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -612,7 +612,7 @@
             "coord_source": "nominatim",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "07:00–23:00",
@@ -625,7 +625,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-036",
+          "id": "airbnb/898250921519049619-036",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -640,7 +640,7 @@
             "coord_source": "nominatim",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "12:00–23:00",
@@ -653,7 +653,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-037",
+          "id": "airbnb/898250921519049619-037",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -668,7 +668,7 @@
             "coord_source": "nominatim",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "10:00–20:00",
@@ -681,7 +681,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-038",
+          "id": "airbnb/898250921519049619-038",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -696,7 +696,7 @@
             "coord_source": "estimated",
             "coord_accuracy": "low",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "Open 24h",
@@ -708,7 +708,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-039",
+          "id": "airbnb/898250921519049619-039",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -723,14 +723,14 @@
             "coord_source": "research",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "status": "primary"
           }
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-040",
+          "id": "airbnb/898250921519049619-040",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -745,7 +745,7 @@
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "08:30–18:30 daily",
@@ -757,7 +757,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-041",
+          "id": "airbnb/898250921519049619-041",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -772,7 +772,7 @@
             "coord_source": "nominatim",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "15:00–02:00",
@@ -785,7 +785,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-042",
+          "id": "airbnb/898250921519049619-042",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -800,7 +800,7 @@
             "coord_source": "research",
             "coord_accuracy": "high",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "09:00–22:00 daily",
@@ -814,7 +814,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-043",
+          "id": "airbnb/898250921519049619-043",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -829,7 +829,7 @@
             "coord_source": "nominatim",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "phone": "+66 81 823 5159",
             "status": "primary"
@@ -837,7 +837,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-044",
+          "id": "airbnb/898250921519049619-044",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -852,7 +852,7 @@
             "coord_source": "nominatim",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "phone": "+66 63 236 1891",
             "status": "primary"
@@ -860,7 +860,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-045",
+          "id": "airbnb/898250921519049619-045",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -875,7 +875,7 @@
             "coord_source": "estimated",
             "coord_accuracy": "low",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "10:00–20:00",
@@ -887,7 +887,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-046",
+          "id": "airbnb/898250921519049619-046",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -902,7 +902,7 @@
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "10:00–22:00",
@@ -915,7 +915,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-047",
+          "id": "airbnb/898250921519049619-047",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -930,7 +930,7 @@
             "coord_source": "research",
             "coord_accuracy": "medium",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "07:30–17:00",
@@ -943,7 +943,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-049",
+          "id": "airbnb/898250921519049619-049",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -958,7 +958,7 @@
             "coord_source": "research",
             "coord_accuracy": "high",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "08:00–17:00 daily",
@@ -970,7 +970,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-050",
+          "id": "airbnb/898250921519049619-050",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -985,7 +985,7 @@
             "coord_source": "nominatim",
             "coord_accuracy": "high",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "06:00–18:00 daily",
@@ -997,7 +997,7 @@
         },
         {
           "type": "Feature",
-          "id": "airbnb/688796991005765901-051",
+          "id": "airbnb/898250921519049619-051",
           "geometry": {
             "type": "Point",
             "coordinates": [
@@ -1012,7 +1012,7 @@
             "coord_source": "research",
             "coord_accuracy": "high",
             "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
+            "listing_url": "https://www.airbnb.com/rooms/898250921519049619",
             "generated_name": false,
             "opening_hours": {
               "raw": "09:00–19:00",
@@ -1026,9 +1026,9 @@
       ]
     },
     "n_pois": 34,
-    "airbnb_url": "https://www.airbnb.com/rooms/688796991005765901",
+    "airbnb_url": "https://www.airbnb.com/rooms/898250921519049619",
     "from_cache": false,
     "listing_title": "Bungalow in Amphoe Ko Samui · ★4.87 · 1 bedroom · 1 bed · 1 private bath",
-    "listing_photo": "https://a0.muscache.com/im/pictures/hosting/Hosting-688796991005765901/original/e3344cb7-2736-47c4-bdb0-770c5936b0b0.jpeg?im_w=720&width=720&quality=70&auto=webp"
+    "listing_photo": "https://a0.muscache.com/im/pictures/hosting/Hosting-898250921519049619/original/e3344cb7-2736-47c4-bdb0-770c5936b0b0.jpeg?im_w=720&width=720&quality=70&auto=webp"
   }
 }

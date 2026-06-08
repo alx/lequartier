@@ -1,7 +1,7 @@
 {
   "listing_id": "10349749",
-  "lat": 43.60498,
-  "lon": 1.45783,
+  "lat": 43.60418830035622,
+  "lon": 1.457722422556249,
   "categories": [
     "activities",
     "bakery",
@@ -16,8 +16,8 @@
     "transit"
   ],
   "result": {
-    "lat": 43.60498,
-    "lon": 1.45783,
+    "lat": 43.60418830035622,
+    "lon": 1.457722422556249,
     "confidence": "medium",
     "listing_id": "10349749",
     "location": {
