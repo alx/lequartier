@@ -69,7 +69,7 @@ def github_webhook():
     def _pull():
         try:
             r = subprocess.run(
-                ["git", "pull", "origin", "main"],
+                ["git", "pull", "--ff-only", "origin", "main"],
                 cwd=project_root,
                 capture_output=True,
                 text=True,
