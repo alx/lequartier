@@ -123,6 +123,40 @@ def invalidate(listing_id: str) -> None:
         path.unlink()
 
 
+def recent(n: int = 6) -> list[dict]:
+    """Return up to n most recently cached listing maps, newest first.
+
+    Excludes map/ and zillow/ prefixed entries so only Airbnb listings appear.
+    Each entry contains: listing_id, cached_at, city, country, n_pois, listing_title.
+    """
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for p in CACHE_DIR.glob("*.json"):
+        try:
+            records: list[dict] = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for rec in records:
+            lid = rec.get("listing_id", p.stem)
+            if lid.startswith(("map/", "zillow/")):
+                continue
+            ts = rec.get("cached_at", "")
+            if not ts:
+                continue
+            result = rec.get("result", {})
+            loc = result.get("location", {})
+            rows.append({
+                "listing_id":    lid,
+                "cached_at":     ts,
+                "city":          loc.get("city", ""),
+                "country":       loc.get("country", ""),
+                "n_pois":        result.get("n_pois", 0),
+                "listing_title": result.get("listing_title") or result.get("custom_listing_title") or "",
+            })
+    rows.sort(key=lambda r: r["cached_at"], reverse=True)
+    return rows[:n]
+
+
 def stats() -> list[dict]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     out = []

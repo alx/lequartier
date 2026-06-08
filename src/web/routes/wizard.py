@@ -67,6 +67,16 @@ def _gh_put_file(hdrs: dict, branch: str, path: str, content: str, message: str)
 wizard = Blueprint("wizard", __name__)
 
 
+@wizard.after_request
+def _allow_airbnb_framing(response):
+    # Allow chrome-extension:// (and any) origin to embed the read-only Airbnb map.
+    # Only applied to the listing read-only route, not edit/jpg/geojson.
+    if re.match(r"^/airbnb/[^/]+$", request.path):
+        response.headers["Content-Security-Policy"] = "frame-ancestors *"
+        response.headers.pop("X-Frame-Options", None)
+    return response
+
+
 def _require_edit_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -314,7 +324,16 @@ def _random_city() -> dict:
 
 @wizard.get("/")
 def index():
-    return render_template("index.html", bg_city=_random_city())
+    recent = cache_mod.recent(6)
+    for entry in recent:
+        lid = entry["listing_id"]
+        og_path = _OG_IMAGES_DIR / f"{lid}.png"
+        if og_path.exists():
+            entry["thumb_url"] = url_for("static", filename=f"img/og/{lid}.png")
+        else:
+            entry["thumb_url"] = url_for("wizard.airbnb_preview_jpg", listing_id=lid)
+        entry["map_url"] = url_for("wizard.airbnb_page", listing_id=lid)
+    return render_template("index.html", bg_city=_random_city(), recent_maps=recent)
 
 
 @wizard.get("/api/listing-preview")

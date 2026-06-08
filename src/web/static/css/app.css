@@ -845,3 +845,19 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
 @media (max-width: 480px) {
   .example-cards { grid-template-columns: 1fr; }
 }
+
+/* ── Recent maps grid (3 cols, links not buttons) ── */
+.recent-maps-grid {
+  grid-template-columns: 1fr 1fr 1fr;
+  margin-bottom: 0;
+}
+.recent-maps-grid .example-card {
+  text-decoration: none;
+  color: inherit;
+}
+.recent-maps-grid .example-card-thumb-wrap {
+  aspect-ratio: 4 / 3;
+}
+@media (max-width: 480px) {
+  .recent-maps-grid { grid-template-columns: 1fr 1fr; }
+}

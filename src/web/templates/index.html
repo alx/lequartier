@@ -44,6 +44,25 @@
         </div>
       </button>
     </div>
+
+    {% if recent_maps %}
+    <div class="example-cards-label">Latest maps:</div>
+    <div class="example-cards recent-maps-grid" id="recent-maps">
+      {% for m in recent_maps %}
+      <a class="example-card" href="{{ m.map_url }}">
+        <div class="example-card-thumb-wrap">
+          <img class="example-card-thumb" src="{{ m.thumb_url }}" alt="" loading="lazy">
+        </div>
+        <div class="example-card-body">
+          {% if m.listing_title %}
+          <div class="example-card-title">{{ m.listing_title }}</div>
+          {% endif %}
+          <div class="example-card-url muted">{{ m.city }}{% if m.country %} · {{ m.country }}{% endif %}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
 
   <div style="text-align:center; font-size:0.75rem; color:rgba(255,255,255,0.75); margin-top:0.5rem; text-shadow:0 1px 3px rgba(0,0,0,0.5);">
