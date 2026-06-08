@@ -810,24 +810,13 @@ def zillow_save_curated(zillow_id: str):
 # ── /api/nearby ────────────────────────────────────────────────────────────────
 
 def _api_nearby_response(geojson: dict) -> Response:
-    resp = Response(json.dumps(geojson, ensure_ascii=False),
+    return Response(json.dumps(geojson, ensure_ascii=False),
                     content_type="application/geo+json")
-    origin = request.headers.get("Origin", "")
-    if origin.startswith("chrome-extension://") or current_app.debug:
-        resp.headers["Access-Control-Allow-Origin"] = origin or "*"
-        resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    return resp
 
 
 @wizard.route("/api/nearby", methods=["OPTIONS"])
 def api_nearby_preflight():
-    resp = Response("", status=204)
-    origin = request.headers.get("Origin", "")
-    if origin.startswith("chrome-extension://") or current_app.debug:
-        resp.headers["Access-Control-Allow-Origin"] = origin or "*"
-        resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        resp.headers["Access-Control-Max-Age"] = "86400"
-    return resp
+    return Response("", status=204)
 
 
 @wizard.get("/api/nearby")
