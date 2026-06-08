@@ -24,7 +24,7 @@
     (window._ringLayers || []).forEach(l => { try { map.removeLayer(l); } catch(e){} });
     window._ringLayers = [];
     if (window._ringLegend) { try { window._ringLegend.remove(); } catch(e){} window._ringLegend = null; }
-    if (window._showMoreCtrl) { try { window._showMoreCtrl.remove(); } catch(e){} window._showMoreCtrl = null; }
+    // show-more-pill is now an overlay card, no Leaflet control to clean up
   } else {
     map = L.map('map').setView([displayLat, displayLon], 16);
     window._wizardMap = map;
@@ -55,16 +55,11 @@
     }).addTo(map));
   });
 
-  // "Show more locations" pill — toggled after init to hide if no hidden POIs
+  // "Show more locations" pill — driven by #show-more-pill-card in the left overlay
   let _showingMore = false;
-  const showMoreCtrl = L.control({ position: 'topright' });
-  showMoreCtrl.onAdd = function() {
-    const div = L.DomUtil.create('div', 'show-more-pill');
-    div.innerHTML = '<button type="button" style="display:flex;align-items:center;gap:5px;">' +
-                    '<span class="pill-markers" style="display:flex;align-items:center;gap:3px;"></span>' +
-                    '<span class="pill-label">Show more locations…</span></button>';
-    L.DomEvent.disableClickPropagation(div);
-    div.querySelector('button').addEventListener('click', function() {
+  const showMorePillEl = document.getElementById('show-more-pill');
+  if (showMorePillEl) {
+    showMorePillEl.querySelector('button').addEventListener('click', function() {
       _showingMore = !_showingMore;
       this.querySelector('.pill-label').textContent = _showingMore ? 'Show fewer locations' : 'Show more locations…';
       RAW_GEOJSON.features.forEach(function(f) {
@@ -82,10 +77,7 @@
       });
       window.renderPoiList();
     });
-    return div;
-  };
-  showMoreCtrl.addTo(map);
-  window._showMoreCtrl = showMoreCtrl;
+  }
 
   let homeIcon = null;
   let homeMarker;
@@ -584,11 +576,12 @@
     const hasHidden = RAW_GEOJSON.features.some(
       f => !DEFAULT_VISIBLE_CATS.has(f.properties.category) && markerMap[f.id]
     );
+    const showMoreCard = document.getElementById('show-more-pill-card');
     if (!hasHidden) {
-      const c = showMoreCtrl.getContainer();
-      if (c) c.style.display = 'none';
+      if (showMoreCard) showMoreCard.style.display = 'none';
     } else {
-      const pillMarkersEl = showMoreCtrl.getContainer()?.querySelector('.pill-markers');
+      if (showMoreCard) showMoreCard.style.display = '';
+      const pillMarkersEl = document.getElementById('show-more-pill')?.querySelector('.pill-markers');
       if (pillMarkersEl) {
         const hiddenCats = [...new Set(
           RAW_GEOJSON.features
