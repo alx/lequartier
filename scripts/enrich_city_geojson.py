@@ -31,6 +31,7 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 ROOT = Path(__file__).parent.parent
 TOP100_PATH = ROOT / "src/web/static/data/top100.json"
@@ -62,9 +63,11 @@ def _overpass_post(query: str) -> dict:
             return r.json()
         except Exception as exc:
             if attempt == 2:
-                print(f"    [overpass] failed: {exc}", file=sys.stderr)
+                tqdm.write(f"    [overpass] failed after 3 attempts: {exc}", file=sys.stderr)
                 return {}
-            time.sleep((2 ** attempt) * (1 + random.random() * 0.3))
+            delay = (2 ** attempt) * (1 + random.random() * 0.3)
+            tqdm.write(f"    [overpass] retry {attempt + 1}/3 in {delay:.1f}s…")
+            time.sleep(delay)
     return {}
 
 
@@ -94,6 +97,7 @@ def batch_wikipedia_urls(wikidata_ids: list[str]) -> dict[str, str]:
     result: dict[str, str] = {}
     for i in range(0, len(wikidata_ids), 50):
         chunk = wikidata_ids[i : i + 50]
+        tqdm.write(f"    [wikidata] fetching {len(chunk)} ID(s)…")
         try:
             r = requests.get(
                 WIKIDATA_API,
@@ -108,12 +112,15 @@ def batch_wikipedia_urls(wikidata_ids: list[str]) -> dict[str, str]:
                 timeout=15,
             )
             r.raise_for_status()
+            found = 0
             for wd_id, entity in r.json().get("entities", {}).items():
                 url = entity.get("sitelinks", {}).get("enwiki", {}).get("url")
                 if url:
                     result[wd_id] = url
+                    found += 1
+            tqdm.write(f"    [wikidata] {found}/{len(chunk)} had an English Wikipedia article")
         except Exception as exc:
-            print(f"    [wikidata] batch failed: {exc}", file=sys.stderr)
+            tqdm.write(f"    [wikidata] batch failed: {exc}", file=sys.stderr)
         if i + 50 < len(wikidata_ids):
             time.sleep(0.3)
     return result
@@ -123,6 +130,7 @@ def batch_wikipedia_urls(wikidata_ids: list[str]) -> dict[str, str]:
 
 def search_youtube(query: str, api_key: str) -> str | None:
     """Return a YouTube embed URL for the top result, or None on failure."""
+    tqdm.write(f"    [youtube] searching: {query!r}")
     try:
         r = requests.get(
             YOUTUBE_API,
@@ -132,9 +140,14 @@ def search_youtube(query: str, api_key: str) -> str | None:
         r.raise_for_status()
         items = r.json().get("items", [])
         if items:
-            return f"https://www.youtube.com/embed/{items[0]['id']['videoId']}"
+            video_id = items[0]["id"]["videoId"]
+            title = items[0]["snippet"]["title"]
+            url = f"https://www.youtube.com/embed/{video_id}"
+            tqdm.write(f"    [youtube] top result: {title!r}")
+            return url
+        tqdm.write("    [youtube] no results found")
     except Exception as exc:
-        print(f"    [youtube] search failed: {exc}", file=sys.stderr)
+        tqdm.write(f"    [youtube] search failed: {exc}", file=sys.stderr)
     return None
 
 
@@ -144,105 +157,158 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None)
     """Enrich one city's GeoJSON file in-place. Returns count of fields added."""
     path = CITIES_DIR / f"{city['slug']}.geojson"
     if not path.exists():
-        print(f"  [skip] {path.name} not found")
+        tqdm.write(f"  [skip] {path.name} not found")
         return 0
 
     gj = json.loads(path.read_text())
     features = gj.get("features", [])
     changed = 0
 
-    def _poi_features(category: str) -> list[dict]:
+    def _pois(category: str) -> list[dict]:
         return [
             f for f in features
             if f.get("properties", {}).get("kind") == "poi"
             and f.get("properties", {}).get("category") == category
         ]
 
+    def _needs(f: dict, field: str) -> bool:
+        return force or not f.get("properties", {}).get(field)
+
     # ── monuments → wikipedia_url ─────────────────────────────────────────────
-    monument_queue: list[tuple[dict, str]] = []
-    for f in _poi_features("monument"):
-        props = f["properties"]
-        if not force and props.get("wikipedia_url"):
-            continue
-        wd = props.get("wikidata")
-        if not wd:
+    to_enrich = [f for f in _pois("monument") if _needs(f, "wikipedia_url")]
+    if to_enrich:
+        tqdm.write(f"  monuments  — {len(to_enrich)} to enrich")
+        monument_queue: list[tuple[dict, str]] = []
+
+        needing_fallback = [f for f in to_enrich if not f["properties"].get("wikidata")]
+        if needing_fallback:
+            tqdm.write(f"    [overpass] {len(needing_fallback)} monument(s) missing wikidata ID, querying…")
+        for f in tqdm(needing_fallback, desc="    overpass fallback", unit="poi", leave=False):
+            name = f["properties"]["name"]
             coords = f["geometry"]["coordinates"]
+            tqdm.write(f"    [overpass] → {name!r}")
             tags = fetch_osm_tags(coords[1], coords[0], "monument")
             wd = tags.get("wikidata")
-            if wd and not dry_run:
-                props["wikidata"] = wd
+            if wd:
+                tqdm.write(f"    [overpass]   found wikidata={wd}")
+                if not dry_run:
+                    f["properties"]["wikidata"] = wd
+            else:
+                tqdm.write(f"    [overpass]   no wikidata tag found")
             time.sleep(0.5)
-        if wd:
-            monument_queue.append((f, wd))
 
-    if monument_queue:
-        unique_ids = list({wd for _, wd in monument_queue})
-        wiki_map = batch_wikipedia_urls(unique_ids)
-        for f, wd in monument_queue:
-            url = wiki_map.get(wd)
-            if url:
-                f["properties"]["wikipedia_url"] = url
+        for f in to_enrich:
+            wd = f["properties"].get("wikidata")
+            if wd:
+                monument_queue.append((f, wd))
+            else:
+                tqdm.write(f"    ✗ {f['properties']['name']!r} — no wikidata ID, skipping")
+
+        if monument_queue:
+            unique_ids = list({wd for _, wd in monument_queue})
+            wiki_map = batch_wikipedia_urls(unique_ids)
+            for f, wd in monument_queue:
+                url = wiki_map.get(wd)
+                name = f["properties"]["name"]
+                if url:
+                    f["properties"]["wikipedia_url"] = url
+                    changed += 1
+                    tqdm.write(f"    ✓ {name!r}")
+                    tqdm.write(f"      {url}")
+                else:
+                    tqdm.write(f"    ✗ {name!r} — no English Wikipedia article")
+    else:
+        tqdm.write("  monuments  — all up to date")
+
+    # ── museums → ticket_url ──────────────────────────────────────────────────
+    to_enrich = [f for f in _pois("museum") if _needs(f, "ticket_url")]
+    if to_enrich:
+        tqdm.write(f"  museums    — {len(to_enrich)} to enrich")
+        for f in tqdm(to_enrich, desc="    museums", unit="poi", leave=False):
+            props = f["properties"]
+            name = props["name"]
+            website = props.get("website")
+            if not website:
+                coords = f["geometry"]["coordinates"]
+                tqdm.write(f"    [overpass] → {name!r}")
+                tags = fetch_osm_tags(coords[1], coords[0], "museum")
+                website = tags.get("website")
+                if website:
+                    tqdm.write(f"    [overpass]   found website")
+                    if not dry_run:
+                        props["website"] = website
+                else:
+                    tqdm.write(f"    [overpass]   no website tag found")
+                time.sleep(0.5)
+            if website:
+                props["ticket_url"] = website
                 changed += 1
-                print(f"  monument   {f['properties']['name'][:50]!r}")
-                print(f"             {url}")
+                tqdm.write(f"    ✓ {name!r}")
+                tqdm.write(f"      {website}")
+            else:
+                tqdm.write(f"    ✗ {name!r} — no website found")
+    else:
+        tqdm.write("  museums    — all up to date")
 
-    # ── museums → ticket_url (OSM website) ───────────────────────────────────
-    for f in _poi_features("museum"):
-        props = f["properties"]
-        if not force and props.get("ticket_url"):
-            continue
-        website = props.get("website")
-        if not website:
-            coords = f["geometry"]["coordinates"]
-            tags = fetch_osm_tags(coords[1], coords[0], "museum")
-            website = tags.get("website")
-            if website and not dry_run:
-                props["website"] = website
-            time.sleep(0.5)
-        if website:
-            props["ticket_url"] = website
-            changed += 1
-            print(f"  museum     {props['name'][:50]!r}")
-            print(f"             {website}")
+    # ── universities → courses_url ────────────────────────────────────────────
+    to_enrich = [f for f in _pois("university") if _needs(f, "courses_url")]
+    if to_enrich:
+        tqdm.write(f"  universities — {len(to_enrich)} to enrich")
+        for f in tqdm(to_enrich, desc="    universities", unit="poi", leave=False):
+            props = f["properties"]
+            name = props["name"]
+            website = props.get("website")
+            if not website:
+                coords = f["geometry"]["coordinates"]
+                tqdm.write(f"    [overpass] → {name!r}")
+                tags = fetch_osm_tags(coords[1], coords[0], "university")
+                website = tags.get("website")
+                if website:
+                    tqdm.write(f"    [overpass]   found website")
+                    if not dry_run:
+                        props["website"] = website
+                else:
+                    tqdm.write(f"    [overpass]   no website tag found")
+                time.sleep(0.5)
+            if website:
+                props["courses_url"] = website
+                changed += 1
+                tqdm.write(f"    ✓ {name!r}")
+                tqdm.write(f"      {website}")
+            else:
+                tqdm.write(f"    ✗ {name!r} — no website found")
+    else:
+        tqdm.write("  universities — all up to date")
 
-    # ── universities → courses_url (OSM website) ─────────────────────────────
-    for f in _poi_features("university"):
-        props = f["properties"]
-        if not force and props.get("courses_url"):
-            continue
-        website = props.get("website")
-        if not website:
-            coords = f["geometry"]["coordinates"]
-            tags = fetch_osm_tags(coords[1], coords[0], "university")
-            website = tags.get("website")
-            if website and not dry_run:
-                props["website"] = website
-            time.sleep(0.5)
-        if website:
-            props["courses_url"] = website
-            changed += 1
-            print(f"  university {props['name'][:50]!r}")
-            print(f"             {website}")
-
-    # ── markets → video_url (one YouTube search per city) ────────────────────
-    if youtube_key:
-        markets_needing = [
-            f for f in _poi_features("market")
-            if force or not f.get("properties", {}).get("video_url")
-        ]
-        if markets_needing:
+    # ── markets → video_url ───────────────────────────────────────────────────
+    to_enrich = [f for f in _pois("market") if _needs(f, "video_url")]
+    if to_enrich:
+        tqdm.write(f"  markets    — {len(to_enrich)} to enrich")
+        if youtube_key:
             query = f"{city['name']} local food market"
             video_url = search_youtube(query, youtube_key)
             if video_url:
-                for f in markets_needing:
+                for f in to_enrich:
                     f["properties"]["video_url"] = video_url
                     changed += 1
-                    print(f"  market     {f['properties']['name'][:50]!r}")
-                    print(f"             {video_url}")
+                    tqdm.write(f"    ✓ {f['properties']['name']!r}")
+                tqdm.write(f"      {video_url}")
+            else:
+                tqdm.write("    ✗ no video found")
+        else:
+            tqdm.write("    [skip] YOUTUBE_API_KEY not set")
+    else:
+        tqdm.write("  markets    — all up to date")
 
     # ── write back ────────────────────────────────────────────────────────────
-    if changed and not dry_run:
-        path.write_text(json.dumps(gj, ensure_ascii=False, separators=(",", ":")))
+    if changed:
+        if dry_run:
+            tqdm.write(f"  → {changed} field(s) would be added (dry-run, not written)")
+        else:
+            path.write_text(json.dumps(gj, ensure_ascii=False, separators=(",", ":")))
+            tqdm.write(f"  → {changed} field(s) added, file written")
+    else:
+        tqdm.write("  → nothing changed")
 
     return changed
 
@@ -275,16 +341,20 @@ def main() -> None:
         print("[dry-run] no files will be written\n")
 
     total_changed = 0
-    for i, city in enumerate(cities, 1):
-        print(f"\n[{i}/{len(cities)}] {city['name']}, {city['country']}")
+    city_bar = tqdm(cities, desc="cities", unit="city")
+    for city in city_bar:
+        city_bar.set_postfix_str(f"{city['name']}, {city['country']}")
+        tqdm.write(f"\n── {city['name']}, {city['country']} ──")
         n = enrich_city(city, force=args.force, dry_run=args.dry_run, youtube_key=youtube_key)
-        if not n:
-            print("  (nothing to enrich)")
         total_changed += n
-        if i < len(cities):
+        if len(cities) > 1:
             time.sleep(0.5)
 
-    print(f"\nDone — {total_changed} field{'s' if total_changed != 1 else ''} added across {len(cities)} {'city' if len(cities) == 1 else 'cities'}.")
+    n_cities = len(cities)
+    print(
+        f"\nDone — {total_changed} field{'s' if total_changed != 1 else ''} added"
+        f" across {n_cities} {'city' if n_cities == 1 else 'cities'}."
+    )
 
 
 if __name__ == "__main__":
