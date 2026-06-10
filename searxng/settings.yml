@@ -1,0 +1,24 @@
+# SearXNG config for Le Quartier enrichment pipeline.
+# Used by scripts/enrich_city_geojson.py to find transit, ticket, and courses URLs.
+# Only DuckDuckGo and Bing are enabled — sufficient for the 100-city dataset.
+# JSON format is explicitly enabled (disabled by default in SearXNG).
+
+use_default_settings:
+  engines:
+    keep_only:
+      - duckduckgo
+      - bing
+
+server:
+  # Generate with: openssl rand -hex 32
+  secret_key: "changeme"
+  bind_address: "0.0.0.0:8080"
+  # Limiter disabled — instance is localhost-only, no public exposure
+  limiter: false
+  image_proxy: false
+
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json

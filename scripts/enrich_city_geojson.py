@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Enrich city GeoJSON files with tooltip content from Wikidata and YouTube APIs.
+"""Enrich city GeoJSON files with tooltip content from Wikidata, YouTube, and SearXNG.
 
 For each POI:
-  monument   → wikipedia_url  (Wikidata API; Overpass fallback for missing wikidata IDs)
-  museum     → ticket_url     (OSM website tag; Overpass fallback if absent)
-  university → courses_url    (OSM website tag; Overpass fallback if absent)
-  market     → video_url      (YouTube Data API, one search per city)
-  airport    → no enrichment  (ADSB link derived from coordinates client-side)
-  train_station → deferred
+  monument      → wikipedia_url  (Wikidata API; Overpass fallback for missing wikidata IDs)
+  museum        → ticket_url     (OSM website → SearXNG fallback: "{name}" buy tickets)
+  university    → courses_url    (OSM website → SearXNG fallback: "{name}" courses catalog)
+  train_station → transit_url    (SearXNG: "{name}" {city} lines schedules)
+  market        → video_url      (YouTube Data API, one search per city)
+  airport       → no enrichment  (ADSB link derived from coordinates client-side)
 
 Skips fields already present (idempotent). Use --force to re-fetch everything.
-Requires YOUTUBE_API_KEY in .env for market enrichment.
+Requires YOUTUBE_API_KEY and SEARXNG_BASE_URL in .env.
 
 Usage:
   uv run scripts/enrich_city_geojson.py               # all 100 cities
@@ -43,10 +43,11 @@ WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 YOUTUBE_API = "https://www.googleapis.com/youtube/v3/search"
 
 _CATEGORY_OSM_SELECTOR = {
-    "monument":   '"tourism"="attraction"',
-    "museum":     '"tourism"="museum"',
-    "university": '"amenity"="university"',
-    "market":     '"amenity"="marketplace"',
+    "monument":     '"tourism"="attraction"',
+    "museum":       '"tourism"="museum"',
+    "university":   '"amenity"="university"',
+    "market":       '"amenity"="marketplace"',
+    "train_station": '"railway"="station"',
 }
 
 
@@ -151,9 +152,34 @@ def search_youtube(query: str, api_key: str) -> str | None:
     return None
 
 
+# ── SearXNG ───────────────────────────────────────────────────────────────────
+
+def search_searxng(query: str, base_url: str) -> str | None:
+    """Return the top URL result from the local SearXNG instance, or None."""
+    tqdm.write(f"    [searxng] searching: {query!r}")
+    try:
+        r = requests.get(
+            f"{base_url.rstrip('/')}/search",
+            params={"q": query, "format": "json", "categories": "general", "language": "auto"},
+            headers={"Accept": "application/json"},
+            timeout=10,
+        )
+        r.raise_for_status()
+        results = r.json().get("results", [])
+        if results:
+            url = results[0].get("url")
+            title = results[0].get("title", "")
+            tqdm.write(f"    [searxng] top result: {title!r} → {url}")
+            return url
+        tqdm.write("    [searxng] no results found")
+    except Exception as exc:
+        tqdm.write(f"    [searxng] failed: {exc}", file=sys.stderr)
+    return None
+
+
 # ── Per-city enrichment ───────────────────────────────────────────────────────
 
-def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None) -> int:
+def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None, searxng_url: str | None) -> int:
     """Enrich one city's GeoJSON file in-place. Returns count of fields added."""
     path = CITIES_DIR / f"{city['slug']}.geojson"
     if not path.exists():
@@ -220,7 +246,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None)
     else:
         tqdm.write("  monuments  — all up to date")
 
-    # ── museums → ticket_url ──────────────────────────────────────────────────
+    # ── museums → ticket_url (OSM website → SearXNG fallback) ────────────────
     to_enrich = [f for f in _pois("museum") if _needs(f, "ticket_url")]
     if to_enrich:
         tqdm.write(f"  museums    — {len(to_enrich)} to enrich")
@@ -240,6 +266,9 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None)
                 else:
                     tqdm.write(f"    [overpass]   no website tag found")
                 time.sleep(0.5)
+            if not website and searxng_url:
+                website = search_searxng(f'"{name}" buy tickets', searxng_url)
+                time.sleep(0.5)
             if website:
                 props["ticket_url"] = website
                 changed += 1
@@ -250,7 +279,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None)
     else:
         tqdm.write("  museums    — all up to date")
 
-    # ── universities → courses_url ────────────────────────────────────────────
+    # ── universities → courses_url (OSM website → SearXNG fallback) ──────────
     to_enrich = [f for f in _pois("university") if _needs(f, "courses_url")]
     if to_enrich:
         tqdm.write(f"  universities — {len(to_enrich)} to enrich")
@@ -270,6 +299,9 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None)
                 else:
                     tqdm.write(f"    [overpass]   no website tag found")
                 time.sleep(0.5)
+            if not website and searxng_url:
+                website = search_searxng(f'"{name}" courses catalog', searxng_url)
+                time.sleep(0.5)
             if website:
                 props["courses_url"] = website
                 changed += 1
@@ -279,6 +311,29 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None)
                 tqdm.write(f"    ✗ {name!r} — no website found")
     else:
         tqdm.write("  universities — all up to date")
+
+    # ── train stations → transit_url (SearXNG primary) ───────────────────────
+    to_enrich = [f for f in _pois("train_station") if _needs(f, "transit_url")]
+    if to_enrich:
+        tqdm.write(f"  train stations — {len(to_enrich)} to enrich")
+        if searxng_url:
+            for f in tqdm(to_enrich, desc="    train_stations", unit="poi", leave=False):
+                props = f["properties"]
+                name = props["name"]
+                query = f'"{name}" {city["name"]} lines schedules'
+                url = search_searxng(query, searxng_url)
+                time.sleep(0.5)
+                if url:
+                    props["transit_url"] = url
+                    changed += 1
+                    tqdm.write(f"    ✓ {name!r}")
+                    tqdm.write(f"      {url}")
+                else:
+                    tqdm.write(f"    ✗ {name!r} — no result found")
+        else:
+            tqdm.write("    [skip] SEARXNG_BASE_URL not set")
+    else:
+        tqdm.write("  train stations — all up to date")
 
     # ── markets → video_url ───────────────────────────────────────────────────
     to_enrich = [f for f in _pois("market") if _needs(f, "video_url")]
@@ -316,6 +371,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None)
 def main() -> None:
     load_dotenv(ROOT / ".env")
     youtube_key = os.environ.get("YOUTUBE_API_KEY")
+    searxng_url = os.environ.get("SEARXNG_BASE_URL", "http://127.0.0.1:8080")
 
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -329,6 +385,23 @@ def main() -> None:
 
     if not youtube_key:
         print("Warning: YOUTUBE_API_KEY not set — market video_url will be skipped.", file=sys.stderr)
+
+    # Verify SearXNG is reachable before starting
+    try:
+        requests.get(f"{searxng_url.rstrip('/')}/healthz", timeout=3)
+        tqdm.write(f"SearXNG reachable at {searxng_url}")
+    except Exception:
+        try:
+            requests.get(searxng_url, timeout=3)
+            tqdm.write(f"SearXNG reachable at {searxng_url}")
+        except Exception:
+            print(
+                f"Warning: SearXNG not reachable at {searxng_url} — "
+                "museum/university/transit enrichment via search will be skipped.\n"
+                "Start it with: docker compose up -d",
+                file=sys.stderr,
+            )
+            searxng_url = None
 
     cities: list[dict] = json.loads(TOP100_PATH.read_text())["cities"]
     if args.city:
@@ -345,7 +418,7 @@ def main() -> None:
     for city in city_bar:
         city_bar.set_postfix_str(f"{city['name']}, {city['country']}")
         tqdm.write(f"\n── {city['name']}, {city['country']} ──")
-        n = enrich_city(city, force=args.force, dry_run=args.dry_run, youtube_key=youtube_key)
+        n = enrich_city(city, force=args.force, dry_run=args.dry_run, youtube_key=youtube_key, searxng_url=searxng_url)
         total_changed += n
         if len(cities) > 1:
             time.sleep(0.5)

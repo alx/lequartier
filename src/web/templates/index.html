@@ -105,8 +105,8 @@
     var coords = f.geometry.coordinates;
     var html = '<strong>' + props.name + '</strong><br>';
     html += '<span style="font-size:0.82em;color:#6b7280;"><i class="fa-solid ' + icon + '"></i> ' + cat.replace(/_/g, ' ') + '</span>';
-    if ((cat === 'train_station' || cat === 'transport') && props.line)
-      html += '<br><i class="fa-solid fa-train"></i> Line: ' + props.line;
+    if ((cat === 'train_station' || cat === 'transport') && props.transit_url)
+      html += '<br><a href="' + props.transit_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-train"></i> Lines &amp; schedules</a>';
     if (cat === 'museum' && props.ticket_url)
       html += '<br><a href="' + props.ticket_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-ticket"></i> Buy tickets</a>';
     if (cat === 'monument' && props.wikipedia_url)

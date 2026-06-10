@@ -28,7 +28,7 @@ Per-category content shown in the click popup, rendered only when the correspond
 
 | Category | Field | Content |
 |---|---|---|
-| `train_station` / `transport` | `line` | Line identifier |
+| `train_station` / `transport` | `transit_url` | Link to the station's page on the transit authority website |
 | `museum` | `ticket_url` | Buy-tickets link |
 | `monument` | `wikipedia_url` | Wikipedia history link |
 | `airport` | _(coords)_ | Live-flights link (always present — derived from coordinates) |
