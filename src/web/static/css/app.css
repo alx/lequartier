@@ -796,6 +796,18 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
 }
+.example-card-thumb-fallback {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: 2rem;
+}
+.example-card-thumb.img-error { display: none; }
+.example-card-thumb.img-error ~ .example-card-thumb-fallback { display: flex; }
 .example-card-body { padding: 0.55rem 0.7rem 0.6rem; }
 .example-card-title {
   font-size: 0.82rem;

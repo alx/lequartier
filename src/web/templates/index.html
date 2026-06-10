@@ -29,7 +29,8 @@
     <div class="example-cards" id="example-cards">
       <button type="button" class="example-card" data-listing-id="686559818391956388" data-url="https://www.airbnb.com/rooms/686559818391956388" onclick="goToExample(this)">
         <div class="example-card-thumb-wrap">
-          <img class="example-card-thumb" src="{{ url_for('static', filename='img/airbnb_686559818391956388.png') }}" alt="">
+          <img class="example-card-thumb" src="{{ url_for('static', filename='img/airbnb_686559818391956388.png') }}" alt="" onerror="this.classList.add('img-error')">
+          <div class="example-card-thumb-fallback" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></div>
         </div>
         <div class="example-card-body">
           <div class="example-card-url muted">airbnb.com · rooms/686559818391956388</div>
@@ -37,7 +38,8 @@
       </button>
       <button type="button" class="example-card" data-listing-id="10349749" data-url="https://www.airbnb.fr/rooms/10349749" onclick="goToExample(this)">
         <div class="example-card-thumb-wrap">
-          <img class="example-card-thumb" src="{{ url_for('static', filename='img/airbnb_10349749.png') }}" alt="">
+          <img class="example-card-thumb" src="{{ url_for('static', filename='img/airbnb_10349749.png') }}" alt="" onerror="this.classList.add('img-error')">
+          <div class="example-card-thumb-fallback" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></div>
         </div>
         <div class="example-card-body">
           <div class="example-card-url muted">airbnb.fr · rooms/10349749</div>
@@ -51,7 +53,8 @@
       {% for m in recent_maps %}
       <a class="example-card" href="{{ m.map_url }}">
         <div class="example-card-thumb-wrap">
-          <img class="example-card-thumb" src="{{ m.thumb_url }}" alt="" loading="lazy">
+          <img class="example-card-thumb" src="{{ m.thumb_url }}" alt="" loading="lazy" onerror="this.classList.add('img-error')">
+          <div class="example-card-thumb-fallback" aria-hidden="true"><i class="fa-solid fa-map-location-dot"></i></div>
         </div>
         <div class="example-card-body">
           {% if m.listing_title %}
