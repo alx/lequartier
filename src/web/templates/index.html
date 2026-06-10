@@ -79,24 +79,91 @@
 {% block extra_js %}
 <script>
 (function () {
+  var CITY_LAT = {{ bg_city.lat }};
+  var CITY_LON = {{ bg_city.lon }};
+  var CITY_SLUG = "{{ bg_city.slug }}";
+
+  var ACCENT = '#1a6b3c';
+
+  var CIRCLE_STYLES = [
+    { radiusM: 400,  label: '5 min' },
+    { radiusM: 800,  label: '10 min' },
+    { radiusM: 1200, label: '15 min' },
+  ];
+
+  var FA_ICONS = {
+    'park': 'fa-tree', 'train_station': 'fa-train', 'airport': 'fa-plane',
+    'museum': 'fa-landmark', 'monument': 'fa-monument', 'university': 'fa-graduation-cap',
+    'stadium': 'fa-futbol', 'market': 'fa-store', 'beach': 'fa-umbrella-beach',
+    'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
+  };
+
   document.addEventListener('DOMContentLoaded', function() {
     var map = L.map('map', {
-      zoomControl: false,
-      dragging: false,
-      scrollWheelZoom: false,
-      touchZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      tap: false,
-      attributionControl: false,
-    }).setView([{{ bg_city.lat }}, {{ bg_city.lon }}], 12);
+      zoomControl: false, dragging: false, scrollWheelZoom: false,
+      touchZoom: false, doubleClickZoom: false, boxZoom: false,
+      keyboard: false, tap: false, attributionControl: false,
+    });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     }).addTo(map);
 
+    // Fit to outermost walking circle (1200m radius)
+    map.fitBounds(L.latLng(CITY_LAT, CITY_LON).toBounds(1200 * 2));
     document.getElementById('map').classList.add('map-active');
+
+    // Draw walking distance rings with labels
+    var cosLat = Math.cos(CITY_LAT * Math.PI / 180);
+    CIRCLE_STYLES.forEach(function(c) {
+      L.circle([CITY_LAT, CITY_LON], {
+        radius: c.radiusM,
+        color: ACCENT, weight: 1.5, dashArray: '5 4',
+        fill: false, opacity: 0.6, interactive: false,
+      }).addTo(map);
+
+      // Label at the top of the circle
+      var labelLat = CITY_LAT + (c.radiusM / 111320);
+      L.marker([labelLat, CITY_LON], {
+        interactive: false,
+        icon: L.divIcon({
+          className: '',
+          html: '<div style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;' +
+                'font-size:10px;font-weight:600;color:' + ACCENT + ';' +
+                'background:rgba(255,255,255,0.88);padding:2px 7px;border-radius:20px;' +
+                'box-shadow:0 1px 4px rgba(0,0,0,.15);transform:translate(-50%,-100%);">' +
+                '<i class="fa-solid fa-person-walking" style="font-size:9px;"></i>' + c.label + '</div>',
+          iconSize: [0, 0],
+          iconAnchor: [0, 0],
+        }),
+      }).addTo(map);
+    });
+
+    // Load and render pre-generated city GeoJSON
+    fetch('/static/data/cities/' + CITY_SLUG + '.geojson')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(gj) {
+        if (!gj) return;
+        gj.features.forEach(function(f) {
+          if (f.properties.kind !== 'poi') return;
+          var coords = f.geometry.coordinates;
+          var cat = f.properties.category || '';
+          var icon = FA_ICONS[cat] || 'fa-location-dot';
+          var color = f.properties.color || '#6b7280';
+          L.marker([coords[1], coords[0]], {
+            interactive: false,
+            icon: L.divIcon({
+              className: '',
+              html: '<div style="width:22px;height:22px;border-radius:50%;background:' + color +
+                    ';display:flex;align-items:center;justify-content:center;' +
+                    'border:2px solid rgba(255,255,255,.6);box-shadow:0 1px 3px rgba(0,0,0,.4)">' +
+                    '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:9px;"></i></div>',
+              iconSize: [22, 22], iconAnchor: [11, 11],
+            }),
+          }).addTo(map);
+        });
+      });
   });
 
   window.goToExample = function(btn) {

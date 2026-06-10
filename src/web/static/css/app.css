@@ -721,6 +721,13 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
 .footer-commit { font-family: monospace; }
 
 /* ── Responsive ─────────────────────── */
+@media (min-width: 769px) {
+  .center-overlay {
+    left: auto;
+    right: 8rem;
+    transform: translateY(-50%);
+  }
+}
 @media (max-width: 768px) {
   .left-overlay {
     left: 0; right: 0; bottom: 0;

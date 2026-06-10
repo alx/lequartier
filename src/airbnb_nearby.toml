@@ -326,7 +326,7 @@ overpass     = """
 node(around:{r},{lat},{lon})["amenity"="bicycle_rental"];
 way(around:{r},{lat},{lon})["amenity"="bicycle_rental"];
 """
-google_types = ["bicycle_rental"]
+google_types = []
 
 # ---------------------------------------------------------------------------
 # Priority order for global cap trimming.
