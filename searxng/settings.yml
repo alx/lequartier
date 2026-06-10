@@ -3,11 +3,13 @@
 # Only DuckDuckGo and Bing are enabled — sufficient for the 100-city dataset.
 # JSON format is explicitly enabled (disabled by default in SearXNG).
 
-use_default_settings:
-  engines:
-    keep_only:
-      - duckduckgo
-      - bing
+use_default_settings: true
+
+engines:
+  - name: bing
+    disabled: false
+  - name: duckduckgo
+    disabled: false
 
 server:
   # Generate with: openssl rand -hex 32

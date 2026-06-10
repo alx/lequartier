@@ -315,7 +315,8 @@
             "rating": 4.4,
             "user_rating_count": 74,
             "status": "primary",
-            "score": 80
+            "score": 80,
+            "video_url": "https://www.youtube.com/embed/bwxg0x9nl7o"
           }
         },
         {
@@ -347,7 +348,8 @@
             "rating": 4.3,
             "user_rating_count": 6,
             "status": "primary",
-            "score": 75
+            "score": 75,
+            "video_url": "https://www.youtube.com/embed/bwxg0x9nl7o"
           }
         },
         {
@@ -508,7 +510,8 @@
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
             "status": "primary",
-            "score": 76
+            "score": 76,
+            "transit_url": "https://www.facebook.com/"
           }
         },
         {
@@ -533,7 +536,8 @@
             "rating": 4.5,
             "user_rating_count": 342,
             "status": "primary",
-            "score": 86
+            "score": 86,
+            "transit_url": "https://www.joto.com/support/attic/attic-calculation/"
           }
         },
         {
@@ -556,7 +560,8 @@
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
             "status": "primary",
-            "score": 71
+            "score": 71,
+            "transit_url": "https://www.youtube.com/"
           }
         },
         {
@@ -579,7 +584,8 @@
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
             "status": "primary",
-            "score": 71
+            "score": 71,
+            "transit_url": "https://www.microsoft.com/en-us?msockid=2ac5e991038863893a0bfee5029b62d7"
           }
         },
         {
@@ -602,7 +608,8 @@
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
             "status": "primary",
-            "score": 70
+            "score": 70,
+            "transit_url": "https://www.zhihu.com/"
           }
         },
         {
@@ -625,7 +632,8 @@
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
             "status": "primary",
-            "score": 69
+            "score": 69,
+            "transit_url": "https://www.ef.com.tw/"
           }
         },
         {

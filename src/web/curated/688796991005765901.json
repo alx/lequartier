@@ -240,7 +240,8 @@
             "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
             "generated_name": true,
             "status": "primary",
-            "score": 72
+            "score": 72,
+            "video_url": "https://www.youtube.com/embed/HQfDvaVVGs4"
           }
         },
         {
@@ -328,7 +329,8 @@
             "rating": 4.3,
             "user_rating_count": 27,
             "status": "primary",
-            "score": 72
+            "score": 72,
+            "wikipedia_url": "https://forum.lowyat.net/"
           }
         },
         {
@@ -358,7 +360,8 @@
             "rating": 4.4,
             "user_rating_count": 3428,
             "status": "primary",
-            "score": 66
+            "score": 66,
+            "wikipedia_url": "https://web.whatsapp.com/"
           }
         },
         {
@@ -558,7 +561,8 @@
               "source": "curated"
             },
             "status": "primary",
-            "score": 49
+            "score": 49,
+            "video_url": "https://www.youtube.com/embed/HQfDvaVVGs4"
           }
         },
         {
@@ -697,7 +701,8 @@
             },
             "phone": "+66 62 404 2969",
             "status": "primary",
-            "score": 12
+            "score": 12,
+            "wikipedia_url": "https://www.reddit.com/r/BingHomepageQuiz/hot/"
           }
         },
         {
@@ -748,7 +753,8 @@
             "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
             "generated_name": false,
             "status": "primary",
-            "score": 12
+            "score": 12,
+            "wikipedia_url": "https://en.wikipedia.org/wiki/Rock_(geology)"
           }
         },
         {
@@ -776,7 +782,8 @@
               "source": "curated"
             },
             "status": "primary",
-            "score": 15
+            "score": 15,
+            "wikipedia_url": "https://www.hibcc.org/hin-system/"
           }
         },
         {
@@ -997,7 +1004,8 @@
               "source": "curated"
             },
             "status": "primary",
-            "score": 15
+            "score": 15,
+            "wikipedia_url": "https://www.whatsapp.com/"
           }
         },
         {
@@ -1025,7 +1033,8 @@
               "source": "curated"
             },
             "status": "primary",
-            "score": 27
+            "score": 27,
+            "wikipedia_url": "https://www.whatsapp.com/"
           }
         },
         {
