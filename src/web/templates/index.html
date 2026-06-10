@@ -10,13 +10,14 @@
 
     <form method="POST" action="/step1/submit">
       <div class="form-group">
-	<label for="airbnb_url">Generate a neighbourhood map for any Airbnb listing:</labe>
+        <label for="airbnb_url">Paste an Airbnb listing URL to generate its neighbourhood map:</label>
         <input type="url" id="airbnb_url" name="airbnb_url" required autofocus
                placeholder="https://www.airbnb.com/rooms/686559818391956388"
-               style="font-size:0.95rem; padding:0.6rem 0.75rem;">
+               style="font-size:0.95rem; padding:0.6rem 0.75rem;"
+               oninput="lqValidateUrl(this)">
       </div>
 
-      <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.4rem;">
+      <button id="btn-fetch" type="submit" class="btn btn-primary" style="width:100%; margin-top:0.4rem;" disabled>
         <i class="fa-solid fa-map"></i> Fetch Nearby Places
       </button>
     </form>
@@ -100,6 +101,12 @@
 
   window.goToExample = function(btn) {
     window.location.href = '/airbnb/' + btn.dataset.listingId;
+  };
+
+  var _airbnbPattern = /airbnb\.[a-z]{2,}\/rooms\/\d+/i;
+  window.lqValidateUrl = function(input) {
+    var valid = _airbnbPattern.test(input.value.trim());
+    document.getElementById('btn-fetch').disabled = !valid;
   };
 })();
 </script>
