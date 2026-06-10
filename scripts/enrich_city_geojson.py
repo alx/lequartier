@@ -35,6 +35,7 @@ import random
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from dotenv import load_dotenv
@@ -49,6 +50,102 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 _HEADERS = {"User-Agent": "LeQuartier/1.0 city-geojson-enricher"}
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 YOUTUBE_API = "https://www.googleapis.com/youtube/v3/search"
+
+# ── URL validators (applied to every SearXNG result before accepting) ─────────
+
+_JUNK_DOMAINS = {
+    "youtube.com", "youtu.be", "facebook.com", "twitter.com", "x.com",
+    "whatsapp.com", "web.whatsapp.com", "instagram.com", "linkedin.com",
+    "microsoft.com", "support.microsoft.com", "office.com",
+    "google.com", "support.google.com", "accounts.google.com",
+    "zhihu.com", "baidu.com", "jingyan.baidu.com", "xmind.cn",
+    "ef.com.tw", "gamewith.jp", "mumu.163.com", "answers.com",
+    "lowyat.net", "forum.lowyat.net", "reddit.com",
+    "tenforums.com", "investopedia.com", "hibcc.org", "mcafee.com",
+    "palaceskateboards.com", "trustoo.nl", "dafont.com",
+    "rosacomputer.vn", "lmskincentre.com", "xylem.live",
+    "hk01.com", "tw.stock.yahoo.com", "cmoney.tw",
+    "trip.com", "unirank.org", "guldborgsund.dk",
+    "st.com", "joto.com", "stackoverflow.com",
+    "tripadvisor.com", "th.tripadvisor.com",
+    "rome2rio.com",
+}
+
+_TRANSIT_DOMAINS = {
+    "moovitapp.com", "busmaps.com",
+    "bahnhof.de", "bvg.de", "mvg.de", "mvv-muenchen.de", "s-bahn-berlin.de",
+    "ratp.fr", "tisseo.fr", "sncf.com", "sncf-connect.com",
+    "tfl.gov.uk", "nationalrail.co.uk", "transportforwales.wales",
+    "treniamo.it", "trenitalia.com", "atac.roma.it",
+    "oasa.gr", "stasy.gr",
+    "metromadrid.es", "metro.cat", "tmb.cat", "metrobilbao.eus",
+    "nmbs.be", "stib.brussels", "stib-mivb.be",
+    "ns.nl", "gvb.nl", "ret.nl",
+    "wienerlinien.at", "oebb.at",
+    "sbb.ch", "zvv.ch",
+    "ztm.waw.pl", "dpp.cz", "idos.cz", "bkk.hu",
+    "sl.se", "sj.se", "ruter.no", "dsb.dk", "rejseplanen.dk", "hsl.fi",
+    "carris.pt", "metrolisboa.pt", "metrorex.ro",
+    "mta.info", "bart.gov", "wmata.com", "mbta.com", "ttc.ca", "translink.ca",
+    "trimet.org", "seattletransitblog.com",
+    "transportnsw.info", "ptv.vic.gov.au", "transperth.wa.gov.au",
+    "tokyometro.jp", "jreast.co.jp", "mtr.com.hk",
+    "lta.gov.sg", "bts.co.th", "mrt.co.th",
+    "delhimetrorail.com", "bmrc.co.in", "seoulmetro.co.kr",
+    "metro.sp.gov.br", "metro.df.gov.br", "metrovias.com.ar",
+    "metro.cdmx.gob.mx", "mosmetro.ru",
+}
+
+_GENERIC_WIKI_SLUGS = {
+    "The", "Basilica", "Rock_(geology)", "Fidel_Castro",
+    "Comt%C3%A9_cheese", "Berliner_(doughnut)",
+}
+
+
+def _url_host(url: str) -> str:
+    try:
+        return urlparse(url).netloc.lower().removeprefix("www.")
+    except Exception:
+        return ""
+
+
+def _is_junk(url: str) -> bool:
+    h = _url_host(url)
+    return h in _JUNK_DOMAINS or any(h.endswith("." + d) for d in _JUNK_DOMAINS)
+
+
+def _valid_wikipedia(url: str) -> bool:
+    if _is_junk(url):
+        return False
+    try:
+        p = urlparse(url)
+        if "wikipedia.org" not in p.netloc:
+            return False
+        parts = p.path.split("/")
+        if len(parts) < 3 or parts[1] != "wiki":
+            return False
+        slug = parts[2]
+        return len(slug) > 4 and slug not in _GENERIC_WIKI_SLUGS
+    except Exception:
+        return False
+
+
+def _valid_transit(url: str) -> bool:
+    if _is_junk(url):
+        return False
+    h = _url_host(url)
+    return any(h == d or h.endswith("." + d) for d in _TRANSIT_DOMAINS)
+
+
+def _valid_ticket(url: str) -> bool:
+    return not _is_junk(url)
+
+
+def _valid_courses(url: str) -> bool:
+    return not _is_junk(url)
+
+
+# ── OSM category → SearXNG validator ─────────────────────────────────────────
 
 _CATEGORY_OSM_SELECTOR = {
     "monument":     '"tourism"="attraction"',
@@ -162,24 +259,32 @@ def search_youtube(query: str, api_key: str) -> str | None:
 
 # ── SearXNG ───────────────────────────────────────────────────────────────────
 
-def search_searxng(query: str, base_url: str) -> str | None:
-    """Return the top URL result from the local SearXNG instance, or None."""
+def search_searxng(query: str, base_url: str, validator=None) -> str | None:
+    """Return the first SearXNG result URL that passes validator(), or None.
+
+    Scans up to 10 results so that a junk top result doesn't block a good #2.
+    """
     tqdm.write(f"    [searxng] searching: {query!r}")
     try:
         r = requests.get(
             f"{base_url.rstrip('/')}/search",
-            params={"q": query, "format": "json", "categories": "general", "language": "auto"},
+            params={"q": query, "format": "json", "categories": "general",
+                    "language": "auto", "pageno": 1},
             headers={"Accept": "application/json"},
             timeout=10,
         )
         r.raise_for_status()
         results = r.json().get("results", [])
-        if results:
-            url = results[0].get("url")
-            title = results[0].get("title", "")
-            tqdm.write(f"    [searxng] top result: {title!r} → {url}")
-            return url
-        tqdm.write("    [searxng] no results found")
+        for result in results[:10]:
+            url = result.get("url")
+            if not url:
+                continue
+            title = result.get("title", "")
+            if validator is None or validator(url):
+                tqdm.write(f"    [searxng] accepted: {title!r} → {url}")
+                return url
+            tqdm.write(f"    [searxng] skipped:  {title!r} → {url}")
+        tqdm.write("    [searxng] no valid result found")
     except Exception as exc:
         tqdm.write(f"    [searxng] failed: {exc}", file=sys.stderr)
     return None
@@ -264,7 +369,8 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
             tqdm.write(f"    [searxng] fallback for {len(searxng_needed)} monument(s)")
             for f in searxng_needed:
                 name = f["properties"]["name"]
-                url = search_searxng(f'"{name}" {city["name"]} wikipedia', searxng_url)
+                url = search_searxng(f'"{name}" {city["name"]} wikipedia', searxng_url,
+                                     validator=_valid_wikipedia)
                 time.sleep(0.5)
                 if url:
                     f["properties"]["wikipedia_url"] = url
@@ -302,7 +408,8 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
             elif not website and no_overpass:
                 tqdm.write(f"    [overpass] skipped for {name!r} (--no-overpass)")
             if not website and searxng_url:
-                website = search_searxng(f'"{name}" {city["name"]} buy tickets', searxng_url)
+                website = search_searxng(f'"{name}" {city["name"]} buy tickets', searxng_url,
+                                         validator=_valid_ticket)
                 time.sleep(0.5)
             if website:
                 props["ticket_url"] = website
@@ -337,7 +444,8 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
             elif not website and no_overpass:
                 tqdm.write(f"    [overpass] skipped for {name!r} (--no-overpass)")
             if not website and searxng_url:
-                website = search_searxng(f'"{name}" {city["name"]} courses', searxng_url)
+                website = search_searxng(f'"{name}" {city["name"]} courses', searxng_url,
+                                         validator=_valid_courses)
                 time.sleep(0.5)
             if website:
                 props["courses_url"] = website
@@ -358,7 +466,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
                 props = f["properties"]
                 name = props["name"]
                 query = f'"{name}" {city["name"]} lines schedules'
-                url = search_searxng(query, searxng_url)
+                url = search_searxng(query, searxng_url, validator=_valid_transit)
                 time.sleep(0.5)
                 if url:
                     props["transit_url"] = url
@@ -453,7 +561,8 @@ def enrich_curated(path: Path, force: bool, dry_run: bool,
         if searxng_url:
             for f in to_enrich:
                 name = f["properties"]["name"]
-                url = search_searxng(f'"{name}" {city_name} lines schedules', searxng_url)
+                url = search_searxng(f'"{name}" {city_name} lines schedules', searxng_url,
+                                     validator=_valid_transit)
                 time.sleep(0.5)
                 if url:
                     f["properties"]["transit_url"] = url
@@ -474,7 +583,8 @@ def enrich_curated(path: Path, force: bool, dry_run: bool,
         if searxng_url:
             for f in to_enrich:
                 name = f["properties"]["name"]
-                url = search_searxng(f'"{name}" {city_name} wikipedia', searxng_url)
+                url = search_searxng(f'"{name}" {city_name} wikipedia', searxng_url,
+                                     validator=_valid_wikipedia)
                 time.sleep(0.5)
                 if url:
                     f["properties"]["wikipedia_url"] = url

@@ -1,4 +1,4 @@
-.PHONY: searxng-up searxng-down enrich enrich-city enrich-curated rebuild-index backfill-scores
+.PHONY: searxng-up searxng-down enrich enrich-city enrich-curated rebuild-index backfill-scores scrub-urls
 
 # Start SearXNG and wait until it responds
 searxng-up:
@@ -37,3 +37,9 @@ rebuild-index:
 # Backfill properties.score on existing curated listing GeoJSONs.
 backfill-scores:
 	uv run scripts/backfill_scores.py
+
+# Remove garbage enriched URLs from all GeoJSON files.
+# Usage: make scrub-urls
+#        make scrub-urls ARGS="--dry-run"
+scrub-urls:
+	uv run scripts/scrub_enriched_urls.py $(ARGS)
