@@ -1,4 +1,4 @@
-.PHONY: searxng-up searxng-down enrich enrich-city rebuild-index backfill-scores
+.PHONY: searxng-up searxng-down enrich enrich-city enrich-curated rebuild-index backfill-scores
 
 # Start SearXNG and wait until it responds
 searxng-up:
@@ -22,6 +22,13 @@ enrich: searxng-up
 #        make enrich-city CITY=tokyo ARGS="--force"
 enrich-city: searxng-up
 	uv run scripts/enrich_city_geojson.py --city $(CITY) $(ARGS)
+
+# Enrich curated listing GeoJSONs (Transit, Market, Culture).
+# Usage: make enrich-curated
+#        make enrich-curated ARGS="--force"
+#        make enrich-curated ARGS="--dry-run"
+enrich-curated: searxng-up
+	uv run scripts/enrich_city_geojson.py --curated $(ARGS)
 
 # Rebuild the SQLite listing index from curated JSON files.
 rebuild-index:

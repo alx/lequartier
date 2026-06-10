@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
 """Enrich city GeoJSON files with tooltip content from Wikidata, YouTube, and SearXNG.
 
-For each POI:
+City GeoJSON mode (default):
   monument      → wikipedia_url  (Wikidata API; Overpass fallback for missing wikidata IDs)
-  museum        → ticket_url     (OSM website → SearXNG fallback: "{name}" buy tickets)
-  university    → courses_url    (OSM website → SearXNG fallback: "{name}" courses catalog)
+  museum        → ticket_url     (OSM website → SearXNG: "{name} {city} buy tickets")
+  university    → courses_url    (OSM website → SearXNG: "{name} {city} courses")
   train_station → transit_url    (SearXNG: "{name}" {city} lines schedules)
   market        → video_url      (YouTube Data API, one search per city)
   airport       → no enrichment  (ADSB link derived from coordinates client-side)
+
+Curated listing mode (--curated):
+  Transit       → transit_url    (SearXNG: "{name}" {city} lines schedules)
+  Market        → video_url      (YouTube Data API, one search per city)
+  Culture       → wikipedia_url  (SearXNG: "{name}" {city} wikipedia)
 
 Skips fields already present (idempotent). Use --force to re-fetch everything.
 Requires YOUTUBE_API_KEY and SEARXNG_BASE_URL in .env.
 
 Usage:
-  uv run scripts/enrich_city_geojson.py               # all 100 cities
-  uv run scripts/enrich_city_geojson.py --city paris  # single city
-  uv run scripts/enrich_city_geojson.py --force       # re-fetch even if field already set
-  uv run scripts/enrich_city_geojson.py --dry-run     # print changes without writing files
+  uv run scripts/enrich_city_geojson.py                    # all 100 cities
+  uv run scripts/enrich_city_geojson.py --city paris       # single city
+  uv run scripts/enrich_city_geojson.py --force            # re-fetch even if field already set
+  uv run scripts/enrich_city_geojson.py --dry-run          # print changes without writing files
+  uv run scripts/enrich_city_geojson.py --no-overpass      # skip Overpass, use SearXNG directly
+  uv run scripts/enrich_city_geojson.py --curated          # enrich curated listing GeoJSONs
 """
 
 from __future__ import annotations
@@ -36,6 +43,7 @@ from tqdm import tqdm
 ROOT = Path(__file__).parent.parent
 TOP100_PATH = ROOT / "src/web/static/data/top100.json"
 CITIES_DIR = ROOT / "src/web/static/data/cities"
+CURATED_DIR = ROOT / "src/web/curated"
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 _HEADERS = {"User-Agent": "LeQuartier/1.0 city-geojson-enricher"}
@@ -179,7 +187,8 @@ def search_searxng(query: str, base_url: str) -> str | None:
 
 # ── Per-city enrichment ───────────────────────────────────────────────────────
 
-def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None, searxng_url: str | None) -> int:
+def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
+                searxng_url: str | None, no_overpass: bool = False) -> int:
     """Enrich one city's GeoJSON file in-place. Returns count of fields added."""
     path = CITIES_DIR / f"{city['slug']}.geojson"
     if not path.exists():
@@ -207,21 +216,23 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
         monument_queue: list[tuple[dict, str]] = []
 
         needing_fallback = [f for f in to_enrich if not f["properties"].get("wikidata")]
-        if needing_fallback:
+        if needing_fallback and no_overpass:
+            tqdm.write(f"    [overpass] skipped (--no-overpass) — {len(needing_fallback)} monument(s) will try SearXNG directly")
+        elif needing_fallback:
             tqdm.write(f"    [overpass] {len(needing_fallback)} monument(s) missing wikidata ID, querying…")
-        for f in needing_fallback:
-            name = f["properties"]["name"]
-            coords = f["geometry"]["coordinates"]
-            tqdm.write(f"    [overpass] → {name!r}")
-            tags = fetch_osm_tags(coords[1], coords[0], "monument")
-            wd = tags.get("wikidata")
-            if wd:
-                tqdm.write(f"    [overpass]   found wikidata={wd}")
-                if not dry_run:
-                    f["properties"]["wikidata"] = wd
-            else:
-                tqdm.write(f"    [overpass]   no wikidata tag found")
-            time.sleep(0.5)
+            for f in needing_fallback:
+                name = f["properties"]["name"]
+                coords = f["geometry"]["coordinates"]
+                tqdm.write(f"    [overpass] → {name!r}")
+                tags = fetch_osm_tags(coords[1], coords[0], "monument")
+                wd = tags.get("wikidata")
+                if wd:
+                    tqdm.write(f"    [overpass]   found wikidata={wd}")
+                    if not dry_run:
+                        f["properties"]["wikidata"] = wd
+                else:
+                    tqdm.write(f"    [overpass]   no wikidata tag found")
+                time.sleep(0.5)
 
         for f in to_enrich:
             wd = f["properties"].get("wikidata")
@@ -253,7 +264,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
             tqdm.write(f"    [searxng] fallback for {len(searxng_needed)} monument(s)")
             for f in searxng_needed:
                 name = f["properties"]["name"]
-                url = search_searxng(f'"{name}" wikipedia', searxng_url)
+                url = search_searxng(f'"{name}" {city["name"]} wikipedia', searxng_url)
                 time.sleep(0.5)
                 if url:
                     f["properties"]["wikipedia_url"] = url
@@ -276,7 +287,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
             props = f["properties"]
             name = props["name"]
             website = props.get("website")
-            if not website:
+            if not website and not no_overpass:
                 coords = f["geometry"]["coordinates"]
                 tqdm.write(f"    [overpass] → {name!r}")
                 tags = fetch_osm_tags(coords[1], coords[0], "museum")
@@ -288,8 +299,10 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
                 else:
                     tqdm.write(f"    [overpass]   no website tag found")
                 time.sleep(0.5)
+            elif not website and no_overpass:
+                tqdm.write(f"    [overpass] skipped for {name!r} (--no-overpass)")
             if not website and searxng_url:
-                website = search_searxng(f'"{name}" buy tickets', searxng_url)
+                website = search_searxng(f'"{name}" {city["name"]} buy tickets', searxng_url)
                 time.sleep(0.5)
             if website:
                 props["ticket_url"] = website
@@ -309,7 +322,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
             props = f["properties"]
             name = props["name"]
             website = props.get("website")
-            if not website:
+            if not website and not no_overpass:
                 coords = f["geometry"]["coordinates"]
                 tqdm.write(f"    [overpass] → {name!r}")
                 tags = fetch_osm_tags(coords[1], coords[0], "university")
@@ -321,8 +334,10 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
                 else:
                     tqdm.write(f"    [overpass]   no website tag found")
                 time.sleep(0.5)
+            elif not website and no_overpass:
+                tqdm.write(f"    [overpass] skipped for {name!r} (--no-overpass)")
             if not website and searxng_url:
-                website = search_searxng(f'"{name}" courses catalog', searxng_url)
+                website = search_searxng(f'"{name}" {city["name"]} courses', searxng_url)
                 time.sleep(0.5)
             if website:
                 props["courses_url"] = website
@@ -390,6 +405,121 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
     return changed
 
 
+def _english_city(result: dict) -> str:
+    """Return a search-friendly (ASCII-safe) city name for a curated listing.
+
+    Priority:
+      1. location.city if it's ASCII (e.g. 'Toulouse', 'London')
+      2. Extract from listing_title: 'Bungalow in Amphoe Ko Samui' → 'Amphoe Ko Samui'
+      3. Fall back to location.city as-is (non-ASCII, may hurt search quality)
+    """
+    import re as _re
+    location = result.get("location") or {}
+    city = location.get("city") or ""
+    if city and city.isascii():
+        return city
+    title = result.get("custom_listing_title") or result.get("listing_title") or ""
+    m = _re.search(r"\bin ([A-Z][^·\|•]+?)(?:\s*[·\|•]|$)", title)
+    if m:
+        return m.group(1).strip()
+    return city
+
+
+def enrich_curated(path: Path, force: bool, dry_run: bool,
+                   youtube_key: str | None, searxng_url: str | None) -> int:
+    """Enrich one curated listing GeoJSON file in-place. Returns count of fields added."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        tqdm.write(f"  [skip] {path.name}: {exc}")
+        return 0
+
+    result = data.get("result") or {}
+    geojson = result.get("geojson") or {}
+    features = geojson.get("features") or []
+    city_name = _english_city(result) or path.stem
+    changed = 0
+
+    def _pois(category: str) -> list[dict]:
+        return [f for f in features if (f.get("properties") or {}).get("category") == category]
+
+    def _needs(f: dict, field: str) -> bool:
+        return force or not (f.get("properties") or {}).get(field)
+
+    # ── Transit → transit_url ─────────────────────────────────────────────────
+    to_enrich = [f for f in _pois("Transit") if _needs(f, "transit_url")]
+    if to_enrich:
+        tqdm.write(f"  transit    — {len(to_enrich)} to enrich")
+        if searxng_url:
+            for f in to_enrich:
+                name = f["properties"]["name"]
+                url = search_searxng(f'"{name}" {city_name} lines schedules', searxng_url)
+                time.sleep(0.5)
+                if url:
+                    f["properties"]["transit_url"] = url
+                    changed += 1
+                    tqdm.write(f"    ✓ {name!r}")
+                    tqdm.write(f"      {url}")
+                else:
+                    tqdm.write(f"    ✗ {name!r} — no result")
+        else:
+            tqdm.write("    [skip] SearXNG not available")
+    else:
+        tqdm.write("  transit    — all up to date")
+
+    # ── Culture → wikipedia_url ───────────────────────────────────────────────
+    to_enrich = [f for f in _pois("Culture") if _needs(f, "wikipedia_url")]
+    if to_enrich:
+        tqdm.write(f"  culture    — {len(to_enrich)} to enrich")
+        if searxng_url:
+            for f in to_enrich:
+                name = f["properties"]["name"]
+                url = search_searxng(f'"{name}" {city_name} wikipedia', searxng_url)
+                time.sleep(0.5)
+                if url:
+                    f["properties"]["wikipedia_url"] = url
+                    changed += 1
+                    tqdm.write(f"    ✓ {name!r}")
+                    tqdm.write(f"      {url}")
+                else:
+                    tqdm.write(f"    ✗ {name!r} — no result")
+        else:
+            tqdm.write("    [skip] SearXNG not available")
+    else:
+        tqdm.write("  culture    — all up to date")
+
+    # ── Market → video_url ────────────────────────────────────────────────────
+    to_enrich = [f for f in _pois("Market") if _needs(f, "video_url")]
+    if to_enrich:
+        tqdm.write(f"  markets    — {len(to_enrich)} to enrich")
+        if youtube_key:
+            video_url = search_youtube(f"{city_name} local food market", youtube_key)
+            if video_url:
+                for f in to_enrich:
+                    f["properties"]["video_url"] = video_url
+                    changed += 1
+                    tqdm.write(f"    ✓ {f['properties']['name']!r}")
+                tqdm.write(f"      {video_url}")
+            else:
+                tqdm.write("    ✗ no video found")
+        else:
+            tqdm.write("    [skip] YOUTUBE_API_KEY not set")
+    else:
+        tqdm.write("  markets    — all up to date")
+
+    # ── write back ────────────────────────────────────────────────────────────
+    if changed:
+        if dry_run:
+            tqdm.write(f"  → {changed} field(s) would be added (dry-run, not written)")
+        else:
+            path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            tqdm.write(f"  → {changed} field(s) added, file written")
+    else:
+        tqdm.write("  → nothing changed")
+
+    return changed
+
+
 def main() -> None:
     load_dotenv(ROOT / ".env")
     youtube_key = os.environ.get("YOUTUBE_API_KEY")
@@ -399,10 +529,14 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--city",    metavar="SLUG", help="Enrich only this city slug")
-    parser.add_argument("--force",   action="store_true", help="Re-fetch even if fields already present")
-    parser.add_argument("--dry-run", action="store_true", dest="dry_run",
+    parser.add_argument("--city",        metavar="SLUG", help="Enrich only this city slug (city mode only)")
+    parser.add_argument("--force",       action="store_true", help="Re-fetch even if fields already present")
+    parser.add_argument("--dry-run",     action="store_true", dest="dry_run",
                         help="Print changes without writing files")
+    parser.add_argument("--no-overpass", action="store_true", dest="no_overpass",
+                        help="Skip all Overpass lookups; fall straight through to SearXNG")
+    parser.add_argument("--curated",     action="store_true",
+                        help="Enrich curated listing GeoJSONs instead of city GeoJSONs")
     args = parser.parse_args()
 
     if not youtube_key:
@@ -425,6 +559,30 @@ def main() -> None:
             )
             searxng_url = None
 
+    if args.dry_run:
+        print("[dry-run] no files will be written\n")
+
+    if args.curated:
+        paths = sorted(CURATED_DIR.glob("*.json")) + sorted((CURATED_DIR / "zillow").glob("*.json") if (CURATED_DIR / "zillow").exists() else [])
+        if not paths:
+            print("No curated GeoJSON files found.", file=sys.stderr)
+            sys.exit(1)
+        total_changed = 0
+        bar = tqdm(paths, desc="listings", unit="listing")
+        for path in bar:
+            bar.set_postfix_str(path.stem[:30])
+            tqdm.write(f"\n── {path.stem} ──")
+            n = enrich_curated(path, force=args.force, dry_run=args.dry_run,
+                               youtube_key=youtube_key, searxng_url=searxng_url)
+            total_changed += n
+            if len(paths) > 1:
+                time.sleep(0.3)
+        print(
+            f"\nDone — {total_changed} field{'s' if total_changed != 1 else ''} added"
+            f" across {len(paths)} listing{'s' if len(paths) != 1 else ''}."
+        )
+        return
+
     cities: list[dict] = json.loads(TOP100_PATH.read_text())["cities"]
     if args.city:
         cities = [c for c in cities if c["slug"] == args.city]
@@ -432,15 +590,14 @@ def main() -> None:
             print(f"City '{args.city}' not found in top100.json.", file=sys.stderr)
             sys.exit(1)
 
-    if args.dry_run:
-        print("[dry-run] no files will be written\n")
-
     total_changed = 0
     city_bar = tqdm(cities, desc="cities", unit="city")
     for city in city_bar:
         city_bar.set_postfix_str(f"{city['name']}, {city['country']}")
         tqdm.write(f"\n── {city['name']}, {city['country']} ──")
-        n = enrich_city(city, force=args.force, dry_run=args.dry_run, youtube_key=youtube_key, searxng_url=searxng_url)
+        n = enrich_city(city, force=args.force, dry_run=args.dry_run,
+                        youtube_key=youtube_key, searxng_url=searxng_url,
+                        no_overpass=args.no_overpass)
         total_changed += n
         if len(cities) > 1:
             time.sleep(0.5)
