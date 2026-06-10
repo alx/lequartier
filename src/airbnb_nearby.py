@@ -980,6 +980,47 @@ def _curate_statuses(features: list) -> None:
             props["status"] = "primary"
 
 
+_CATEGORY_WEIGHT: dict[str, int] = {
+    "Supermarket": 30, "Transit": 28, "Market": 24, "Park": 22,
+    "Restaurant": 18, "Bakery & Food": 16, "Health": 14, "Culture": 12,
+    "Wellness": 10, "Education": 8, "Activity": 8, "Bike Share": 8,
+    "Night Shop": 6, "Dog Park": 4, "Playground": 4,
+}
+
+_RADIUS_MAX = 1200.0
+
+
+def poi_score(p: dict, rental_lat: float, rental_lon: float) -> int:
+    """Relevance score (0–100) for a POI relative to a rental location.
+
+    Signals:
+      - Distance   0–50 pts  linear decay from 0 m to _RADIUS_MAX
+      - Category   0–30 pts  fixed weight per category type
+      - Rating     0–15 pts  Google rating × count signals
+      - Quality    0–5  pts  coord_accuracy + source
+    """
+    dist = haversine(rental_lat, rental_lon, p["lat"], p["lon"])
+    dist_score = max(0.0, 50.0 * (1.0 - dist / _RADIUS_MAX))
+
+    cat_score = _CATEGORY_WEIGHT.get(p.get("category", ""), 10)
+
+    rating = p.get("rating") or 0.0
+    count  = p.get("user_rating_count") or 0
+    rating_score = min(10.0, float(rating) * 2.0)
+    if count > 500:
+        rating_score = min(15.0, rating_score + 5.0)
+    elif count > 100:
+        rating_score = min(15.0, rating_score + 3.0)
+
+    quality = 0
+    if p.get("coord_accuracy") == "high":
+        quality += 3
+    if p.get("source") == "google":
+        quality += 2
+
+    return round(dist_score + cat_score + rating_score + quality)
+
+
 def build_geojson(
     airbnb_url: str,
     lat: float,
@@ -1003,6 +1044,7 @@ def build_geojson(
                 "source": p["source"],
                 "listing_url": airbnb_url,
                 "generated_name": p.get("generated_name", False),
+                "score": poi_score(p, lat, lon),
             }
             if p.get("opening_hours"):
                 props["opening_hours"] = p["opening_hours"]

@@ -127,7 +127,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 73
           }
         },
         {
@@ -158,7 +159,8 @@
             "website": "http://www.7eleven.co.th/",
             "rating": 3.7,
             "user_rating_count": 20,
-            "status": "primary"
+            "status": "primary",
+            "score": 88
           }
         },
         {
@@ -182,7 +184,8 @@
             "generated_name": false,
             "rating": 4.8,
             "user_rating_count": 22,
-            "status": "primary"
+            "status": "primary",
+            "score": 74
           }
         },
         {
@@ -213,7 +216,8 @@
             "website": "http://m.samui-passion.com/samui/boulangerie.php",
             "rating": 4.6,
             "user_rating_count": 1373,
-            "status": "primary"
+            "status": "primary",
+            "score": 74
           }
         },
         {
@@ -235,7 +239,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
             "generated_name": true,
-            "status": "primary"
+            "status": "primary",
+            "score": 72
           }
         },
         {
@@ -259,7 +264,8 @@
             "generated_name": false,
             "rating": 4.3,
             "user_rating_count": 229,
-            "status": "primary"
+            "status": "primary",
+            "score": 83
           }
         },
         {
@@ -290,7 +296,8 @@
             "website": "https://www.kidomokids.com/",
             "rating": 5,
             "user_rating_count": 12,
-            "status": "primary"
+            "status": "primary",
+            "score": 56
           }
         },
         {
@@ -320,7 +327,8 @@
             "phone": "082 738 7757",
             "rating": 4.3,
             "user_rating_count": 27,
-            "status": "primary"
+            "status": "primary",
+            "score": 72
           }
         },
         {
@@ -349,7 +357,8 @@
             },
             "rating": 4.4,
             "user_rating_count": 3428,
-            "status": "primary"
+            "status": "primary",
+            "score": 66
           }
         },
         {
@@ -377,7 +386,8 @@
               "source": "osm"
             },
             "website": "https://www.facebook.com/ChinnawatVeerasakul",
-            "status": "primary"
+            "status": "primary",
+            "score": 63
           }
         },
         {
@@ -400,7 +410,8 @@
             "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
             "generated_name": false,
             "phone": "0817283735",
-            "status": "primary"
+            "status": "primary",
+            "score": 60
           }
         },
         {
@@ -428,7 +439,8 @@
               "source": "curated"
             },
             "phone": "+66 65 337 7946",
-            "status": "primary"
+            "status": "primary",
+            "score": 59
           }
         },
         {
@@ -457,7 +469,8 @@
             },
             "phone": "+66 61 661 5161",
             "website": "https://punchitgym.com",
-            "status": "primary"
+            "status": "primary",
+            "score": 23
           }
         },
         {
@@ -486,7 +499,8 @@
             },
             "phone": "+66 98 525 9458",
             "website": "https://chatpichitmuaythai.com",
-            "status": "primary"
+            "status": "primary",
+            "score": 11
           }
         },
         {
@@ -515,7 +529,8 @@
             },
             "phone": "+66 85 926 4626",
             "website": "https://tamarindsprings.com",
-            "status": "primary"
+            "status": "primary",
+            "score": 21
           }
         },
         {
@@ -542,7 +557,8 @@
               "open_now": null,
               "source": "curated"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 49
           }
         },
         {
@@ -570,7 +586,8 @@
               "source": "curated"
             },
             "phone": "+66 85 354 8963",
-            "status": "primary"
+            "status": "primary",
+            "score": 62
           }
         },
         {
@@ -592,7 +609,8 @@
             "source": "curated",
             "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 58
           }
         },
         {
@@ -620,7 +638,8 @@
               "source": "curated"
             },
             "phone": "+66 61 190 3253",
-            "status": "primary"
+            "status": "primary",
+            "score": 40
           }
         },
         {
@@ -648,7 +667,8 @@
               "source": "curated"
             },
             "phone": "+66 98 383 6900",
-            "status": "primary"
+            "status": "primary",
+            "score": 63
           }
         },
         {
@@ -676,7 +696,8 @@
               "source": "curated"
             },
             "phone": "+66 62 404 2969",
-            "status": "primary"
+            "status": "primary",
+            "score": 12
           }
         },
         {
@@ -703,7 +724,8 @@
               "open_now": null,
               "source": "curated"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 23
           }
         },
         {
@@ -725,7 +747,8 @@
             "source": "curated",
             "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 12
           }
         },
         {
@@ -752,7 +775,8 @@
               "open_now": null,
               "source": "curated"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 15
           }
         },
         {
@@ -780,7 +804,8 @@
               "source": "curated"
             },
             "phone": "+66 85 286 2954",
-            "status": "primary"
+            "status": "primary",
+            "score": 26
           }
         },
         {
@@ -809,7 +834,8 @@
             },
             "phone": "+66 77 256 500",
             "website": "https://www.lotuss.com",
-            "status": "primary"
+            "status": "primary",
+            "score": 61
           }
         },
         {
@@ -832,7 +858,8 @@
             "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
             "generated_name": false,
             "phone": "+66 81 823 5159",
-            "status": "primary"
+            "status": "primary",
+            "score": 35
           }
         },
         {
@@ -855,7 +882,8 @@
             "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
             "generated_name": false,
             "phone": "+66 63 236 1891",
-            "status": "primary"
+            "status": "primary",
+            "score": 62
           }
         },
         {
@@ -882,7 +910,8 @@
               "open_now": null,
               "source": "curated"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 42
           }
         },
         {
@@ -910,7 +939,8 @@
               "source": "curated"
             },
             "phone": "+66 77 424 369",
-            "status": "primary"
+            "status": "primary",
+            "score": 59
           }
         },
         {
@@ -938,7 +968,8 @@
               "source": "curated"
             },
             "website": "https://www.instagram.com/1percentcoffeesamui",
-            "status": "primary"
+            "status": "primary",
+            "score": 18
           }
         },
         {
@@ -965,7 +996,8 @@
               "open_now": null,
               "source": "curated"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 15
           }
         },
         {
@@ -992,7 +1024,8 @@
               "open_now": null,
               "source": "curated"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 27
           }
         },
         {
@@ -1020,7 +1053,8 @@
               "source": "curated"
             },
             "phone": "+66 82 284 6789",
-            "status": "primary"
+            "status": "primary",
+            "score": 67
           }
         }
       ]

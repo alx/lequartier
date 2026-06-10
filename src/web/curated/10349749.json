@@ -131,7 +131,8 @@
               "open_now": null,
               "source": "osm"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 77
           }
         },
         {
@@ -159,7 +160,8 @@
               "source": "osm"
             },
             "website": "https://www.carrefour.fr/magasin/toulouse-riquet",
-            "status": "secondary"
+            "status": "secondary",
+            "score": 79
           }
         },
         {
@@ -187,7 +189,8 @@
               "source": "osm"
             },
             "phone": "+33 9 67 10 35 76",
-            "status": "primary"
+            "status": "primary",
+            "score": 61
           }
         },
         {
@@ -215,7 +218,8 @@
               "source": "osm"
             },
             "phone": "+33 5 61 62 46 02",
-            "status": "primary"
+            "status": "primary",
+            "score": 57
           }
         },
         {
@@ -237,7 +241,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 54
           }
         },
         {
@@ -266,7 +271,8 @@
             },
             "phone": "+33 5 62 73 08 45",
             "website": "https://lahalleauxpains-maisonfressinaud.fr/",
-            "status": "primary"
+            "status": "primary",
+            "score": 47
           }
         },
         {
@@ -294,7 +300,8 @@
               "source": "osm"
             },
             "website": "https://metropole.toulouse.fr/annuaire/marche-de-saint-aubin",
-            "status": "primary"
+            "status": "primary",
+            "score": 71
           }
         },
         {
@@ -322,7 +329,8 @@
               "source": "osm"
             },
             "website": "https://metropole.toulouse.fr/annuaire/marche-place-dupuy",
-            "status": "primary"
+            "status": "primary",
+            "score": 54
           }
         },
         {
@@ -344,7 +352,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 49
           }
         },
         {
@@ -371,7 +380,8 @@
               "open_now": null,
               "source": "osm"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 53
           }
         },
         {
@@ -393,7 +403,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": true,
-            "status": "secondary"
+            "status": "secondary",
+            "score": 49
           }
         },
         {
@@ -415,7 +426,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 46
           }
         },
         {
@@ -437,7 +449,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 49
           }
         },
         {
@@ -459,7 +472,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": true,
-            "status": "secondary"
+            "status": "secondary",
+            "score": 32
           }
         },
         {
@@ -481,7 +495,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 75
           }
         },
         {
@@ -503,7 +518,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 72
           }
         },
         {
@@ -525,7 +541,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 78
           }
         },
         {
@@ -547,7 +564,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 70
           }
         },
         {
@@ -569,7 +587,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 69
           }
         },
         {
@@ -591,7 +610,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 62
           }
         },
         {
@@ -620,7 +640,8 @@
             },
             "phone": "+33 5 62 160 660",
             "website": "https://www.lapizzeria31.fr/",
-            "status": "primary"
+            "status": "primary",
+            "score": 67
           }
         },
         {
@@ -647,7 +668,8 @@
               "open_now": null,
               "source": "osm"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 64
           }
         },
         {
@@ -676,7 +698,8 @@
             },
             "phone": "+33 5 34 66 67 34",
             "website": "https://www.vesubio.fr/",
-            "status": "primary"
+            "status": "primary",
+            "score": 65
           }
         },
         {
@@ -703,7 +726,8 @@
               "open_now": null,
               "source": "osm"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 59
           }
         },
         {
@@ -731,7 +755,8 @@
               "source": "osm"
             },
             "phone": "+33 5 61 80 07 03",
-            "status": "primary"
+            "status": "primary",
+            "score": 62
           }
         },
         {
@@ -754,7 +779,8 @@
             "listing_url": "https://www.airbnb.fr/rooms/10349749",
             "generated_name": false,
             "phone": "+33 5 61 34 95 50",
-            "status": "secondary"
+            "status": "secondary",
+            "score": 60
           }
         },
         {
@@ -782,7 +808,8 @@
               "source": "osm"
             },
             "phone": "+33 5 61 62 57 02",
-            "status": "secondary"
+            "status": "secondary",
+            "score": 56
           }
         },
         {
@@ -809,7 +836,8 @@
               "open_now": null,
               "source": "osm"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 54
           }
         },
         {
@@ -836,7 +864,8 @@
               "open_now": null,
               "source": "osm"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 49
           }
         },
         {
@@ -863,7 +892,8 @@
               "open_now": null,
               "source": "osm"
             },
-            "status": "primary"
+            "status": "primary",
+            "score": 48
           }
         }
       ]

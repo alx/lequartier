@@ -154,7 +154,8 @@
             "phone": "21 0340 9810",
             "rating": 4.4,
             "user_rating_count": 52,
-            "status": "primary"
+            "status": "primary",
+            "score": 85
           }
         },
         {
@@ -178,7 +179,8 @@
             "generated_name": false,
             "rating": 4,
             "user_rating_count": 391,
-            "status": "secondary"
+            "status": "secondary",
+            "score": 85
           }
         },
         {
@@ -206,7 +208,8 @@
               "source": "osm"
             },
             "phone": "+30 21 0346 2131",
-            "status": "primary"
+            "status": "primary",
+            "score": 66
           }
         },
         {
@@ -228,7 +231,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 62
           }
         },
         {
@@ -250,7 +254,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 53
           }
         },
         {
@@ -279,7 +284,8 @@
             },
             "phone": "+302130235776",
             "website": "https://bathoskipos.gr/",
-            "status": "primary"
+            "status": "primary",
+            "score": 50
           }
         },
         {
@@ -308,7 +314,8 @@
             },
             "rating": 4.4,
             "user_rating_count": 74,
-            "status": "primary"
+            "status": "primary",
+            "score": 80
           }
         },
         {
@@ -339,7 +346,8 @@
             "website": "https://www.thriftmarket.gr/",
             "rating": 4.3,
             "user_rating_count": 6,
-            "status": "primary"
+            "status": "primary",
+            "score": 75
           }
         },
         {
@@ -361,7 +369,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": true,
-            "status": "secondary"
+            "status": "secondary",
+            "score": 70
           }
         },
         {
@@ -383,7 +392,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": true,
-            "status": "secondary"
+            "status": "secondary",
+            "score": 69
           }
         },
         {
@@ -405,7 +415,8 @@
             "source": "google",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 70
           }
         },
         {
@@ -427,7 +438,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": true,
-            "status": "secondary"
+            "status": "secondary",
+            "score": 68
           }
         },
         {
@@ -449,7 +461,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": true,
-            "status": "secondary"
+            "status": "secondary",
+            "score": 46
           }
         },
         {
@@ -471,7 +484,8 @@
             "source": "google",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 39
           }
         },
         {
@@ -493,7 +507,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 76
           }
         },
         {
@@ -517,7 +532,8 @@
             "generated_name": false,
             "rating": 4.5,
             "user_rating_count": 342,
-            "status": "primary"
+            "status": "primary",
+            "score": 86
           }
         },
         {
@@ -539,7 +555,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 71
           }
         },
         {
@@ -561,7 +578,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 71
           }
         },
         {
@@ -583,7 +601,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 70
           }
         },
         {
@@ -605,7 +624,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 69
           }
         },
         {
@@ -634,7 +654,8 @@
             },
             "phone": "+302103461981",
             "website": "https://herakleidon.org",
-            "status": "primary"
+            "status": "primary",
+            "score": 54
           }
         },
         {
@@ -658,7 +679,8 @@
             "generated_name": false,
             "phone": "+30 210 3422407",
             "website": "https://www.facebook.com/to.steki.tou.hlia/",
-            "status": "primary"
+            "status": "primary",
+            "score": 70
           }
         },
         {
@@ -680,7 +702,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 65
           }
         },
         {
@@ -702,7 +725,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 65
           }
         },
         {
@@ -725,7 +749,8 @@
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
             "phone": "+30 21 0345 2948",
-            "status": "primary"
+            "status": "primary",
+            "score": 64
           }
         },
         {
@@ -747,7 +772,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 63
           }
         },
         {
@@ -769,7 +795,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": true,
-            "status": "primary"
+            "status": "primary",
+            "score": 63
           }
         },
         {
@@ -791,7 +818,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "secondary"
+            "status": "secondary",
+            "score": 58
           }
         },
         {
@@ -813,7 +841,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": true,
-            "status": "secondary"
+            "status": "secondary",
+            "score": 58
           }
         },
         {
@@ -835,7 +864,8 @@
             "source": "osm",
             "listing_url": "https://www.airbnb.com/rooms/686559818391956388",
             "generated_name": false,
-            "status": "primary"
+            "status": "primary",
+            "score": 40
           }
         }
       ]
@@ -845,5 +875,6 @@
     "from_cache": false,
     "listing_title": "Rental unit in Athens · ★4.93 · 2 bedrooms · 2 beds · 1.5 private baths",
     "listing_photo": "https://a0.muscache.com/im/pictures/miso/Hosting-686559818391956388/original/20307476-c0b1-4ce1-94cf-4627de59c5a9.jpeg?im_w=720&width=720&quality=70&auto=webp"
-  }
+  },
+  "is_shared": true
 }

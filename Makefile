@@ -1,4 +1,4 @@
-.PHONY: searxng-up searxng-down enrich enrich-city rebuild-index
+.PHONY: searxng-up searxng-down enrich enrich-city rebuild-index backfill-scores
 
 # Start SearXNG and wait until it responds
 searxng-up:
@@ -26,3 +26,7 @@ enrich-city: searxng-up
 # Rebuild the SQLite listing index from curated JSON files.
 rebuild-index:
 	uv run scripts/rebuild_listing_index.py
+
+# Backfill properties.score on existing curated listing GeoJSONs.
+backfill-scores:
+	uv run scripts/backfill_scores.py
