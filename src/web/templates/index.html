@@ -98,6 +98,30 @@
     'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
   };
 
+  function poiPopupHtml(f) {
+    var props = f.properties;
+    var cat = props.category || '';
+    var icon = FA_ICONS[cat] || 'fa-location-dot';
+    var coords = f.geometry.coordinates;
+    var html = '<strong>' + props.name + '</strong><br>';
+    html += '<span style="font-size:0.82em;color:#6b7280;"><i class="fa-solid ' + icon + '"></i> ' + cat.replace(/_/g, ' ') + '</span>';
+    if ((cat === 'train_station' || cat === 'transport') && props.line)
+      html += '<br><i class="fa-solid fa-train"></i> Line: ' + props.line;
+    if (cat === 'museum' && props.ticket_url)
+      html += '<br><a href="' + props.ticket_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-ticket"></i> Buy tickets</a>';
+    if (cat === 'monument' && props.wikipedia_url)
+      html += '<br><a href="' + props.wikipedia_url + '" target="_blank" rel="noopener"><i class="fa-brands fa-wikipedia-w"></i> History on Wikipedia</a>';
+    if (cat === 'airport') {
+      var adsbUrl = 'https://globe.adsbexchange.com/?lat=' + coords[1].toFixed(4) + '&lon=' + coords[0].toFixed(4) + '&zoom=12';
+      html += '<br><a href="' + adsbUrl + '" target="_blank" rel="noopener"><i class="fa-solid fa-plane-departure"></i> Live flights nearby</a>';
+    }
+    if (cat === 'university' && props.courses_url)
+      html += '<br><a href="' + props.courses_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-graduation-cap"></i> Courses</a>';
+    if (cat === 'market' && props.video_url)
+      html += '<br><iframe src="' + props.video_url + '" width="200" height="120" frameborder="0" allowfullscreen style="border-radius:4px;margin-top:4px;display:block;"></iframe>';
+    return html;
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     var map = L.map('map', {
       zoomControl: false, dragging: false, scrollWheelZoom: false,
@@ -140,6 +164,27 @@
       }).addTo(map);
     });
 
+    // Center "your rental" demo marker
+    L.marker([CITY_LAT, CITY_LON], {
+      interactive: false,
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="position:relative;">' +
+              '<div style="width:28px;height:28px;border-radius:50%;background:' + ACCENT + ';' +
+              'display:flex;align-items:center;justify-content:center;' +
+              'border:2.5px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.45);">' +
+              '<i class="fa-solid fa-house" style="color:#fff;font-size:12px;"></i></div>' +
+              '<div style="position:absolute;top:32px;left:50%;transform:translateX(-50%);' +
+              'background:' + ACCENT + ';color:#fff;font-size:10px;font-weight:700;' +
+              'padding:2px 8px;border-radius:10px;white-space:nowrap;' +
+              'box-shadow:0 1px 4px rgba(0,0,0,.3);">' +
+              '<i class="fa-solid fa-house" style="font-size:8px;margin-right:3px;"></i>your rental</div>' +
+              '</div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      }),
+    }).addTo(map);
+
     // Load and render pre-generated city GeoJSON
     fetch('/static/data/cities/' + CITY_SLUG + '.geojson')
       .then(function(r) { return r.ok ? r.json() : null; })
@@ -151,8 +196,7 @@
           var cat = f.properties.category || '';
           var icon = FA_ICONS[cat] || 'fa-location-dot';
           var color = f.properties.color || '#6b7280';
-          L.marker([coords[1], coords[0]], {
-            interactive: false,
+          var m = L.marker([coords[1], coords[0]], {
             icon: L.divIcon({
               className: '',
               html: '<div style="width:22px;height:22px;border-radius:50%;background:' + color +
@@ -161,7 +205,13 @@
                     '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:9px;"></i></div>',
               iconSize: [22, 22], iconAnchor: [11, 11],
             }),
-          }).addTo(map);
+          });
+          m.bindTooltip(
+            '<i class="fa-solid ' + icon + '"></i> ' + f.properties.name,
+            { direction: 'top', offset: [0, -14], opacity: 1 }
+          );
+          m.bindPopup(poiPopupHtml(f));
+          m.addTo(map);
         });
       });
   });
