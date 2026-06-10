@@ -992,22 +992,31 @@ def api_nearby_preflight():
 
 @wizard.post("/api/generate")
 def api_generate():
-    """Start a map-generation task from coordinates (called by userscripts on 404)."""
+    """Start a map-generation task (called by userscripts on 404). lat/lon are optional."""
     data       = request.get_json(force=True) or {}
     site       = data.get("site", "").strip()
     listing_id = data.get("listing_id", "").strip()
-    try:
-        lat = float(data["lat"])
-        lon = float(data["lon"])
-    except (KeyError, TypeError, ValueError):
-        return jsonify({"error": "lat and lon are required"}), 400
 
     if site not in ("airbnb", "zillow"):
         return jsonify({"error": "site must be 'airbnb' or 'zillow'"}), 400
     if not listing_id:
         return jsonify({"error": "listing_id is required"}), 400
 
-    task = task_mod.run_in_thread(_fetch_task_direct, site, listing_id, lat, lon)
+    lat_raw = data.get("lat")
+    lon_raw = data.get("lon")
+
+    if lat_raw is not None and lon_raw is not None:
+        try:
+            lat = float(lat_raw)
+            lon = float(lon_raw)
+        except (TypeError, ValueError):
+            return jsonify({"error": "lat and lon must be numbers"}), 400
+        task = task_mod.run_in_thread(_fetch_task_direct, site, listing_id, lat, lon)
+    else:
+        source_url = (f"https://www.airbnb.com/rooms/{listing_id}" if site == "airbnb"
+                      else f"https://www.zillow.com/homedetails/{listing_id}")
+        task = task_mod.run_in_thread(_fetch_task, source_url, None, None, None, False)
+
     return jsonify({"task_id": task.task_id})
 
 

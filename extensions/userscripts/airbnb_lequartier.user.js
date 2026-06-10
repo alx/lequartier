@@ -22,6 +22,8 @@
   const LQ_ROOT_ID   = 'lq-map-root';
   const LQ_STATUS_ID = 'lq-status';
 
+  let _externalUrl = '';
+
   // ── Load Leaflet (strip sourceMappingURL comment to avoid DevTools 404) ──
   // (0, eval) is an indirect eval that runs in the global scope, same as @require
   ;(0, eval)(GM_getResourceText('leafletJS').replace(/\/\/# sourceMappingURL=\S+[ \t]*$/m, ''));
@@ -221,10 +223,10 @@
     const listing_id = extractListingId();
     if (!listing_id) return;
 
+    _externalUrl = `${getBackendUrl()}/airbnb/${listing_id}`;
+
     const shareContainer = await waitForShareButton();
     if (!shareContainer || document.getElementById('lq-title-link')) return;
-
-    const externalUrl = `${getBackendUrl()}/airbnb/${listing_id}`;
 
     const wrapper = document.createElement('div');
     wrapper.id = 'lq-title-link';
@@ -235,11 +237,11 @@
     btn.title = 'Le Quartier';
     btn.className = 'b1iktwwp cn6bjj0 dir dir-ltr';
     btn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:transparent;border:none;cursor:pointer;font-size:14px;font-weight:600;color:inherit;';
-    btn.innerHTML = '<span aria-hidden="true">🌳🏠</span><span style="text-decoration:underline;">Le Quartier</span>';
+    btn.innerHTML = '<i class="fa-solid fa-leaf" aria-hidden="true"></i><span style="text-decoration:underline;">Le Quartier</span>';
     btn.addEventListener('click', () => {
       const mapEl = document.getElementById(LQ_ROOT_ID);
       if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth' });
-      else window.open(externalUrl, '_blank', 'noopener,noreferrer');
+      else window.open(_externalUrl, '_blank', 'noopener,noreferrer');
     });
 
     wrapper.appendChild(btn);
@@ -258,15 +260,17 @@
 
     let taskId;
     try {
+      const body = { site: 'airbnb', listing_id };
+      if (lat !== null && lon !== null) { body.lat = lat; body.lon = lon; }
       const resp = await fetch(`${backendBase}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site: 'airbnb', listing_id, lat, lon }),
+        body: JSON.stringify(body),
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       taskId = (await resp.json()).task_id;
     } catch (err) {
-      if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text">⚠ ${err.message}</span>`;
+      if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message}</span>`;
       return null;
     }
 
@@ -307,7 +311,7 @@
           polling = false;
           clearInterval(autoIncr);
           const loadingEl = document.getElementById('lq-loading');
-          if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text">⚠ ${r.error}</span>`;
+          if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text"><i class="fa-solid fa-triangle-exclamation"></i> ${r.error}</span>`;
           return false;
         }
 
@@ -363,17 +367,32 @@
 
     const PALETTE = ['#16a34a','#2563eb','#f97316','#9333ea','#dc2626',
                      '#0891b2','#ca8a04','#be185d','#15803d','#1d4ed8'];
-    const catMeta   = (geojson._meta && geojson._meta.category_meta) || {};
-    const catColors = {};
-    let   palIdx    = 0;
+    const FA_FALLBACK = {
+      'Supermarket': 'fa-cart-shopping', 'Bakery & Food': 'fa-bread-slice',
+      'Market': 'fa-store', 'Night Shop': 'fa-moon', 'Park': 'fa-tree',
+      'Playground': 'fa-child-reaching', 'Dog Park': 'fa-dog', 'Transit': 'fa-bus',
+      'Activity': 'fa-person-running', 'Culture': 'fa-landmark', 'Wellness': 'fa-spa',
+      'Restaurant': 'fa-utensils', 'Health': 'fa-pills', 'Bike Share': 'fa-bicycle',
+    };
+    const catMeta    = (geojson._meta && geojson._meta.category_meta) || {};
+    const catColors  = {};
+    const catFaIcons = {};
+    let   palIdx     = 0;
 
     Object.entries(catMeta).forEach(([label, m]) => {
-      catColors[label] = m.color || PALETTE[palIdx++ % PALETTE.length];
+      catColors[label]  = m.color || PALETTE[palIdx++ % PALETTE.length];
+      catFaIcons[label] = (m.fa_icon && m.fa_icon !== 'fa-location-dot')
+        ? m.fa_icon : (FA_FALLBACK[label] || 'fa-location-dot');
     });
 
     function colorFor(cat) {
       if (!catColors[cat]) catColors[cat] = PALETTE[palIdx++ % PALETTE.length];
       return catColors[cat];
+    }
+
+    function faIconFor(cat) {
+      if (!catFaIcons[cat]) catFaIcons[cat] = FA_FALLBACK[cat] || 'fa-location-dot';
+      return catFaIcons[cat];
     }
 
     function darken(hex, f) {
@@ -399,10 +418,10 @@
       });
       const lines = [
         `<strong>${p.name || '?'}</strong>`,
-        `<span style="color:#6b7280;font-size:0.82em;">${p.icon || ''} ${cat}</span>`,
+        `<span style="color:#6b7280;font-size:0.82em;"><i class="fa-solid ${faIconFor(cat)}"></i> ${cat}</span>`,
         p.rating ? `<i class="fa-solid fa-star" style="color:#f59e0b"></i> ${p.rating.toFixed(1)}${p.user_rating_count ? ` (${p.user_rating_count})` : ''}` : '',
-        (p.opening_hours && p.opening_hours.raw) ? `🕐 ${p.opening_hours.raw}` : '',
-        p.website ? `<a href="${p.website}" target="_blank" rel="noopener" style="font-size:0.8em;">Website ↗</a>` : '',
+        (p.opening_hours && p.opening_hours.raw) ? `<i class="fa-solid fa-clock"></i> ${p.opening_hours.raw}` : '',
+        p.website ? `<a href="${p.website}" target="_blank" rel="noopener" style="font-size:0.8em;">Website <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i></a>` : '',
       ].filter(Boolean).join('<br>');
       L.marker([flat, flon], { icon }).bindPopup(lines).addTo(layerByCat[cat]);
     });
@@ -434,11 +453,11 @@
 
       const openBtn = document.createElement('a');
       openBtn.className = 'lq-cat-btn';
-      openBtn.href = `${getBackendUrl()}/airbnb/${listing_id}`;
+      openBtn.href = _externalUrl || `${getBackendUrl()}/airbnb/${listing_id}`;
       openBtn.target = '_blank';
       openBtn.rel = 'noopener';
       openBtn.style.setProperty('--lq-cat-color', '#1a6b3c');
-      openBtn.innerHTML = '<i class="fa-solid fa-map-marked-alt"></i> Open in Le Quartier';
+      openBtn.innerHTML = '<i class="fa-solid fa-map-location-dot"></i> Open in Le Quartier';
       catBar.appendChild(openBtn);
     }
   }
@@ -454,10 +473,6 @@
     injectTitleLink();
 
     const coords = extractCoordinates();
-    if (!coords) {
-      console.warn('[LeQuartier] Could not extract coordinates from this Airbnb page.');
-      return;
-    }
 
     const backendBase = getBackendUrl();
 
@@ -474,15 +489,16 @@
       const resp = await fetch(url);
 
       if (resp.status === 404) {
-        const taskId = await generateAndPoll(listing_id, coords.lat, coords.lon, backendBase);
+        const taskId = await generateAndPoll(listing_id, coords?.lat ?? null, coords?.lon ?? null, backendBase);
         if (!taskId) return;
+        if (taskId) _externalUrl = `${backendBase}/airbnb/${listing_id}?task_id=${taskId}`;
         const ok = await pollUntilDone(taskId, backendBase);
         if (!ok) return;
         const geojsonResp = await fetch(url);
         if (!geojsonResp.ok) throw new Error(`HTTP ${geojsonResp.status}`);
         const geojson = await geojsonResp.json();
         document.getElementById('lq-loading')?.remove();
-        renderMap(coords.lat, coords.lon, geojson, listing_id);
+        if (coords) renderMap(coords.lat, coords.lon, geojson, listing_id);
         return;
       }
 
@@ -494,10 +510,10 @@
       if (statusEl) statusEl.textContent = `${n} place${n !== 1 ? 's' : ''}`;
 
       document.getElementById('lq-loading')?.remove();
-      renderMap(coords.lat, coords.lon, geojson, listing_id);
+      if (coords) renderMap(coords.lat, coords.lon, geojson, listing_id);
     } catch (err) {
       const loadingEl = document.getElementById('lq-loading');
-      if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text">⚠ ${err.message}</span>`;
+      if (loadingEl) loadingEl.innerHTML = `<span class="lq-error-text"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message}</span>`;
     }
   }
 
@@ -511,6 +527,7 @@
     document.getElementById(LQ_ROOT_ID)?.remove();
     mapWrapper = null;
     document.getElementById('lq-title-link')?.remove();
+    _externalUrl = '';
     delete window.__lqRan;
     setTimeout(run, 800);
   }

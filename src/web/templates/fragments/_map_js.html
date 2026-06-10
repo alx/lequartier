@@ -29,7 +29,7 @@
     map = L.map('map').setView([displayLat, displayLon], 16);
     window._wizardMap = map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | 🌳🏠 <a href="https://lequartier.girard-davila.net">Le Quartier</a>',
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | <a href="https://lequartier.girard-davila.net">Le Quartier</a>',
       maxZoom: 19,
     }).addTo(map);
   }
@@ -96,7 +96,7 @@
       iconAnchor: [16, 16],
     });
     homeMarker = L.marker([centerLat, centerLon], { icon: homeIcon })
-      .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
+      .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i></a>')
       .addTo(map);
   }
 
@@ -136,7 +136,7 @@
     centerLon = e.latlng.lng;
     map.removeLayer(homeMarker);
     homeMarker = L.marker([centerLat, centerLon], { icon: homeIcon })
-      .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing ↗</a>')
+      .bindPopup('<strong>Airbnb listing</strong><br><a href="' + AIRBNB_URL + '" target="_blank">View listing <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i></a>')
       .addTo(map);
   });
 
@@ -211,17 +211,18 @@
     const props = feature.properties;
     const id = feature.id;
     const isSec = secondaryPois.has(id);
+    const faClass = catFaIcons[props.category] || 'fa-location-dot';
     let h = '<strong>' + props.name + '</strong><br>';
-    h += '<span class="popup-cat">' + (props.icon || '') + ' ' + props.category + '</span>';
-    if (props.rating) h += '<br>⭐ ' + props.rating.toFixed(1);
-    if (props.opening_hours?.raw) h += '<br>🕐 ' + props.opening_hours.raw;
-    if (props.phone) h += '<br>📞 ' + props.phone;
-    if (props.website) h += '<br><a href="' + props.website + '" target="_blank" rel="noopener">🔗 Website</a>';
+    h += '<span class="popup-cat"><i class="fa-solid ' + faClass + '"></i> ' + props.category + '</span>';
+    if (props.rating) h += '<br><i class="fa-solid fa-star" style="color:#f59e0b"></i> ' + props.rating.toFixed(1);
+    if (props.opening_hours?.raw) h += '<br><i class="fa-solid fa-clock"></i> ' + props.opening_hours.raw;
+    if (props.phone) h += '<br><i class="fa-solid fa-phone"></i> ' + props.phone;
+    if (props.website) h += '<br><a href="' + props.website + '" target="_blank" rel="noopener"><i class="fa-solid fa-link"></i> Website</a>';
     if (!READONLY) {
       h += '<div class="popup-actions">';
       h += '<button class="popup-action-btn popup-status-btn" onclick="window.toggleSecondaryFromPopup(\'' + id + '\')" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '">'
-         + (isSec ? '○ Secondary' : '● Primary') + '</button>';
-      h += '<button class="popup-action-btn popup-remove-btn" onclick="window.removePoi(\'' + id + '\');window._wizardMap?.closePopup();" title="Remove from map">✕ Remove</button>';
+         + (isSec ? '<i class="fa-regular fa-circle"></i> Secondary' : '<i class="fa-solid fa-circle"></i> Primary') + '</button>';
+      h += '<button class="popup-action-btn popup-remove-btn" onclick="window.removePoi(\'' + id + '\');window._wizardMap?.closePopup();" title="Remove from map">&#x2715; Remove</button>';
       h += '</div>';
     }
     return h;
@@ -243,15 +244,15 @@
 
   function _metaHtml(props) {
     const lines = [];
-    if (props.opening_hours?.raw) lines.push('🕐 ' + props.opening_hours.raw);
+    if (props.opening_hours?.raw) lines.push('<i class="fa-solid fa-clock"></i> ' + props.opening_hours.raw);
     if (props.rating) {
-      let r = '⭐ ' + props.rating.toFixed(1);
+      let r = '<i class="fa-solid fa-star" style="color:#f59e0b"></i> ' + props.rating.toFixed(1);
       if (props.user_rating_count) r += ' (' + props.user_rating_count + ' reviews)';
       lines.push(r);
     }
     if (props.price_level) lines.push(props.price_level);
-    if (props.phone) lines.push('📞 <a href="tel:' + props.phone + '">' + props.phone + '</a>');
-    if (props.website) lines.push('🔗 <a href="' + props.website + '" target="_blank" rel="noopener">Website ↗</a>');
+    if (props.phone) lines.push('<i class="fa-solid fa-phone"></i> <a href="tel:' + props.phone + '">' + props.phone + '</a>');
+    if (props.website) lines.push('<i class="fa-solid fa-link"></i> <a href="' + props.website + '" target="_blank" rel="noopener">Website <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i></a>');
     if (props.video_url) lines.push('<iframe src="' + props.video_url + '" width="100%" height="140" frameborder="0" allowfullscreen style="border-radius:4px;margin-top:0.2rem;display:block;"></iframe>');
     return lines.join('<br>');
   }
@@ -275,7 +276,7 @@
       const group = document.createElement('div');
       group.className = 'poi-group';
       group.dataset.cat = cat;
-      group.innerHTML = '<div class="poi-group-header"><button type="button" class="poi-group-toggle" title="Hide/show" onclick="togglePoiGroup(this)"><i class="fa-solid fa-chevron-down"></i></button>' + (catMeta[cat]?.icon || '') + ' ' + cat + '</div>';
+      group.innerHTML = '<div class="poi-group-header"><button type="button" class="poi-group-toggle" title="Hide/show" onclick="togglePoiGroup(this)"><i class="fa-solid fa-chevron-down"></i></button><i class="fa-solid ' + (catFaIcons[cat] || 'fa-location-dot') + '"></i> ' + cat + '</div>';
       pois.forEach(f => {
         const row = document.createElement('div');
         const isSec = secondaryPois.has(f.id);
@@ -287,10 +288,10 @@
         row.innerHTML =
           '<div class="poi-row-summary">' +
           '<span class="poi-dot" style="background:' + color + '"></span>' +
-          (READONLY ? '' : '<button type="button" class="poi-status-btn" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '" onclick="toggleSecondary(\'' + f.id + '\')">' + (isSec ? '○' : '●') + '</button>') +
+          (READONLY ? '' : '<button type="button" class="poi-status-btn" title="' + (isSec ? 'Promote to primary' : 'Demote to secondary') + '" onclick="toggleSecondary(\'' + f.id + '\')">' + (isSec ? '<i class="fa-regular fa-circle"></i>' : '<i class="fa-solid fa-circle"></i>') + '</button>') +
           '<span class="poi-name poi-name-link" onclick="highlightPoi(\'' + f.id + '\')">' + f.properties.name + '</span>' +
           (hasMeta ? '<button type="button" class="poi-meta-btn" data-id="' + f.id + '" onclick="togglePoiMeta(\'' + f.id + '\')"><i class="fa-solid fa-angle-down"></i></button>' : '') +
-          (READONLY ? '' : '<button type="button" class="poi-remove-btn" title="Remove from map" onclick="removePoi(\'' + f.id + '\')">✕</button>') +
+          (READONLY ? '' : '<button type="button" class="poi-remove-btn" title="Remove from map" onclick="removePoi(\'' + f.id + '\')">&#x2715;</button>') +
           '</div>' +
           (hasMeta ? '<div class="poi-meta-panel" data-id="' + f.id + '" hidden>' + meta + '</div>' : '');
         group.appendChild(row);
@@ -425,7 +426,7 @@
       const isSec = secondaryPois.has(id);
       row.className = 'poi-row' + (isSec ? ' poi-secondary' : '');
       const btn = row.querySelector('.poi-status-btn');
-      if (btn) { btn.textContent = isSec ? '○' : '●'; btn.title = isSec ? 'Promote to primary' : 'Demote to secondary'; }
+      if (btn) { btn.innerHTML = isSec ? '<i class="fa-regular fa-circle"></i>' : '<i class="fa-solid fa-circle"></i>'; btn.title = isSec ? 'Promote to primary' : 'Demote to secondary'; }
     }
   }
 
@@ -562,14 +563,14 @@
       const data = await resp.json();
       if (btn) {
         btn.disabled = false;
-        btn.textContent = data.ok ? '✓ Saved' : '⚠ Error';
-        setTimeout(function() { if (btn) btn.textContent = '💾 Save changes'; }, 2500);
+        btn.innerHTML = data.ok ? '<i class="fa-solid fa-check"></i> Saved' : '<i class="fa-solid fa-triangle-exclamation"></i> Error';
+        setTimeout(function() { if (btn) btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save changes'; }, 2500);
       }
     } catch(e) {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '⚠ Error';
-        setTimeout(function() { if (btn) btn.textContent = '💾 Save changes'; }, 2500);
+        btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error';
+        setTimeout(function() { if (btn) btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save changes'; }, 2500);
       }
     }
   };

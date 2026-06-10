@@ -1,10 +1,10 @@
 <div class="card">
-  <h3>💾 Local write</h3>
+  <h3><i class="fa-solid fa-floppy-disk"></i> Local write</h3>
   {% if error %}
   <div class="alert alert-error">{{ error }}</div>
   {% else %}
   <div class="alert alert-success">
-    Committed &amp; pushed ✓ — <code>{{ commit }}</code>
+    Committed &amp; pushed <i class="fa-solid fa-check"></i> — <code>{{ commit }}</code>
   </div>
   <p style="margin-top:0.75rem;">
     Preview locally with:

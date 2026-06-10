@@ -41,7 +41,7 @@
 <!-- Left overlay skeleton (hidden, populated by OOB swaps when map loads) -->
 <div class="map-overlay left-overlay" id="left-overlay" style="display:none;">
   <div class="overlay-card">
-    <div class="block-label">🏠 Le Quartier</div>
+    <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
     <div id="publish-area" style="display:none;"></div>
   </div>
   <div class="overlay-card scrollable" style="display:none;">
@@ -67,7 +67,7 @@
 <!-- Left overlay with listing info + POI list -->
 <div class="map-overlay left-overlay" id="left-overlay">
   <div class="overlay-card">
-    <a href="/" class="block-label" style="text-decoration:none; display:block;">🏠 Le Quartier</a>
+    <a href="/" class="block-label" style="text-decoration:none; display:block;"><i class="fa-solid fa-house"></i> Le Quartier</a>
     {% if listing_photo %}
     <img src="{{ listing_photo }}" alt="{{ listing_title or '' }}"
          style="width:100%; height:100px; object-fit:cover; border-radius:8px; margin:0.4rem 0 0.35rem;">
@@ -77,12 +77,12 @@
     {% endif %}
     <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.35rem;">
       {% if location.get('neighbourhood') or location.get('city') %}
-      <span style="font-size:0.78rem; color:var(--text-muted);">📍 {{ (location.get('neighbourhood') or '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ (location.get('city') or '') }}</span>
+      <span style="font-size:0.78rem; color:var(--text-muted);"><i class="fa-solid fa-location-dot"></i> {{ (location.get('neighbourhood') or '') }}{% if location.get('neighbourhood') and location.get('city') %}, {% endif %}{{ (location.get('city') or '') }}</span>
       {% endif %}
       {% if airbnb_url and 'airbnb.com' in airbnb_url %}
       <a href="{{ airbnb_url }}" target="_blank" rel="noopener"
          style="font-size:0.78rem; color:var(--text-muted); text-decoration:none; white-space:nowrap; margin-left:auto;"
-         onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb ↗</a>
+         onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i></a>
       {% endif %}
     </div>
     {% if not readonly %}
@@ -90,14 +90,14 @@
       <div style="display:flex; gap:0.5rem;">
         <button class="btn btn-outline"
                 style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
-                onclick="openSupportModal()">❓ Help</button>
+                onclick="openSupportModal()"><i class="fa-solid fa-circle-question"></i> Help</button>
         <button id="btn-save-changes" class="btn btn-primary"
                 style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
-                onclick="saveChanges()">💾 Save changes</button>
+                onclick="saveChanges()"><i class="fa-solid fa-floppy-disk"></i> Save changes</button>
       </div>
       <button class="btn btn-outline"
               style="width:100%; margin-top:0.4rem; font-size:0.82rem; padding:0.4rem 0.75rem;"
-              onclick="activatePickLocation()">📍 Fix location</button>
+              onclick="activatePickLocation()"><i class="fa-solid fa-location-dot"></i> Fix location</button>
     </div>
     {% endif %}
   </div>
@@ -132,12 +132,12 @@
 <div id="support-modal" class="modal-overlay" style="display:none;"
      onclick="if(event.target===this) closeSupportModal()">
   <div class="modal-card">
-    <button class="modal-close" onclick="closeSupportModal()">✕</button>
-    <h3>❓ Support</h3>
+    <button class="modal-close" onclick="closeSupportModal()"><i class="fa-solid fa-xmark"></i></button>
+    <h3><i class="fa-solid fa-circle-question"></i> Support</h3>
     <p style="font-size:0.9rem; margin-bottom:0.75rem;">Need help modifying the map for this location? Contact me:</p>
-    <p style="margin-bottom:0.4rem;">📧 <a href="mailto:girard.davila@gmail.com">girard.davila@gmail.com</a></p>
-    <p style="margin-bottom:0.75rem;">💬 WhatsApp: <a href="https://wa.me/0084378022537" target="_blank" rel="noopener">Message @alx on WhatsApp</a></p>
-    <button class="btn btn-outline" style="width:100%;" onclick="copyLocationUrl()">📋 Copy location URL</button>
+    <p style="margin-bottom:0.4rem;"><i class="fa-solid fa-envelope"></i> <a href="mailto:girard.davila@gmail.com">girard.davila@gmail.com</a></p>
+    <p style="margin-bottom:0.75rem;"><i class="fa-brands fa-whatsapp"></i> WhatsApp: <a href="https://wa.me/0084378022537" target="_blank" rel="noopener">Message @alx on WhatsApp</a></p>
+    <button class="btn btn-outline" style="width:100%;" onclick="copyLocationUrl()"><i class="fa-solid fa-clipboard"></i> Copy location URL</button>
     <div id="copy-url-feedback" style="display:none; font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top:0.4rem;">Copied!</div>
   </div>
 </div>
@@ -176,13 +176,23 @@ window.copyLocationUrl   = function() {
     maxZoom: 19,
   }).addTo(map);
 
+  var FA_ICON_FALLBACK = {
+    'Supermarket': 'fa-cart-shopping', 'Bakery & Food': 'fa-bread-slice',
+    'Market': 'fa-store', 'Night Shop': 'fa-moon', 'Park': 'fa-tree',
+    'Playground': 'fa-child-reaching', 'Dog Park': 'fa-dog', 'Transit': 'fa-bus',
+    'Activity': 'fa-person-running', 'Culture': 'fa-landmark', 'Wellness': 'fa-spa',
+    'Restaurant': 'fa-utensils', 'Health': 'fa-pills', 'Bike Share': 'fa-bicycle',
+  };
+
   var seenIds = new Set();
   var mapInitialized = false;
   var polling = true;
 
   function addHomeAndCircles(lat, lon) {
     var homeIcon = L.divIcon({
-      html: '<div class="map-pin map-pin-home">🏠</div>',
+      html: '<span class="fa-stack" style="font-size:16px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">' +
+            '<i class="fa-solid fa-circle fa-stack-2x" style="color:#b33f43"></i>' +
+            '<i class="fa-solid fa-house fa-stack-1x" style="color:#fff"></i></span>',
       className: '', iconSize: [32, 32], iconAnchor: [16, 16],
     });
     var hm = L.marker([lat, lon], { icon: homeIcon }).addTo(map);
@@ -199,8 +209,9 @@ window.copyLocationUrl   = function() {
         catIdx++;
       }
       var color = catColorMap[cat] || '#6b7280';
+      var fa = FA_ICON_FALLBACK[cat] || 'fa-location-dot';
       var icon = L.divIcon({
-        html: '<div class="map-pin" style="background:' + color + ';width:20px;height:20px;font-size:10px;border-color:#ccc;opacity:0.8">' + ((f.properties && f.properties.icon) || '📍') + '</div>',
+        html: '<div style="background:' + color + ';width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.4);opacity:0.8"><i class="fa-solid ' + fa + '" style="color:#fff;font-size:9px;"></i></div>',
         className: '', iconSize: [20, 20], iconAnchor: [10, 10],
       });
       var coords = f.geometry && f.geometry.coordinates;
@@ -240,15 +251,15 @@ window.copyLocationUrl   = function() {
         addHomeAndCircles(r.lat, r.lon);
       }
 
-      if (r.features && r.features.length) {
-        addPartialFeatures(r.features);
-      }
-
       if (r.done || r.error) {
         polling = false;
         var pill = document.getElementById('loading-pill');
         if (pill && r.done) pill.style.display = 'none';
         return;
+      }
+
+      if (r.features && r.features.length) {
+        addPartialFeatures(r.features);
       }
     } catch(e) {}
     setTimeout(pollMapState, 1000);

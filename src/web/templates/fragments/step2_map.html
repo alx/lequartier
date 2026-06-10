@@ -6,7 +6,7 @@
 <!-- OOB: show and populate left overlay (first card + POI list card) -->
 <div id="left-overlay" hx-swap-oob="outerHTML" class="map-overlay left-overlay">
   <div class="overlay-card">
-    <a href="/" class="block-label" style="text-decoration:none; display:block;">🏠 Le Quartier</a>
+    <a href="/" class="block-label" style="text-decoration:none; display:block;"><i class="fa-solid fa-house"></i> Le Quartier</a>
     {% if listing_photo %}
     <img src="{{ listing_photo }}" alt="{{ listing_title or '' }}"
          style="width:100%; height:100px; object-fit:cover; border-radius:8px; margin:0.4rem 0 0.35rem;">
@@ -16,12 +16,12 @@
     {% endif %}
     <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.35rem;">
       {% if location.get("neighbourhood") or location.get("city") %}
-      <span style="font-size:0.78rem; color:var(--text-muted);">📍 {{ (location.get("neighbourhood") or "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ (location.get("city") or "") }}</span>
+      <span style="font-size:0.78rem; color:var(--text-muted);"><i class="fa-solid fa-location-dot"></i> {{ (location.get("neighbourhood") or "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ (location.get("city") or "") }}</span>
       {% endif %}
       {% if airbnb_url and 'airbnb.com' in airbnb_url %}
       <a href="{{ airbnb_url }}" target="_blank" rel="noopener"
          style="font-size:0.78rem; color:var(--text-muted); text-decoration:none; white-space:nowrap; margin-left:auto;"
-         onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb ↗</a>
+         onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Airbnb <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i></a>
       {% endif %}
     </div>
     <div id="publish-area" style="{{ 'display:none' if readonly else '' }}">
@@ -30,14 +30,14 @@
         <div style="display:flex; gap:0.5rem;">
           <button class="btn btn-outline"
                   style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
-                  onclick="openSupportModal()">❓ Help</button>
+                  onclick="openSupportModal()"><i class="fa-solid fa-circle-question"></i> Help</button>
           <button id="btn-save-changes" class="btn btn-primary"
                   style="flex:1; font-size:0.88rem; padding:0.5rem 0.75rem;"
-                  onclick="saveChanges()">💾 Save changes</button>
+                  onclick="saveChanges()"><i class="fa-solid fa-floppy-disk"></i> Save changes</button>
         </div>
         <button class="btn btn-outline"
                 style="width:100%; margin-top:0.4rem; font-size:0.82rem; padding:0.4rem 0.75rem;"
-                onclick="activatePickLocation()">📍 Fix location</button>
+                onclick="activatePickLocation()"><i class="fa-solid fa-location-dot"></i> Fix location</button>
       </div>
       {% endif %}
     </div>

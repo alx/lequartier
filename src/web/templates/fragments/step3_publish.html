@@ -1,10 +1,10 @@
 <section id="step3-publish" class="wizard-block">
   <div class="card">
-    <div class="block-label">📤 Step 3 — Download &amp; Publish</div>
+    <div class="block-label"><i class="fa-solid fa-file-export"></i> Step 3 — Download &amp; Publish</div>
     <div class="summary-row">
-      <span>🏠 Listing <code>{{ listing_id }}</code></span>
+      <span><i class="fa-solid fa-house"></i> Listing <code>{{ listing_id }}</code></span>
       {% if location.get("city") %}
-      <span>📍 {{ location.get("neighbourhood", "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ location.get("city", "") }}</span>
+      <span><i class="fa-solid fa-location-dot"></i> {{ location.get("neighbourhood", "") }}{% if location.get("neighbourhood") and location.get("city") %}, {% endif %}{{ location.get("city", "") }}</span>
       {% endif %}
       <span><strong>{{ n_pois }}</strong> places selected</span>
     </div>
@@ -12,19 +12,19 @@
 
   <!-- Download -->
   <div class="card">
-    <h3>⬇ Download GeoJSON</h3>
+    <h3><i class="fa-solid fa-download"></i> Download GeoJSON</h3>
     <p class="muted" style="margin-bottom:1rem;">
       Save <code>locations.geojson</code> to share or use elsewhere.
     </p>
     <button class="btn btn-primary" onclick="downloadGeoJSON3()">
-      ⬇ Download locations.geojson
+      <i class="fa-solid fa-download"></i> Download locations.geojson
     </button>
   </div>
 
   <!-- Publish online -->
   {% if has_github_token and in_git_repo %}
   <div class="card" id="pr-card">
-    <h3>🗺 Publish the map online</h3>
+    <h3><i class="fa-solid fa-map"></i> Publish the map online</h3>
     <p class="muted" style="margin-bottom:1rem;">
       Fill in the details below and click the button — we'll review your map and publish it at <strong>maps.girard-davila.com</strong>, usually within a day or two.
     </p>
@@ -52,7 +52,7 @@
       </div>
       <button type="submit" class="btn btn-primary">
         <span class="htmx-indicator spinner"></span>
-        📤 Publish the map online →
+        <i class="fa-solid fa-file-export"></i> Publish the map online
       </button>
     </form>
   </div>
@@ -61,7 +61,7 @@
   <!-- Local write -->
   {% if can_write_local %}
   <div class="card" id="local-card">
-    <h3>💾 Write directly to travel-guide</h3>
+    <h3><i class="fa-solid fa-floppy-disk"></i> Write directly to travel-guide</h3>
     <p class="muted" style="margin-bottom:1rem;">
       Since this app runs alongside the travel-guide repo, it can commit &amp; push directly.
     </p>
@@ -74,7 +74,7 @@
              value="{{ n_pois }} places near the listing in {{ location.get('city', '') }}. Source: OSM + Google Places.">
       <button type="submit" class="btn btn-outline">
         <span class="htmx-indicator spinner"></span>
-        💾 Commit &amp; Push →
+        <i class="fa-solid fa-floppy-disk"></i> Commit &amp; Push
       </button>
     </form>
   </div>
