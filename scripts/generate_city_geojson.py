@@ -207,6 +207,8 @@ def fetch_city_pois(lat: float, lon: float) -> list[dict]:
             "color": color,
             "fa_icon": fa_icon,
             "score": score_elem(elem),
+            "wikidata": tags.get("wikidata"),
+            "website": tags.get("website"),
         })
 
     if cat_counts:
@@ -236,16 +238,21 @@ def build_geojson(city: dict, pois: list[dict]) -> dict:
             "properties": {"kind": "circle", "radius_m": c["radius_m"], "label": c["label"]},
         })
     for poi in pois:
+        props: dict = {
+            "kind": "poi",
+            "name": poi["name"],
+            "category": poi["category"],
+            "color": poi["color"],
+            "fa_icon": poi["fa_icon"],
+        }
+        if poi.get("wikidata"):
+            props["wikidata"] = poi["wikidata"]
+        if poi.get("website"):
+            props["website"] = poi["website"]
         features.append({
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [poi["lon"], poi["lat"]]},
-            "properties": {
-                "kind": "poi",
-                "name": poi["name"],
-                "category": poi["category"],
-                "color": poi["color"],
-                "fa_icon": poi["fa_icon"],
-            },
+            "properties": props,
         })
     return {"type": "FeatureCollection", "features": features}
 
