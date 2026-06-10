@@ -209,7 +209,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
         needing_fallback = [f for f in to_enrich if not f["properties"].get("wikidata")]
         if needing_fallback:
             tqdm.write(f"    [overpass] {len(needing_fallback)} monument(s) missing wikidata ID, querying…")
-        for f in tqdm(needing_fallback, desc="    overpass fallback", unit="poi", leave=False):
+        for f in needing_fallback:
             name = f["properties"]["name"]
             coords = f["geometry"]["coordinates"]
             tqdm.write(f"    [overpass] → {name!r}")
@@ -228,8 +228,10 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
             if wd:
                 monument_queue.append((f, wd))
             else:
-                tqdm.write(f"    ✗ {f['properties']['name']!r} — no wikidata ID, skipping")
+                tqdm.write(f"    ✗ {f['properties']['name']!r} — no wikidata ID, will try SearXNG")
 
+        # Batch-fetch Wikipedia URLs for those with wikidata IDs
+        no_article: list[dict] = []
         if monument_queue:
             unique_ids = list({wd for _, wd in monument_queue})
             wiki_map = batch_wikipedia_urls(unique_ids)
@@ -242,7 +244,27 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
                     tqdm.write(f"    ✓ {name!r}")
                     tqdm.write(f"      {url}")
                 else:
-                    tqdm.write(f"    ✗ {name!r} — no English Wikipedia article")
+                    tqdm.write(f"    ✗ {name!r} — no English Wikipedia article, will try SearXNG")
+                    no_article.append(f)
+
+        # SearXNG fallback for monuments with no wikidata ID or no English article
+        searxng_needed = [f for f in to_enrich if not f["properties"].get("wikidata")] + no_article
+        if searxng_needed and searxng_url:
+            tqdm.write(f"    [searxng] fallback for {len(searxng_needed)} monument(s)")
+            for f in searxng_needed:
+                name = f["properties"]["name"]
+                url = search_searxng(f'"{name}" wikipedia', searxng_url)
+                time.sleep(0.5)
+                if url:
+                    f["properties"]["wikipedia_url"] = url
+                    changed += 1
+                    tqdm.write(f"    ✓ {name!r}")
+                    tqdm.write(f"      {url}")
+                else:
+                    tqdm.write(f"    ✗ {name!r} — no result found")
+        elif searxng_needed:
+            for f in searxng_needed:
+                tqdm.write(f"    ✗ {f['properties']['name']!r} — skipped (SearXNG not available)")
     else:
         tqdm.write("  monuments  — all up to date")
 
@@ -250,7 +272,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
     to_enrich = [f for f in _pois("museum") if _needs(f, "ticket_url")]
     if to_enrich:
         tqdm.write(f"  museums    — {len(to_enrich)} to enrich")
-        for f in tqdm(to_enrich, desc="    museums", unit="poi", leave=False):
+        for f in to_enrich:
             props = f["properties"]
             name = props["name"]
             website = props.get("website")
@@ -283,7 +305,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
     to_enrich = [f for f in _pois("university") if _needs(f, "courses_url")]
     if to_enrich:
         tqdm.write(f"  universities — {len(to_enrich)} to enrich")
-        for f in tqdm(to_enrich, desc="    universities", unit="poi", leave=False):
+        for f in to_enrich:
             props = f["properties"]
             name = props["name"]
             website = props.get("website")
@@ -317,7 +339,7 @@ def enrich_city(city: dict, force: bool, dry_run: bool, youtube_key: str | None,
     if to_enrich:
         tqdm.write(f"  train stations — {len(to_enrich)} to enrich")
         if searxng_url:
-            for f in tqdm(to_enrich, desc="    train_stations", unit="poi", leave=False):
+            for f in to_enrich:
                 props = f["properties"]
                 name = props["name"]
                 query = f'"{name}" {city["name"]} lines schedules'
