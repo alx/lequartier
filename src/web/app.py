@@ -135,6 +135,9 @@ def create_app(config: dict | None = None) -> Flask:
     from .routes.webhook import webhook
     app.register_blueprint(webhook)
 
+    from .routes.explore import explore
+    app.register_blueprint(explore)
+
     @app.after_request
     def add_cors_headers(response):
         response.headers["Access-Control-Allow-Origin"] = "*"

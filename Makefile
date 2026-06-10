@@ -1,4 +1,4 @@
-.PHONY: searxng-up searxng-down enrich enrich-city
+.PHONY: searxng-up searxng-down enrich enrich-city rebuild-index
 
 # Start SearXNG and wait until it responds
 searxng-up:
@@ -22,3 +22,7 @@ enrich: searxng-up
 #        make enrich-city CITY=tokyo ARGS="--force"
 enrich-city: searxng-up
 	uv run scripts/enrich_city_geojson.py --city $(CITY) $(ARGS)
+
+# Rebuild the SQLite listing index from curated JSON files.
+rebuild-index:
+	uv run scripts/rebuild_listing_index.py

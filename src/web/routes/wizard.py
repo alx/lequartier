@@ -29,6 +29,7 @@ from flask import (
 from .. import cache as cache_mod
 from .. import tasks as task_mod
 from .. import poi_engine
+from .. import listing_index
 from ... import airbnb_nearby as lib
 
 _GH_API             = "https://api.github.com"
@@ -604,9 +605,12 @@ def save_curated(listing_id: str):
 
     curated_file = _CURATED_DIR / f"{listing_id}.json"
     categories: list[str] = []
+    is_shared: bool = False
     if curated_file.exists():
         try:
-            categories = json.loads(curated_file.read_text(encoding="utf-8")).get("categories", [])
+            existing = json.loads(curated_file.read_text(encoding="utf-8"))
+            categories = existing.get("categories", [])
+            is_shared  = bool(existing.get("is_shared", False))
         except Exception:
             pass
     if not categories:
@@ -615,7 +619,8 @@ def save_curated(listing_id: str):
 
     _CURATED_DIR.mkdir(exist_ok=True)
     seed_data = {"listing_id": listing_id, "lat": lat, "lon": lon,
-                 "categories": categories, "result": updated_result}
+                 "is_shared": is_shared, "categories": categories,
+                 "result": updated_result}
     curated_file.write_text(
         json.dumps(seed_data, ensure_ascii=False, indent=2), encoding="utf-8"
     )
@@ -624,7 +629,35 @@ def save_curated(listing_id: str):
     cache_mod.put(listing_id, lat, lon, categories,
                   {**updated_result, "from_cache": False})
 
+    location = updated_result.get("location") or {}
+    listing_index.upsert(
+        listing_id=listing_id, lat=lat, lon=lon,
+        title=updated_result.get("custom_listing_title") or updated_result.get("listing_title"),
+        city=location.get("city"),
+        is_shared=is_shared,
+        n_pois=len(features),
+        cached_at=updated_result.get("cached_at"),
+    )
+
     return jsonify({"ok": True, "n_pois": len(features)})
+
+
+@wizard.post("/airbnb/<listing_id>/set-shared")
+@_require_edit_auth
+def set_shared(listing_id: str):
+    data = request.get_json(force=True) or {}
+    shared = bool(data.get("shared", False))
+    curated_file = _CURATED_DIR / f"{listing_id}.json"
+    if not curated_file.exists():
+        return jsonify({"ok": False, "error": "Not curated yet"}), 404
+    try:
+        curated = json.loads(curated_file.read_text(encoding="utf-8"))
+    except Exception:
+        return jsonify({"ok": False, "error": "Corrupt curated file"}), 500
+    curated["is_shared"] = shared
+    curated_file.write_text(json.dumps(curated, ensure_ascii=False, indent=2), encoding="utf-8")
+    listing_index.set_shared(listing_id, shared)
+    return jsonify({"ok": True, "is_shared": shared})
 
 
 @wizard.post("/step2/continue")
@@ -657,6 +690,14 @@ def step2_continue():
     default_title = f"{neighbourhood}, {city}".strip(", ") or f"Airbnb {listing_id}"
     slug          = f"airbnb/{listing_id}"
 
+    curated_file = _CURATED_DIR / f"{listing_id}.json"
+    is_shared = False
+    if curated_file.exists():
+        try:
+            is_shared = bool(json.loads(curated_file.read_text(encoding="utf-8")).get("is_shared", False))
+        except Exception:
+            pass
+
     return render_template(
         "fragments/step3_publish.html",
         listing_id=listing_id,
@@ -669,6 +710,8 @@ def step2_continue():
         has_github_token=bool(current_app.config.get("GITHUB_TOKEN")),
         can_write_local=False,
         in_git_repo=bool(current_app.config.get("IN_GIT_REPO")),
+        edit_enabled=os.environ.get("EDIT_ENABLED", "").strip().lower() == "true",
+        is_shared=is_shared,
     )
 
 
@@ -958,9 +1001,12 @@ def zillow_save_curated(zillow_id: str):
     safe_name     = zillow_id.replace("/", "--")
     curated_file  = _ZILLOW_CURATED_DIR / f"{safe_name}.json"
     categories: list[str] = []
+    is_shared: bool = False
     if curated_file.exists():
         try:
-            categories = json.loads(curated_file.read_text(encoding="utf-8")).get("categories", [])
+            existing  = json.loads(curated_file.read_text(encoding="utf-8"))
+            categories = existing.get("categories", [])
+            is_shared  = bool(existing.get("is_shared", False))
         except Exception:
             pass
     if not categories:
@@ -969,11 +1015,22 @@ def zillow_save_curated(zillow_id: str):
 
     _ZILLOW_CURATED_DIR.mkdir(parents=True, exist_ok=True)
     seed_data = {"listing_id": cache_key, "lat": lat, "lon": lon,
-                 "categories": categories, "result": updated_result}
+                 "is_shared": is_shared, "categories": categories,
+                 "result": updated_result}
     curated_file.write_text(json.dumps(seed_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     cache_mod.invalidate(cache_key)
     cache_mod.put(cache_key, lat, lon, categories, {**updated_result, "from_cache": False})
+
+    zillow_location = updated_result.get("location") or {}
+    listing_index.upsert(
+        listing_id=cache_key, lat=lat, lon=lon,
+        title=updated_result.get("custom_listing_title") or updated_result.get("listing_title"),
+        city=zillow_location.get("city"),
+        is_shared=is_shared,
+        n_pois=len(features),
+        cached_at=updated_result.get("cached_at"),
+    )
 
     return jsonify({"ok": True, "n_pois": len(features)})
 

@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Explore Maps — Le Quartier{% endblock %}
+{% block og_title %}Explore Maps — Le Quartier{% endblock %}
+{% block og_description %}Browse neighbourhood maps shared by Le Quartier users around the world.{% endblock %}
+
+{% block content %}
+
+<!-- Top-left: back link + count -->
+<div class="map-overlay left-overlay" style="top:1rem;max-width:220px;">
+  <div class="overlay-card" style="padding:.75rem 1rem;">
+    <a href="/" style="display:flex;align-items:center;gap:.5rem;color:inherit;text-decoration:none;font-weight:600;">
+      <i class="fa-solid fa-arrow-left"></i> Le Quartier
+    </a>
+    <div style="margin-top:.5rem;font-size:.85em;color:#6b7280;">
+      {% if shared_listings %}
+        <strong>{{ shared_listings | length }}</strong> shared map{{ 's' if shared_listings | length != 1 else '' }}
+      {% else %}
+        No shared maps yet.
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Right: side panel (hidden until a pin is clicked) -->
+<div id="side-panel" class="map-overlay right-overlay"
+     style="top:1rem;bottom:1rem;width:300px;display:none;">
+  <div class="overlay-card scrollable" style="height:100%;overflow-y:auto;padding:1rem;">
+    <button onclick="closePanel()"
+            style="float:right;background:none;border:none;cursor:pointer;font-size:1.1em;color:#6b7280;padding:0;line-height:1;">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+    <div id="panel-title" style="font-weight:700;font-size:1.05em;margin-bottom:.2rem;padding-right:1.5rem;"></div>
+    <div id="panel-city" style="font-size:.85em;color:#6b7280;margin-bottom:1rem;"></div>
+    <div id="panel-pois"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script type="application/json" id="shared-listings-data">{{ shared_listings | tojson }}</script>
+<script>
+(function () {
+  var SHARED  = JSON.parse(document.getElementById('shared-listings-data').textContent);
+  var ACCENT  = '#1a6b3c';
+  var FA_ICONS = {
+    park: 'fa-tree', train_station: 'fa-train', airport: 'fa-plane',
+    museum: 'fa-landmark', monument: 'fa-monument', university: 'fa-graduation-cap',
+    stadium: 'fa-futbol', market: 'fa-store', beach: 'fa-umbrella-beach',
+    restaurant: 'fa-utensils', culture: 'fa-masks-theater',
+  };
+
+  var map, poiLayer = null;
+
+  document.addEventListener('DOMContentLoaded', function () {
+    map = L.map('map', {
+      zoomControl: true,
+      attributionControl: true,
+    }).setView([20, 10], 2);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    }).addTo(map);
+
+    document.getElementById('map').classList.add('map-active');
+
+    SHARED.forEach(function (listing) {
+      var label = listing.title || listing.city || listing.listing_id;
+      var m = L.marker([listing.lat, listing.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: '<div style="width:28px;height:28px;border-radius:50%;background:' + ACCENT + ';' +
+                'display:flex;align-items:center;justify-content:center;cursor:pointer;' +
+                'border:2.5px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.45);">' +
+                '<i class="fa-solid fa-house" style="color:#fff;font-size:12px;"></i></div>',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+        }),
+      });
+      m.bindTooltip(
+        '<strong>' + label + '</strong>' +
+        (listing.city ? '<br><span style="color:#6b7280">' + listing.city + '</span>' : ''),
+        { direction: 'top', offset: [0, -14], opacity: 1 }
+      );
+      m.on('click', function () { openListing(listing); });
+      m.addTo(map);
+    });
+  });
+
+  function openListing(listing) {
+    var panel = document.getElementById('side-panel');
+    panel.style.display = '';
+    document.getElementById('panel-title').textContent =
+      listing.title || listing.city || listing.listing_id;
+    document.getElementById('panel-city').innerHTML = listing.city
+      ? '<i class="fa-solid fa-location-dot"></i> ' + listing.city
+      : '';
+    document.getElementById('panel-pois').innerHTML =
+      '<span style="color:#6b7280;font-size:.9em;">Loading…</span>';
+
+    fetch('/api/listing/' + listing.listing_id + '/geojson')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (gj) {
+        if (!gj) {
+          document.getElementById('panel-pois').innerHTML =
+            '<span style="color:#ef4444;">Could not load POIs.</span>';
+          return;
+        }
+        renderOverlay(gj, listing);
+      });
+  }
+
+  function renderOverlay(gj, listing) {
+    if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; }
+
+    var features = (gj.features || []).filter(function (f) {
+      if (!f.properties) return false;
+      var kind = f.properties.kind;
+      // City GeoJSONs tag features as kind='poi'; listing GeoJSONs have no kind field
+      return kind === 'poi' || kind === undefined || kind === null;
+    });
+
+    features.sort(function (a, b) {
+      return (b.properties.score || 0) - (a.properties.score || 0);
+    });
+
+    poiLayer = L.layerGroup();
+    var bounds = [[listing.lat, listing.lon]];
+
+    features.forEach(function (f) {
+      var coords = f.geometry.coordinates;
+      var cat    = f.properties.category || '';
+      var icon   = FA_ICONS[cat.toLowerCase()] || 'fa-location-dot';
+      var color  = f.properties.color || '#6b7280';
+      bounds.push([coords[1], coords[0]]);
+      L.marker([coords[1], coords[0]], {
+        icon: L.divIcon({
+          className: '',
+          html: '<div style="width:22px;height:22px;border-radius:50%;background:' + color +
+                ';display:flex;align-items:center;justify-content:center;' +
+                'border:2px solid rgba(255,255,255,.6);box-shadow:0 1px 3px rgba(0,0,0,.4);">' +
+                '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:9px;"></i></div>',
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+        }),
+      })
+      .bindTooltip(
+        '<i class="fa-solid ' + icon + '"></i> ' + f.properties.name,
+        { direction: 'top', offset: [0, -14], opacity: 1 }
+      )
+      .addTo(poiLayer);
+    });
+
+    // Rental marker at listing centre
+    L.marker([listing.lat, listing.lon], {
+      interactive: false,
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="width:28px;height:28px;border-radius:50%;background:' + ACCENT + ';' +
+              'display:flex;align-items:center;justify-content:center;' +
+              'border:2.5px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.45);">' +
+              '<i class="fa-solid fa-house" style="color:#fff;font-size:12px;"></i></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      }),
+    }).addTo(poiLayer);
+
+    poiLayer.addTo(map);
+    if (bounds.length > 1) {
+      map.fitBounds(bounds, { padding: [40, 360] });
+    } else {
+      map.setView([listing.lat, listing.lon], 13);
+    }
+
+    var html = '<div style="font-size:.82em;color:#6b7280;margin-bottom:.75rem;">' +
+               features.length + ' place' + (features.length !== 1 ? 's' : '') + '</div>';
+    features.forEach(function (f) {
+      var cat   = f.properties.category || '';
+      var icon  = FA_ICONS[cat.toLowerCase()] || 'fa-location-dot';
+      var color = f.properties.color || '#6b7280';
+      html += '<div style="display:flex;align-items:center;gap:.5rem;padding:.35rem 0;' +
+              'border-bottom:1px solid #f3f4f6;">' +
+              '<span style="width:20px;height:20px;border-radius:50%;background:' + color +
+              ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+              '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:8px;"></i></span>' +
+              '<span style="font-size:.9em;">' + f.properties.name + '</span>' +
+              '</div>';
+    });
+    document.getElementById('panel-pois').innerHTML = html;
+  }
+
+  window.closePanel = function () {
+    document.getElementById('side-panel').style.display = 'none';
+    if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; }
+    map.setView([20, 10], 2);
+  };
+})();
+</script>
+{% endblock %}

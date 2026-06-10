@@ -58,6 +58,41 @@
   </div>
   {% endif %}
 
+  <!-- Share on Explore -->
+  {% if edit_enabled %}
+  <div class="card" id="share-card">
+    <h3><i class="fa-solid fa-earth-europe"></i> Share on Explore</h3>
+    <p class="muted" style="margin-bottom:1rem;">
+      Make this map visible on <strong>/explore</strong> so it appears on the world map alongside other shared listings.
+    </p>
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-weight:600;">
+        <input type="checkbox" id="share-toggle" {% if is_shared %}checked{% endif %}
+               style="width:18px;height:18px;cursor:pointer;"
+               onchange="setShared(this.checked)">
+        Share this map publicly
+      </label>
+      <span id="share-status" style="font-size:.85em;color:#6b7280;"></span>
+    </div>
+  </div>
+  <script>
+  (function() {
+    var LID = {{ listing_id | tojson }};
+    window.setShared = function(shared) {
+      var status = document.getElementById('share-status');
+      status.textContent = 'Saving…';
+      fetch('/airbnb/' + LID + '/set-shared', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({shared: shared})
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        status.textContent = d.ok ? (shared ? 'Shared on Explore.' : 'Removed from Explore.') : ('Error: ' + d.error);
+      }).catch(function() { status.textContent = 'Request failed.'; });
+    };
+  })();
+  </script>
+  {% endif %}
+
   <!-- Local write -->
   {% if can_write_local %}
   <div class="card" id="local-card">

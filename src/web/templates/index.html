@@ -49,7 +49,12 @@
     </div>
 
     {% if recent_maps %}
-    <div class="example-cards-label">Latest maps:</div>
+    <div class="example-cards-label">
+      Latest maps:
+      <a href="/explore" style="float:right;font-size:.82em;font-weight:600;color:var(--accent,#1a6b3c);text-decoration:none;">
+        <i class="fa-solid fa-earth-europe"></i> Explore all
+      </a>
+    </div>
     <div class="example-cards recent-maps-grid" id="recent-maps">
       {% for m in recent_maps %}
       <a class="example-card" href="{{ m.map_url }}">
