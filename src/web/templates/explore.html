@@ -112,6 +112,35 @@
       });
   }
 
+  function catMeta(gj, cat) {
+    // Prefer per-GeoJSON category_meta (listing format); fall back to FA_ICONS map (city format)
+    var meta = ((gj._meta || {}).category_meta || {})[cat] || {};
+    return {
+      color:   meta.color   || '#6b7280',
+      fa_icon: meta.fa_icon || FA_ICONS[cat.toLowerCase()] || 'fa-location-dot',
+    };
+  }
+
+  function starsHtml(rating, count) {
+    if (!rating) return '';
+    var full  = Math.floor(rating);
+    var half  = (rating - full) >= 0.5 ? 1 : 0;
+    var empty = 5 - full - half;
+    var stars = '';
+    for (var i = 0; i < full;  i++) stars += '<i class="fa-solid fa-star"  style="color:#f59e0b;font-size:9px;"></i>';
+    if (half)                        stars += '<i class="fa-solid fa-star-half-stroke" style="color:#f59e0b;font-size:9px;"></i>';
+    for (var j = 0; j < empty; j++) stars += '<i class="fa-regular fa-star" style="color:#d1d5db;font-size:9px;"></i>';
+    var countStr = count > 0 ? ' <span style="color:#9ca3af;">(' + count + ')</span>' : '';
+    return '<span style="white-space:nowrap;">' + stars + countStr + '</span>';
+  }
+
+  function openNowHtml(opening_hours) {
+    if (!opening_hours || opening_hours.open_now === null || opening_hours.open_now === undefined) return '';
+    return opening_hours.open_now
+      ? '<span style="color:#16a34a;font-size:.78em;font-weight:600;">Open</span>'
+      : '<span style="color:#ef4444;font-size:.78em;">Closed</span>';
+  }
+
   function renderOverlay(gj, listing) {
     if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; }
 
@@ -132,22 +161,23 @@
     features.forEach(function (f) {
       var coords = f.geometry.coordinates;
       var cat    = f.properties.category || '';
-      var icon   = FA_ICONS[cat.toLowerCase()] || 'fa-location-dot';
-      var color  = f.properties.color || '#6b7280';
+      var cm     = catMeta(gj, cat);
+      var secondary = f.properties.status === 'secondary';
       bounds.push([coords[1], coords[0]]);
       L.marker([coords[1], coords[0]], {
         icon: L.divIcon({
           className: '',
-          html: '<div style="width:22px;height:22px;border-radius:50%;background:' + color +
+          html: '<div style="width:22px;height:22px;border-radius:50%;background:' + cm.color +
                 ';display:flex;align-items:center;justify-content:center;' +
-                'border:2px solid rgba(255,255,255,.6);box-shadow:0 1px 3px rgba(0,0,0,.4);">' +
-                '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:9px;"></i></div>',
+                'border:2px solid rgba(255,255,255,.6);box-shadow:0 1px 3px rgba(0,0,0,.4);' +
+                (secondary ? 'opacity:.55;' : '') + '">' +
+                '<i class="fa-solid ' + cm.fa_icon + '" style="color:#fff;font-size:9px;"></i></div>',
           iconSize: [22, 22],
           iconAnchor: [11, 11],
         }),
       })
       .bindTooltip(
-        '<i class="fa-solid ' + icon + '"></i> ' + f.properties.name,
+        '<i class="fa-solid ' + cm.fa_icon + '"></i> ' + f.properties.name,
         { direction: 'top', offset: [0, -14], opacity: 1 }
       )
       .addTo(poiLayer);
@@ -177,15 +207,37 @@
     var html = '<div style="font-size:.82em;color:#6b7280;margin-bottom:.75rem;">' +
                features.length + ' place' + (features.length !== 1 ? 's' : '') + '</div>';
     features.forEach(function (f) {
-      var cat   = f.properties.category || '';
-      var icon  = FA_ICONS[cat.toLowerCase()] || 'fa-location-dot';
-      var color = f.properties.color || '#6b7280';
-      html += '<div style="display:flex;align-items:center;gap:.5rem;padding:.35rem 0;' +
-              'border-bottom:1px solid #f3f4f6;">' +
-              '<span style="width:20px;height:20px;border-radius:50%;background:' + color +
-              ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-              '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:8px;"></i></span>' +
-              '<span style="font-size:.9em;">' + f.properties.name + '</span>' +
+      var p         = f.properties;
+      var cat       = p.category || '';
+      var cm        = catMeta(gj, cat);
+      var secondary = p.status === 'secondary';
+
+      var meta = '';
+      var rating   = starsHtml(p.rating, p.user_rating_count);
+      var openNow  = openNowHtml(p.opening_hours);
+      if (rating)  meta += rating + ' ';
+      if (openNow) meta += openNow;
+      if (meta)    meta = '<div style="margin-top:.15rem;">' + meta + '</div>';
+
+      var website = (p.website)
+        ? '<a href="' + p.website + '" target="_blank" rel="noopener" ' +
+          'style="font-size:.78em;color:#6b7280;text-decoration:none;white-space:nowrap;' +
+          'overflow:hidden;text-overflow:ellipsis;display:block;max-width:180px;" ' +
+          'title="' + p.website + '">' +
+          '<i class="fa-solid fa-arrow-up-right-from-square" style="font-size:.65em;"></i> ' +
+          p.website.replace(/^https?:\/\//, '').replace(/\/$/, '') +
+          '</a>'
+        : '';
+
+      html += '<div style="display:flex;align-items:flex-start;gap:.5rem;padding:.4rem 0;' +
+              'border-bottom:1px solid #f3f4f6;' + (secondary ? 'opacity:.6;' : '') + '">' +
+              '<span style="width:20px;height:20px;border-radius:50%;background:' + cm.color +
+              ';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">' +
+              '<i class="fa-solid ' + cm.fa_icon + '" style="color:#fff;font-size:8px;"></i></span>' +
+              '<div style="min-width:0;">' +
+              '<div style="font-size:.9em;font-weight:' + (secondary ? '400' : '500') + ';">' + p.name + '</div>' +
+              meta + website +
+              '</div>' +
               '</div>';
     });
     document.getElementById('panel-pois').innerHTML = html;
