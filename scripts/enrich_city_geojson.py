@@ -633,7 +633,7 @@ def enrich_curated(path: Path, force: bool, dry_run: bool,
 def main() -> None:
     load_dotenv(ROOT / ".env")
     youtube_key = os.environ.get("YOUTUBE_API_KEY")
-    searxng_url = os.environ.get("SEARXNG_BASE_URL", "http://127.0.0.1:8080")
+    searxng_url = os.environ.get("SEARXNG_BASE_URL", "http://127.0.0.1:8888")
 
     parser = argparse.ArgumentParser(
         description=__doc__,

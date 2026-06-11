@@ -334,7 +334,8 @@ def index():
         else:
             entry["thumb_url"] = url_for("wizard.airbnb_preview_jpg", listing_id=lid)
         entry["map_url"] = url_for("wizard.airbnb_page", listing_id=lid)
-    return render_template("index.html", bg_city=_random_city(), recent_maps=recent)
+    all_cities = current_app.config.get("TOP100_CITIES", [])
+    return render_template("index.html", bg_city=_random_city(), recent_maps=recent, all_cities=all_cities)
 
 
 @wizard.get("/api/listing-preview")
@@ -361,12 +362,12 @@ def step1_submit():
     lon = float(lon_s) if lon_s else None
 
     if not airbnb_url:
-        return render_template("index.html", error="Please enter an Airbnb URL.", bg_city=_random_city())
+        return render_template("index.html", error="Please enter an Airbnb URL.", bg_city=_random_city(), all_cities=current_app.config.get("TOP100_CITIES", []))
 
     try:
         listing_id = poi_engine.listing_id_from_url(airbnb_url)
     except Exception:
-        return render_template("index.html", error="Could not parse an Airbnb listing ID from that URL.", bg_city=_random_city())
+        return render_template("index.html", error="Could not parse an Airbnb listing ID from that URL.", bg_city=_random_city(), all_cities=current_app.config.get("TOP100_CITIES", []))
 
     task = task_mod.run_in_thread(_fetch_task, airbnb_url, gmaps_url, lat, lon, force)
     return redirect(url_for("wizard.airbnb_edit_page", listing_id=listing_id, task_id=task.task_id))

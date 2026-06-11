@@ -12,10 +12,12 @@ _Avoid_: rental GeoJSON, curated JSON
 **City GeoJSON**: Static pre-generated GeoJSON in `static/data/cities/`. Contains city-level POIs with minimal fields (`name`, `category`, `color`, `fa_icon`). Used by the Landing Map as a decorative background.
 _Avoid_: city data, background GeoJSON
 
-**Rental Marker**: The accent-coloured circle with a white house icon placed at the rental's coordinates. Always larger than POI markers (28 px vs 22 px). On the Landing Map it is a demo placeholder at the city centre.
+**Rental Marker**: The accent-coloured circle with a white house icon placed at the rental's coordinates. Always larger than POI Markers. On the Landing Map it is a demo placeholder at the city centre. Current sizes: `RENTAL_SIZE=40px`, `POI_SIZE=32px` (Landing Map constants in `index.html`; mirror when porting to airbnb maps).
 _Avoid_: home marker, listing pin, centre marker
 
-**POI Marker**: A 22 px coloured circle with a category icon, representing a nearby place of interest.
+**POI Marker**: A coloured circle with a category icon, representing a nearby place of interest. On the Landing Map, each POI Marker has a permanent visible name label (pill style) and a 3-state interaction: default (label only) → hover (enhanced popup) → click (popup locked open).
+
+**Bakery & Food icon**: Always use `fa-cookie-bite`. Never use `fa-bread-slice`.
 
 **Landing Map**: The decorative background map on the index page. Centred on a random city. Uses City GeoJSON. Map navigation is locked; POI Markers are interactive (hover preview + click popup).
 _Avoid_: background map, index map

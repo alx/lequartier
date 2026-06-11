@@ -4,7 +4,7 @@
 searxng-up:
 	docker compose up -d
 	@echo "Waiting for SearXNG…"
-	@until curl -sf http://127.0.0.1:8080 > /dev/null 2>&1; do sleep 1; done
+	@until curl -sf http://127.0.0.1:8888 > /dev/null 2>&1; do sleep 1; done
 	@echo "SearXNG ready."
 
 searxng-down:

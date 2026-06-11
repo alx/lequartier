@@ -41,11 +41,19 @@
 {% block extra_js %}
 <script>
 (function () {
-  var CITY_LAT = {{ bg_city.lat }};
-  var CITY_LON = {{ bg_city.lon }};
-  var CITY_SLUG = "{{ bg_city.slug }}";
+  // ── Constants (mirror in _map_js.html when porting to airbnb maps) ──────
+  var POI_SIZE    = 32;
+  var RENTAL_SIZE = 40;
 
   var ACCENT = '#1a6b3c';
+
+  var CITY_LAT     = {{ bg_city.lat }};
+  var CITY_LON     = {{ bg_city.lon }};
+  var CITY_SLUG    = "{{ bg_city.slug }}";
+  var CITY_NAME    = "{{ bg_city.name }}";
+  var CITY_COUNTRY = "{{ bg_city.country }}";
+
+  var ALL_CITIES = {{ all_cities | tojson }};
 
   var CIRCLE_STYLES = [
     { radiusM: 400,  label: '5 min' },
@@ -54,38 +62,233 @@
   ];
 
   var FA_ICONS = {
-    'park': 'fa-tree', 'train_station': 'fa-train', 'airport': 'fa-plane',
-    'museum': 'fa-landmark', 'monument': 'fa-monument', 'university': 'fa-graduation-cap',
-    'stadium': 'fa-futbol', 'market': 'fa-store', 'beach': 'fa-umbrella-beach',
+    'park': 'fa-tree', 'train_station': 'fa-train', 'transit': 'fa-bus',
+    'airport': 'fa-plane', 'museum': 'fa-landmark', 'monument': 'fa-monument',
+    'university': 'fa-graduation-cap', 'stadium': 'fa-futbol',
+    'market': 'fa-store', 'beach': 'fa-umbrella-beach',
     'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
   };
 
+  // ── Popup HTML builder ──────────────────────────────────────────────────
   function poiPopupHtml(f) {
     var props = f.properties;
     var cat = props.category || '';
     var icon = FA_ICONS[cat] || 'fa-location-dot';
     var coords = f.geometry.coordinates;
-    var html = '<strong>' + props.name + '</strong><br>';
+    var html = '';
+
+    if (props.wikipedia_thumb || props.wikipedia_summary) {
+      html += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;">';
+      if (props.wikipedia_thumb)
+        html += '<img src="' + props.wikipedia_thumb + '" style="width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;" alt="">';
+      if (props.wikipedia_summary)
+        html += '<p style="font-size:0.78em;color:#4b5563;line-height:1.45;margin:0;">' + props.wikipedia_summary + '</p>';
+      html += '</div>';
+    }
+
+    html += '<strong>' + props.name + '</strong><br>';
     html += '<span style="font-size:0.82em;color:#6b7280;"><i class="fa-solid ' + icon + '"></i> ' + cat.replace(/_/g, ' ') + '</span>';
-    if ((cat === 'train_station' || cat === 'transport') && props.transit_url)
+
+    if ((cat === 'train_station' || cat === 'transit' || cat === 'transport') && props.transit_url)
       html += '<br><a href="' + props.transit_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-train"></i> Lines &amp; schedules</a>';
     if (cat === 'museum' && props.ticket_url)
       html += '<br><a href="' + props.ticket_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-ticket"></i> Buy tickets</a>';
-    if (cat === 'monument' && props.wikipedia_url)
-      html += '<br><a href="' + props.wikipedia_url + '" target="_blank" rel="noopener"><i class="fa-brands fa-wikipedia-w"></i> History on Wikipedia</a>';
+    if (props.wikipedia_url)
+      html += '<br><a href="' + props.wikipedia_url + '" target="_blank" rel="noopener"><i class="fa-brands fa-wikipedia-w"></i> Wikipedia</a>';
     if (cat === 'airport') {
       var adsbUrl = 'https://globe.adsbexchange.com/?lat=' + coords[1].toFixed(4) + '&lon=' + coords[0].toFixed(4) + '&zoom=12';
       html += '<br><a href="' + adsbUrl + '" target="_blank" rel="noopener"><i class="fa-solid fa-plane-departure"></i> Live flights nearby</a>';
     }
     if (cat === 'university' && props.courses_url)
       html += '<br><a href="' + props.courses_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-graduation-cap"></i> Courses</a>';
-    if (cat === 'market' && props.video_url)
-      html += '<br><iframe src="' + props.video_url + '" width="200" height="120" frameborder="0" allowfullscreen style="border-radius:4px;margin-top:4px;display:block;"></iframe>';
+    if (props.video_url)
+      html += '<br><iframe src="' + props.video_url + '" style="width:100%;aspect-ratio:16/9;border:0;border-radius:4px;margin-top:6px;display:block;" allowfullscreen></iframe>';
+
     return html;
   }
 
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  function haversineM(lat1, lon1, lat2, lon2) {
+    var R = 6371000;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // ── Map state ───────────────────────────────────────────────────────────
+  var map, ringLayer, poiLayer, rentalMarker;
+  var lockedMarkerId = null;
+  var lockedMarkerRef = null;
+  var _idSeq = 0;
+  var currentCity = { lat: CITY_LAT, lon: CITY_LON, slug: CITY_SLUG, name: CITY_NAME, country: CITY_COUNTRY };
+
+  // ── Walking rings ───────────────────────────────────────────────────────
+  function drawRings(lat, lon) {
+    if (ringLayer) map.removeLayer(ringLayer);
+    ringLayer = L.layerGroup();
+    CIRCLE_STYLES.forEach(function(c) {
+      L.circle([lat, lon], {
+        radius: c.radiusM,
+        color: ACCENT, weight: 1.5, dashArray: '5 4',
+        fill: false, opacity: 0.6, interactive: false,
+      }).addTo(ringLayer);
+      var labelLat = lat + (c.radiusM / 111320);
+      L.marker([labelLat, lon], {
+        interactive: false,
+        icon: L.divIcon({
+          className: '',
+          html: '<div style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;' +
+                'font-size:10px;font-weight:600;color:' + ACCENT + ';' +
+                'background:rgba(255,255,255,0.88);padding:2px 7px;border-radius:20px;' +
+                'box-shadow:0 1px 4px rgba(0,0,0,.15);transform:translate(-50%,-100%);">' +
+                '<i class="fa-solid fa-person-walking" style="font-size:9px;"></i>' + c.label + '</div>',
+          iconSize: [0, 0], iconAnchor: [0, 0],
+        }),
+      }).addTo(ringLayer);
+    });
+    ringLayer.addTo(map);
+  }
+
+  // ── Rental marker ───────────────────────────────────────────────────────
+  function placeRentalMarker(lat, lon) {
+    if (rentalMarker) map.removeLayer(rentalMarker);
+    rentalMarker = L.marker([lat, lon], {
+      interactive: false,
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="position:relative;">' +
+              '<div style="width:' + RENTAL_SIZE + 'px;height:' + RENTAL_SIZE + 'px;border-radius:50%;background:' + ACCENT + ';' +
+              'display:flex;align-items:center;justify-content:center;' +
+              'border:2.5px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.45);">' +
+              '<i class="fa-solid fa-house" style="color:#fff;font-size:' + Math.round(RENTAL_SIZE * 0.43) + 'px;"></i></div>' +
+              '<div style="position:absolute;top:' + (RENTAL_SIZE + 4) + 'px;left:50%;transform:translateX(-50%);' +
+              'background:' + ACCENT + ';color:#fff;font-size:10px;font-weight:700;' +
+              'padding:2px 8px;border-radius:10px;white-space:nowrap;' +
+              'box-shadow:0 1px 4px rgba(0,0,0,.3);">your rental</div>' +
+              '</div>',
+        iconSize: [RENTAL_SIZE, RENTAL_SIZE],
+        iconAnchor: [RENTAL_SIZE / 2, RENTAL_SIZE / 2],
+      }),
+    }).addTo(map);
+  }
+
+  // ── POI markers ─────────────────────────────────────────────────────────
+  function makePOIMarker(f, cityLat, cityLon) {
+    var props = f.properties;
+    var coords = f.geometry.coordinates;
+    var cat = props.category || '';
+    var icon = FA_ICONS[cat] || 'fa-location-dot';
+    var color = props.color || '#6b7280';
+    var id = ++_idSeq;
+    var distM = haversineM(cityLat, cityLon, coords[1], coords[0]);
+
+    var m = L.marker([coords[1], coords[0]], {
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="width:' + POI_SIZE + 'px;height:' + POI_SIZE + 'px;border-radius:50%;background:' + color +
+              ';display:flex;align-items:center;justify-content:center;' +
+              'border:2px solid rgba(255,255,255,.65);box-shadow:0 1px 5px rgba(0,0,0,.4);cursor:pointer;">' +
+              '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:' + Math.round(POI_SIZE * 0.4) + 'px;"></i></div>',
+        iconSize: [POI_SIZE, POI_SIZE], iconAnchor: [POI_SIZE / 2, POI_SIZE / 2],
+      }),
+    });
+
+    m._poiId = id;
+
+    // Suppress permanent label for POIs inside the 5-min ring (clutters rental marker area)
+    if (distM > CIRCLE_STYLES[0].radiusM) {
+      m.bindTooltip(props.name, {
+        permanent: true,
+        direction: 'top',
+        offset: [0, -(POI_SIZE / 2 + 2)],
+        className: 'landing-poi-label',
+        opacity: 1,
+      });
+    }
+
+    m.bindPopup(poiPopupHtml(f), { maxWidth: 320, autoPan: false });
+
+    function _tooltipDisplay(marker, show) {
+      var t = marker.getTooltip();
+      if (t && t._container) t._container.style.display = show ? '' : 'none';
+    }
+
+    function _lockPopup(marker) {
+      if (lockedMarkerRef) _tooltipDisplay(lockedMarkerRef, true);
+      map.closePopup();
+      lockedMarkerId = marker._poiId;
+      lockedMarkerRef = marker;
+      _tooltipDisplay(marker, false);
+      marker.openPopup();
+    }
+
+    function _unlockPopup(marker) {
+      lockedMarkerId = null;
+      lockedMarkerRef = null;
+      marker.closePopup();
+      _tooltipDisplay(marker, true);
+    }
+
+    m.on('mouseover', function() {
+      if (lockedMarkerId === this._poiId) return;
+      _lockPopup(this);
+    });
+    m.on('click', function(e) {
+      L.DomEvent.stopPropagation(e);
+      if (lockedMarkerId === this._poiId) {
+        _unlockPopup(this);
+      } else {
+        _lockPopup(this);
+      }
+    });
+
+    return m;
+  }
+
+  // ── Load city GeoJSON ───────────────────────────────────────────────────
+  function loadCityPOIs(slug, cityLat, cityLon) {
+    if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; }
+    lockedMarkerId = null;
+    lockedMarkerRef = null;
+    fetch('/static/data/cities/' + slug + '.geojson')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(gj) {
+        if (!gj) return;
+        poiLayer = L.layerGroup();
+        gj.features.forEach(function(f) {
+          if (f.properties.kind !== 'poi') return;
+          makePOIMarker(f, cityLat, cityLon).addTo(poiLayer);
+        });
+        poiLayer.addTo(map);
+      });
+  }
+
+  // ── Random city ─────────────────────────────────────────────────────────
+  window.randomCity = function() {
+    var candidates = ALL_CITIES.filter(function(c) { return c.slug !== currentCity.slug; });
+    if (!candidates.length) return;
+    var city = candidates[Math.floor(Math.random() * candidates.length)];
+    currentCity = city;
+
+    if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; }
+    lockedMarkerId = null;
+
+    map.flyToBounds(L.latLng(city.lat, city.lon).toBounds(1200 * 2), { duration: 1.5 });
+    drawRings(city.lat, city.lon);
+    placeRentalMarker(city.lat, city.lon);
+
+    var nameText = document.getElementById('city-name-text');
+    if (nameText) nameText.textContent = city.name + ', ' + city.country;
+
+    map.once('moveend', function() { loadCityPOIs(city.slug, city.lat, city.lon); });
+  };
+
+  // ── Init ────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
-    var map = L.map('map', {
+    map = L.map('map', {
       zoomControl: false, dragging: false, scrollWheelZoom: false,
       touchZoom: false, doubleClickZoom: false, boxZoom: false,
       keyboard: false, tap: false, attributionControl: false,
@@ -96,7 +299,6 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     }).addTo(map);
 
-    // Fit to outermost walking circle (1200m radius)
     map.fitBounds(L.latLng(CITY_LAT, CITY_LON).toBounds(1200 * 2));
     document.getElementById('map').classList.add('map-active');
 
@@ -106,82 +308,15 @@
       map.panBy([0, -Math.round(window.innerHeight * 0.16)], { animate: false });
     }
 
-    // Draw walking distance rings with labels
-    var cosLat = Math.cos(CITY_LAT * Math.PI / 180);
-    CIRCLE_STYLES.forEach(function(c) {
-      L.circle([CITY_LAT, CITY_LON], {
-        radius: c.radiusM,
-        color: ACCENT, weight: 1.5, dashArray: '5 4',
-        fill: false, opacity: 0.6, interactive: false,
-      }).addTo(map);
-
-      // Label at the top of the circle
-      var labelLat = CITY_LAT + (c.radiusM / 111320);
-      L.marker([labelLat, CITY_LON], {
-        interactive: false,
-        icon: L.divIcon({
-          className: '',
-          html: '<div style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;' +
-                'font-size:10px;font-weight:600;color:' + ACCENT + ';' +
-                'background:rgba(255,255,255,0.88);padding:2px 7px;border-radius:20px;' +
-                'box-shadow:0 1px 4px rgba(0,0,0,.15);transform:translate(-50%,-100%);">' +
-                '<i class="fa-solid fa-person-walking" style="font-size:9px;"></i>' + c.label + '</div>',
-          iconSize: [0, 0],
-          iconAnchor: [0, 0],
-        }),
-      }).addTo(map);
+    map.on('click', function() {
+      if (lockedMarkerRef) { _tooltipDisplay(lockedMarkerRef, true); lockedMarkerRef = null; }
+      lockedMarkerId = null;
+      map.closePopup();
     });
 
-    // Center "your rental" demo marker
-    L.marker([CITY_LAT, CITY_LON], {
-      interactive: false,
-      icon: L.divIcon({
-        className: '',
-        html: '<div style="position:relative;">' +
-              '<div style="width:28px;height:28px;border-radius:50%;background:' + ACCENT + ';' +
-              'display:flex;align-items:center;justify-content:center;' +
-              'border:2.5px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.45);">' +
-              '<i class="fa-solid fa-house" style="color:#fff;font-size:12px;"></i></div>' +
-              '<div style="position:absolute;top:32px;left:50%;transform:translateX(-50%);' +
-              'background:' + ACCENT + ';color:#fff;font-size:10px;font-weight:700;' +
-              'padding:2px 8px;border-radius:10px;white-space:nowrap;' +
-              'box-shadow:0 1px 4px rgba(0,0,0,.3);">' +
-              '<i class="fa-solid fa-house" style="font-size:8px;margin-right:3px;"></i>your rental</div>' +
-              '</div>',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
-      }),
-    }).addTo(map);
-
-    // Load and render pre-generated city GeoJSON
-    fetch('/static/data/cities/' + CITY_SLUG + '.geojson')
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(gj) {
-        if (!gj) return;
-        gj.features.forEach(function(f) {
-          if (f.properties.kind !== 'poi') return;
-          var coords = f.geometry.coordinates;
-          var cat = f.properties.category || '';
-          var icon = FA_ICONS[cat] || 'fa-location-dot';
-          var color = f.properties.color || '#6b7280';
-          var m = L.marker([coords[1], coords[0]], {
-            icon: L.divIcon({
-              className: '',
-              html: '<div style="width:22px;height:22px;border-radius:50%;background:' + color +
-                    ';display:flex;align-items:center;justify-content:center;' +
-                    'border:2px solid rgba(255,255,255,.6);box-shadow:0 1px 3px rgba(0,0,0,.4)">' +
-                    '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:9px;"></i></div>',
-              iconSize: [22, 22], iconAnchor: [11, 11],
-            }),
-          });
-          m.bindTooltip(
-            '<i class="fa-solid ' + icon + '"></i> ' + f.properties.name,
-            { direction: 'top', offset: [0, -14], opacity: 1 }
-          );
-          m.bindPopup(poiPopupHtml(f));
-          m.addTo(map);
-        });
-      });
+    drawRings(CITY_LAT, CITY_LON);
+    placeRentalMarker(CITY_LAT, CITY_LON);
+    loadCityPOIs(CITY_SLUG, CITY_LAT, CITY_LON);
   });
 
   var _airbnbPattern = /airbnb\.[a-z]{2,}\/rooms\/\d+/i;

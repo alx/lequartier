@@ -46,10 +46,17 @@ CITY_CATEGORIES = [
     ),
     (
         "train_station", "#2563eb", "fa-train",
-        lambda t: t.get("railway") == "station",
-        'node(around:{R},{lat},{lon})["railway"="station"]["name"];\n'
-        'way(around:{R},{lat},{lon})["railway"="station"]["name"];\n'
-        'relation(around:{R},{lat},{lon})["railway"="station"]["name"];',
+        lambda t: t.get("railway") == "station" and t.get("station", "") not in ("subway", "light_rail", "monorail", "tram"),
+        'node(around:{R},{lat},{lon})["railway"="station"]["name"]["station"!~"subway|light_rail|monorail|tram"];\n'
+        'way(around:{R},{lat},{lon})["railway"="station"]["name"]["station"!~"subway|light_rail|monorail|tram"];\n'
+        'relation(around:{R},{lat},{lon})["railway"="station"]["name"]["station"!~"subway|light_rail|monorail|tram"];',
+    ),
+    (
+        "transit", "#0369a1", "fa-bus",
+        lambda t: t.get("railway") == "station" and t.get("station", "") in ("subway", "light_rail", "monorail", "tram"),
+        'node(around:{R},{lat},{lon})["railway"="station"]["name"]["station"~"subway|light_rail|monorail|tram"];\n'
+        'way(around:{R},{lat},{lon})["railway"="station"]["name"]["station"~"subway|light_rail|monorail|tram"];\n'
+        'relation(around:{R},{lat},{lon})["railway"="station"]["name"]["station"~"subway|light_rail|monorail|tram"];',
     ),
     (
         "monument", "#be123c", "fa-monument",
