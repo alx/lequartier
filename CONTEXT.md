@@ -49,3 +49,35 @@ Per-category content shown in the click popup, rendered only when the correspond
 | `airport` | _(coords)_ | Live-flights link (always present — derived from coordinates) |
 | `university` | `courses_url` | Courses link |
 | `market` | `video_url` | YouTube embed |
+
+## Listings
+
+**Listing** — a rental or real-estate property page on a supported site (Airbnb or Zillow). Each listing has a **Listing ID**.
+
+**Listing ID** — a site-specific identifier extracted from the listing URL.
+- Airbnb: numeric string, e.g. `12345678`, from `/rooms/{id}`
+- Zillow: full URL slug, e.g. `123-main-st-sf-ca/2061458876_zpid`, from `/homedetails/{slug}` — may contain slashes
+
+**POI (Point of Interest)** — a nearby place of interest (shop, restaurant, transit stop, etc.) associated with a listing. POIs are grouped by **Category**.
+
+**Category** — a named type of POI (e.g. Supermarket, Bakery & Food, Market, Restaurant). Categories can be toggled on/off on the map.
+
+**Default visible categories** — the 3 categories shown enabled by default when the map loads: `Supermarket`, `Bakery & Food`, `Market`. All other categories start hidden.
+
+**GeoJSON endpoint** — the path-based backend API that returns POI data for a listing: `GET /{site}/{listing_id}.geojson`. No coordinates are sent by the client — the backend resolves them from the listing ID.
+
+## Delivery mechanisms
+
+**Userscript** — a self-contained GreaseMonkey/Tampermonkey script that injects the neighbourhood map directly into the listing page. Does not require a browser extension install. All rendering logic is inlined.
+
+**Extension** — a Chrome or Firefox browser extension (Manifest v3). Uses a **content script** per site + a **service worker** for backend calls + **shared helpers** for map rendering.
+
+**Content script** — site-specific JS injected by the extension into a listing page. Responsible for: extracting the listing ID, finding the DOM anchor, injecting the map container, and requesting POI data via the service worker.
+
+**Service worker** — the extension background script (`browser-ext/background.js`). Receives `{ site, listing_id }` from a content script, calls `GET /{site}/{listing_id}.geojson` on the configured backend, and returns the GeoJSON.
+
+**Shared helpers** — files in `extensions/shared/` used by all extension content scripts: `map-config.js` (constants), `map-init.js` (rendering), `styles.css` (styles).
+
+## Backend
+
+**Backend base URL** — configurable. Default: `https://lequartier.girard-davila.net`. Set via extension popup (`chrome.storage.sync`) or userscript `GM_getValue('backendUrl', ...)`.
