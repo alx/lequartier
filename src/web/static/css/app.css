@@ -96,7 +96,7 @@ main { max-width: 100%; padding: 0; margin: 0; }
 /* ── Landing page footer (city name + random button) ── */
 .landing-footer {
   position: fixed;
-  bottom: 1.25rem;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
@@ -104,22 +104,26 @@ main { max-width: 100%; padding: 0; margin: 0; }
   align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.8);
-  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
   white-space: nowrap;
   pointer-events: all;
 }
 .landing-random-btn {
-  color: rgba(255,255,255,0.8);
+  color: var(--text-muted);
   text-decoration: none;
-  padding: 0.2rem 0.45rem;
+  padding: 0.1rem 0.25rem;
   border-radius: 4px;
-  transition: color 0.15s, background 0.12s;
+  transition: color 0.15s;
   line-height: 1;
 }
 .landing-random-btn:hover {
-  color: #fff;
-  background: rgba(255,255,255,0.18);
+  color: var(--accent);
   text-decoration: none;
 }
 
