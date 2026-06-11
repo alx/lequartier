@@ -115,15 +115,18 @@ main { max-width: 100%; padding: 0; margin: 0; }
   pointer-events: all;
 }
 .landing-random-btn {
-  color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  background: var(--accent);
   text-decoration: none;
-  padding: 0.1rem 0.25rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 4px;
-  transition: color 0.15s;
+  transition: background 0.15s;
   line-height: 1;
 }
 .landing-random-btn:hover {
-  color: var(--accent-hover);
+  color: #fff;
+  background: var(--accent-hover);
   text-decoration: none;
 }
 
