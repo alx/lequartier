@@ -100,6 +100,12 @@
     map.fitBounds(L.latLng(CITY_LAT, CITY_LON).toBounds(1200 * 2));
     document.getElementById('map').classList.add('map-active');
 
+    // On mobile, shift the city center to 66% from top so the map
+    // fills the upper portion of the screen above the form card.
+    if (window.innerWidth <= 768) {
+      map.panBy([0, -Math.round(window.innerHeight * 0.16)], { animate: false });
+    }
+
     // Draw walking distance rings with labels
     var cosLat = Math.cos(CITY_LAT * Math.PI / 180);
     CIRCLE_STYLES.forEach(function(c) {

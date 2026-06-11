@@ -770,10 +770,6 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
   }
 }
 @media (max-width: 768px) {
-  .center-overlay {
-    top: 66%;
-    transform: translate(-50%, -50%);
-  }
   .left-overlay {
     left: 0; right: 0; bottom: 0;
     top: 55vh;
