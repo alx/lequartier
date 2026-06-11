@@ -27,9 +27,13 @@
     {% endif %}
   </div>
 
-  <div style="text-align:center; font-size:0.75rem; color:rgba(255,255,255,0.75); margin-top:0.5rem; text-shadow:0 1px 3px rgba(0,0,0,0.5);">
-    {{ bg_city.name }}, {{ bg_city.country }}
-  </div>
+</div>
+
+<div class="landing-footer">
+  <span>{{ bg_city.name }}, {{ bg_city.country }}</span>
+  <a href="/" class="landing-random-btn" title="Random city">
+    <i class="fa-solid fa-shuffle"></i>
+  </a>
 </div>
 
 {% endblock %}
