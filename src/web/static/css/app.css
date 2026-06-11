@@ -75,15 +75,22 @@ main { max-width: 100%; padding: 0; margin: 0; }
 /* ── Centered overlay (landing + loading) ── */
 .center-overlay {
   position: fixed;
-  top: 50%;
+  top: 2rem;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   z-index: 200;
-  width: 380px;
+  width: 480px;
   max-width: calc(100vw - 2rem);
-  max-height: 90vh;
-  overflow-y: auto;
   pointer-events: all;
+}
+.center-overlay .overlay-card {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-top: 3px solid var(--accent);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
 }
 
 /* ── Floating loading pill (loading mode over map) ── */
@@ -723,9 +730,9 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
 /* ── Responsive ─────────────────────── */
 @media (min-width: 769px) {
   .center-overlay {
-    left: auto;
-    right: 8rem;
-    transform: translateY(-50%);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
   }
 }
 @media (max-width: 768px) {
