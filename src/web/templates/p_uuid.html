@@ -36,7 +36,7 @@
     <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.85rem;">
       {% for cat, count in category_counts.items() %}
       <span style="display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
-        <i class="fa-solid {{ {'park':'fa-tree','train_station':'fa-train','transit':'fa-bus','airport':'fa-plane','museum':'fa-landmark','monument':'fa-monument','university':'fa-graduation-cap','stadium':'fa-futbol','market':'fa-store','beach':'fa-umbrella-beach','restaurant':'fa-utensils','culture':'fa-masks-theater'}.get(cat, 'fa-location-dot') }}"></i>
+        <i class="fa-solid {{ category_icons.get(cat, 'fa-location-dot') }}" style="color:{{ category_colors.get(cat, 'var(--text-muted)') }};"></i>
         {{ cat.replace('_', ' ') }} &middot; {{ count }}
       </span>
       {% endfor %}
@@ -116,6 +116,21 @@
     'university': 'fa-graduation-cap', 'stadium': 'fa-futbol',
     'market': 'fa-store', 'beach': 'fa-umbrella-beach',
     'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
+    'Park': 'fa-tree', 'Transit': 'fa-bus', 'Restaurant': 'fa-utensils',
+    'Market': 'fa-store', 'Supermarket': 'fa-cart-shopping',
+    'Bakery & Food': 'fa-bread-slice', 'Bike Share': 'fa-bicycle',
+    'Health': 'fa-kit-medical', 'Playground': 'fa-child-reaching',
+    'Activity': 'fa-person-running', 'Culture': 'fa-masks-theater',
+    'Wellness': 'fa-spa',
+  };
+
+  var CATEGORY_COLORS = {
+    'Park': '#16a34a', 'Transit': '#1d4ed8', 'Restaurant': '#b45309',
+    'Market': '#b45309', 'Supermarket': '#0f766e', 'Bakery & Food': '#b45309',
+    'Bike Share': '#0891b2', 'Health': '#dc2626', 'Playground': '#7c3aed',
+    'Activity': '#0369a1', 'Culture': '#be123c', 'Wellness': '#059669',
+    'park': '#16a34a', 'transit': '#1d4ed8', 'restaurant': '#b45309',
+    'market': '#b45309', 'museum': '#b45309', 'culture': '#be123c',
   };
 
   function poiPopupHtml(f) {
@@ -215,7 +230,7 @@
     var coords = f.geometry.coordinates;
     var cat = props.category || '';
     var icon = FA_ICONS[cat] || 'fa-location-dot';
-    var color = props.color || '#6b7280';
+    var color = props.color || CATEGORY_COLORS[cat] || '#6b7280';
     var id = ++_idSeq;
 
     var m = L.marker([coords[1], coords[0]], {

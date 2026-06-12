@@ -71,13 +71,6 @@
       "country": "DK"
     },
     {
-      "slug": "oslo",
-      "name": "Oslo",
-      "lat": 59.9139,
-      "lon": 10.7522,
-      "country": "NO"
-    },
-    {
       "slug": "helsinki",
       "name": "Helsinki",
       "lat": 60.1699,
@@ -519,13 +512,6 @@
       "country": "LK"
     },
     {
-      "slug": "yangon",
-      "name": "Yangon",
-      "lat": 16.8661,
-      "lon": 96.1951,
-      "country": "MM"
-    },
-    {
       "slug": "cairo",
       "name": "Cairo",
       "lat": 30.0444,
@@ -573,13 +559,6 @@
       "lat": 9.032,
       "lon": 38.7469,
       "country": "ET"
-    },
-    {
-      "slug": "accra",
-      "name": "Accra",
-      "lat": 5.6037,
-      "lon": -0.187,
-      "country": "GH"
     },
     {
       "slug": "dar-es-salaam",

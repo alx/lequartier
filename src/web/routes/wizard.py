@@ -39,6 +39,29 @@ _GH_REPO            = "alx/travel-guide"
 _CURATED_DIR        = Path(__file__).parent.parent / "curated"
 _ZILLOW_CURATED_DIR = _CURATED_DIR / "zillow"
 
+CATEGORY_ICONS: dict[str, str] = {
+    "park": "fa-tree", "train_station": "fa-train", "transit": "fa-bus",
+    "airport": "fa-plane", "museum": "fa-landmark", "monument": "fa-monument",
+    "university": "fa-graduation-cap", "stadium": "fa-futbol",
+    "market": "fa-store", "beach": "fa-umbrella-beach",
+    "restaurant": "fa-utensils", "culture": "fa-masks-theater",
+    "Park": "fa-tree", "Transit": "fa-bus", "Restaurant": "fa-utensils",
+    "Market": "fa-store", "Supermarket": "fa-cart-shopping",
+    "Bakery & Food": "fa-bread-slice", "Bike Share": "fa-bicycle",
+    "Health": "fa-kit-medical", "Playground": "fa-child-reaching",
+    "Activity": "fa-person-running", "Culture": "fa-masks-theater",
+    "Wellness": "fa-spa",
+}
+
+CATEGORY_COLORS: dict[str, str] = {
+    "Park": "#16a34a", "Transit": "#1d4ed8", "Restaurant": "#b45309",
+    "Market": "#b45309", "Supermarket": "#0f766e", "Bakery & Food": "#b45309",
+    "Bike Share": "#0891b2", "Health": "#dc2626", "Playground": "#7c3aed",
+    "Activity": "#0369a1", "Culture": "#be123c", "Wellness": "#059669",
+    "park": "#16a34a", "transit": "#1d4ed8", "restaurant": "#b45309",
+    "market": "#b45309", "museum": "#b45309", "culture": "#be123c",
+}
+
 
 def _gh_headers(token: str) -> dict:
     return {
@@ -159,21 +182,22 @@ def _fetch_task(
 ) -> None:
     try:
         task_mod.store.update(task.task_id, status=task_mod.Status.RUNNING,
-                              progress="Resolving coordinates…", progress_pct=10)
+                              progress="Checking cache…", progress_pct=10)
 
-        rlat, rlon, confidence = poi_engine.resolve_coords(airbnb_url, gmaps_url, lat, lon)
         listing_id = poi_engine.listing_id_from_url(airbnb_url)
         cfg        = poi_engine.get_cfg()
         categories = cfg.default_categories if cfg else []
 
-        task_mod.store.update(task.task_id,
-                              partial_lat=rlat, partial_lon=rlon, partial_confidence=confidence)
-
         if not force:
-            task_mod.store.update(task.task_id, progress="Checking cache…", progress_pct=18)
-            cached = cache_mod.get(listing_id, rlat, rlon, categories,
+            cached = cache_mod.get(listing_id, lat, lon, categories,
                                    ttl_days=cfg.cache_ttl_days if cfg else 7)
             if cached:
+                rlat = cached.get("lat") or lat or 0.0
+                rlon = cached.get("lon") or lon or 0.0
+                confidence = cached.get("confidence", "high")
+                task_mod.store.update(task.task_id,
+                                      partial_lat=rlat, partial_lon=rlon,
+                                      partial_confidence=confidence)
                 features = cached.get("geojson", {}).get("features", [])
                 if features and "status" not in features[0].get("properties", {}):
                     poi_engine.apply_status_curation(features)
@@ -188,6 +212,11 @@ def _fetch_task(
                 if map_uuid:
                     _generate_exports(map_uuid, listing_id, rlat, rlon, cached_result)
                 return
+
+        task_mod.store.update(task.task_id, progress="Resolving coordinates…", progress_pct=18)
+        rlat, rlon, confidence = poi_engine.resolve_coords(airbnb_url, gmaps_url, lat, lon)
+        task_mod.store.update(task.task_id,
+                              partial_lat=rlat, partial_lon=rlon, partial_confidence=confidence)
 
         def _prog(pct, msg):
             task_mod.store.update(task.task_id, progress=msg, progress_pct=pct)
@@ -498,7 +527,13 @@ def task_map_state(task_id: str):
         "lat":          task.partial_lat,
         "lon":          task.partial_lon,
         "confidence":   task.partial_confidence,
-        "features":     task.partial_geojson.get("features", []) if task.partial_geojson else [],
+        "features":     (
+            task.partial_geojson.get("features", [])
+            if task.partial_geojson
+            else (task.result.get("geojson", {}).get("features", [])
+                  if task.status == task_mod.Status.DONE and task.result
+                  else [])
+        ),
         "progress_pct": task.progress_pct,
         "progress":     task.progress,
         "done":         task.status == task_mod.Status.DONE,
@@ -1341,6 +1376,8 @@ def host_map_page(map_uuid: str):
         listing_title=listing_title,
         n_pois=n_pois,
         category_counts=category_counts,
+        category_icons=CATEGORY_ICONS,
+        category_colors=CATEGORY_COLORS,
         share_url=share_url,
         embed=embed,
     )

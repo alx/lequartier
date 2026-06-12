@@ -20,9 +20,14 @@
                style="font-size:0.95rem; padding:0.6rem 0.75rem;"
                oninput="lqValidateUrl(this)">
       </div>
-      <button id="btn-fetch" type="submit" class="btn btn-primary" style="width:100%;margin-top:0.4rem;" disabled>
-        <i class="fa-solid fa-map"></i> Generate my map
-      </button>
+      <div style="display:flex;gap:0.5rem;margin-top:0.4rem;">
+        <button id="btn-fetch" type="submit" class="btn btn-primary" style="flex:2;" disabled>
+          <i class="fa-solid fa-map"></i> Generate my map
+        </button>
+        <button type="button" class="btn btn-outline" style="flex:1;" onclick="lqTryExample(event)">
+          <i class="fa-solid fa-map-location-dot"></i> Peek at a map
+        </button>
+      </div>
     </form>
     <div id="start-error" class="alert alert-error" style="display:none;margin-top:0.6rem;"></div>
   </div>
@@ -48,26 +53,66 @@
       <div id="results-city" style="font-size:0.88rem;color:var(--text-muted);"></div>
     </div>
     <div id="results-summary" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.65rem;"></div>
-    <div id="results-tally" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.85rem;"></div>
-    <div style="border-top:1px solid var(--border);padding-top:0.85rem;">
-      <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:0.65rem;">
-        Get a downloadable map image, QR code, and a permanent shareable link for your guests.
-      </p>
-      <button id="btn-checkout" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="lqStartCheckout()">
-        <span id="checkout-label"><i class="fa-solid fa-lock"></i> Get your map — $19</span>
-        <span id="checkout-spinner" class="spinner" style="display:none;border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>
-      </button>
-      <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.45rem;">
-        Map PNG · QR code · Permanent shareable link
-      </p>
-    </div>
+    <div id="results-tally" style="display:flex;flex-wrap:wrap;gap:0.35rem;"></div>
   </div>
 
 </div>
 
+<!-- ── Deliverables bottom bar ── -->
+<div id="bar-deliverables" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+     width:480px;max-width:calc(100vw - 2rem);
+     background:#ffffff;border:1px solid rgba(0,0,0,0.08);border-top:3px solid var(--accent);
+     border-radius:6px;padding:0.85rem 1rem 0.9rem;z-index:1000;
+     box-shadow:0 4px 24px rgba(0,0,0,0.15);">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;
+       margin-bottom:0.65rem;">
+    <!-- Col 1: Map PNG -->
+    <div style="text-align:center;">
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.3rem;font-weight:600;letter-spacing:.02em;">Map PNG</div>
+      <div id="bar-map-wrap" style="height:68px;background:var(--surface2);
+           border:1px solid var(--border);border-radius:6px;overflow:hidden;
+           display:flex;align-items:center;justify-content:center;">
+        <span id="bar-map-spinner" class="spinner" style="border-color:var(--border);border-top-color:var(--accent);"></span>
+        <img id="bar-map-img" src="" alt="Map preview"
+             style="display:none;width:100%;height:100%;object-fit:cover;">
+      </div>
+    </div>
+    <!-- Col 2: QR code -->
+    <div style="text-align:center;">
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.3rem;font-weight:600;letter-spacing:.02em;">QR code</div>
+      <div style="height:68px;background:var(--surface2);
+           border:1px solid var(--border);border-radius:6px;overflow:hidden;
+           display:flex;align-items:center;justify-content:center;">
+        <img id="bar-qr-img" src="" alt="QR code"
+             style="width:100%;height:100%;object-fit:contain;padding:4px;">
+      </div>
+    </div>
+    <!-- Col 3: Share link -->
+    <div style="text-align:center;">
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.3rem;font-weight:600;letter-spacing:.02em;">Share link</div>
+      <div style="height:68px;background:var(--surface2);border:1px solid var(--border);
+           border-radius:6px;display:flex;flex-direction:column;
+           align-items:center;justify-content:center;gap:0.25rem;padding:0.3rem;">
+        <span id="bar-link-text" style="font-size:0.62rem;color:var(--text-muted);
+              word-break:break-all;line-height:1.2;max-height:2.6em;overflow:hidden;"></span>
+        <button id="bar-copy-btn" onclick="lqCopyShareLink()"
+                style="font-size:0.68rem;padding:0.12rem 0.45rem;border-radius:4px;
+                       border:1px solid var(--border);background:var(--surface);cursor:pointer;
+                       color:var(--text-muted);">Copy</button>
+      </div>
+    </div>
+  </div>
+  <div>
+    <button id="btn-checkout" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="lqStartCheckout()">
+      <span id="checkout-label"><i class="fa-solid fa-lock"></i> Get your map — $19</span>
+      <span id="checkout-spinner" class="spinner" style="display:none;border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>
+    </button>
+  </div>
+</div>
+
 <div class="landing-footer" id="landing-footer">
   <span id="city-name-text">{{ bg_city.name }}, {{ bg_city.country }}</span>
-  <a href="/" class="landing-random-btn" title="Random city">
+  <a href="#" class="landing-random-btn" title="Random city" onclick="randomCity(); return false;">
     <i class="fa-solid fa-shuffle"></i>
   </a>
 </div>
@@ -103,6 +148,21 @@
     'university': 'fa-graduation-cap', 'stadium': 'fa-futbol',
     'market': 'fa-store', 'beach': 'fa-umbrella-beach',
     'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
+    'Park': 'fa-tree', 'Transit': 'fa-bus', 'Restaurant': 'fa-utensils',
+    'Market': 'fa-store', 'Supermarket': 'fa-cart-shopping',
+    'Bakery & Food': 'fa-bread-slice', 'Bike Share': 'fa-bicycle',
+    'Health': 'fa-kit-medical', 'Playground': 'fa-child-reaching',
+    'Activity': 'fa-person-running', 'Culture': 'fa-masks-theater',
+    'Wellness': 'fa-spa',
+  };
+
+  var CATEGORY_COLORS = {
+    'Park': '#16a34a', 'Transit': '#1d4ed8', 'Restaurant': '#b45309',
+    'Market': '#b45309', 'Supermarket': '#0f766e', 'Bakery & Food': '#b45309',
+    'Bike Share': '#0891b2', 'Health': '#dc2626', 'Playground': '#7c3aed',
+    'Activity': '#0369a1', 'Culture': '#be123c', 'Wellness': '#059669',
+    'park': '#16a34a', 'transit': '#1d4ed8', 'restaurant': '#b45309',
+    'market': '#b45309', 'museum': '#b45309', 'culture': '#be123c',
   };
 
   // ── Popup HTML builder ──────────────────────────────────────────────────
@@ -217,7 +277,7 @@
     var coords = f.geometry.coordinates;
     var cat = props.category || '';
     var icon = FA_ICONS[cat] || 'fa-location-dot';
-    var color = props.color || '#6b7280';
+    var color = props.color || CATEGORY_COLORS[cat] || '#6b7280';
     var id = ++_idSeq;
     var distM = haversineM(cityLat, cityLon, coords[1], coords[0]);
 
@@ -278,6 +338,7 @@
         poiLayer = L.layerGroup();
         gj.features.forEach(function(f) {
           if (f.properties.kind !== 'poi') return;
+          if (f.properties.status === 'secondary') return;
           makePOIMarker(f, cityLat, cityLon).addTo(poiLayer);
         });
         poiLayer.addTo(map);
@@ -307,7 +368,7 @@
   // ── Init ────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
     map = L.map('map', {
-      zoomControl: true, attributionControl: false,
+      zoomControl: true, attributionControl: false, keepBuffer: 4,
     });
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -332,12 +393,35 @@
     drawRings(CITY_LAT, CITY_LON);
     placeRentalMarker(CITY_LAT, CITY_LON);
     loadCityPOIs(CITY_SLUG, CITY_LAT, CITY_LON);
+    prefetchWorldTiles();
   });
+
+  function prefetchWorldTiles() {
+    var subdomains = ['a', 'b', 'c', 'd'];
+    var MAX_ZOOM = 4;
+    for (var z = 0; z <= MAX_ZOOM; z++) {
+      var n = Math.pow(2, z);
+      for (var x = 0; x < n; x++) {
+        for (var y = 0; y < n; y++) {
+          var s = subdomains[(x + y) % subdomains.length];
+          fetch('https://' + s + '.basemaps.cartocdn.com/light_all/' + z + '/' + x + '/' + y + '.png', { priority: 'low' });
+        }
+      }
+    }
+  }
 
   var _airbnbPattern = /airbnb\.[a-z]{2,}\/rooms\/\d+/i;
   window.lqValidateUrl = function(input) {
     var valid = _airbnbPattern.test(input.value.trim());
     document.getElementById('btn-fetch').disabled = !valid;
+  };
+
+  window.lqTryExample = function(e) {
+    e.preventDefault();
+    var input = document.getElementById('airbnb_url');
+    input.value = 'https://www.airbnb.com/rooms/10349749';
+    lqValidateUrl(input);
+    document.getElementById('form-start-map').dispatchEvent(new Event('submit', {cancelable: true}));
   };
 
   // ── Host Map AJAX flow ──────────────────────────────────────────────────
@@ -347,13 +431,7 @@
   var _tallyData  = {};
   var _mapFlownTo = false;
 
-  var FA_ICONS_TALLY = {
-    'park': 'fa-tree', 'train_station': 'fa-train', 'transit': 'fa-bus',
-    'airport': 'fa-plane', 'museum': 'fa-landmark', 'monument': 'fa-monument',
-    'university': 'fa-graduation-cap', 'stadium': 'fa-futbol',
-    'market': 'fa-store', 'beach': 'fa-umbrella-beach',
-    'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
-  };
+  var FA_ICONS_TALLY = FA_ICONS;
 
   function _showState(state) {
     ['state-initial', 'state-loading', 'state-results'].forEach(function(id) {
@@ -361,15 +439,18 @@
     });
     var footer = document.getElementById('landing-footer');
     if (footer) footer.style.display = state === 'state-initial' ? '' : 'none';
+    var bar = document.getElementById('bar-deliverables');
+    if (bar) bar.style.display = state === 'state-results' ? '' : 'none';
   }
 
   function _tallyHtml(tally) {
     return Object.keys(tally).map(function(cat) {
       var icon = FA_ICONS_TALLY[cat] || 'fa-location-dot';
+      var color = CATEGORY_COLORS[cat] || 'var(--text-muted)';
       return '<span style="display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);' +
              'border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;' +
              'font-size:0.78rem;color:var(--text-muted);">' +
-             '<i class="fa-solid ' + icon + '"></i>' +
+             '<i class="fa-solid ' + icon + '" style="color:' + color + ';"></i>' +
              cat.replace(/_/g, ' ') + ' &middot; ' + tally[cat] + '</span>';
     }).join('');
   }
@@ -422,7 +503,7 @@
       _mapFlownTo = true;
       if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; }
       lockedMarkerId = null; lockedMarkerRef = null;
-      map.flyToBounds(L.latLng(d.lat, d.lon).toBounds(1200 * 2), { duration: 1.8 });
+      map.flyToBounds(L.latLng(d.lat, d.lon).toBounds(600), { duration: 1.8 });
       drawRings(d.lat, d.lon);
       placeRentalMarker(d.lat, d.lon);
       poiLayer = L.layerGroup().addTo(map);
@@ -437,6 +518,7 @@
         _seenIds[fid] = true;
         var cat = f.properties && f.properties.category;
         if (cat) _tallyData[cat] = (_tallyData[cat] || 0) + 1;
+        if (f.properties && f.properties.status === 'secondary') return;
         makePOIMarker(f, d.lat || CITY_LAT, d.lon || CITY_LON).addTo(poiLayer);
       });
       document.getElementById('loading-tally').innerHTML = _tallyHtml(_tallyData);
@@ -488,7 +570,37 @@
     document.getElementById('results-tally').innerHTML = _tallyHtml(_tallyData);
 
     _showState('state-results');
+
+    // Populate deliverables bar
+    var uuid = _mapUuid;
+    var shareUrl = window.location.origin + '/p/' + uuid;
+    document.getElementById('bar-link-text').textContent = shareUrl;
+    document.getElementById('bar-qr-img').src = '/static/img/maps/' + uuid + '_qr.png';
+    _pollMapPng(uuid);
   }
+
+  function _pollMapPng(uuid) {
+    var img = new Image();
+    img.onload = function() {
+      document.getElementById('bar-map-spinner').style.display = 'none';
+      var el = document.getElementById('bar-map-img');
+      el.src = '/static/img/maps/' + uuid + '_map.png';
+      el.style.display = '';
+    };
+    img.onerror = function() {
+      setTimeout(function() { _pollMapPng(uuid); }, 2000);
+    };
+    img.src = '/static/img/maps/' + uuid + '_map.png?t=' + Date.now();
+  }
+
+  window.lqCopyShareLink = function() {
+    var url = window.location.origin + '/p/' + _mapUuid;
+    navigator.clipboard.writeText(url).then(function() {
+      var btn = document.getElementById('bar-copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
+    });
+  };
 
   window.lqStartCheckout = function() {
     if (!_mapUuid) return;
