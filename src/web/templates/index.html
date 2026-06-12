@@ -198,30 +198,13 @@
 
     m._poiId = id;
 
-    // Suppress permanent label for POIs inside the 5-min ring (clutters rental marker area)
-    if (distM > CIRCLE_STYLES[0].radiusM) {
-      m.bindTooltip(props.name, {
-        permanent: true,
-        direction: 'top',
-        offset: [0, -(POI_SIZE / 2 + 2)],
-        className: 'landing-poi-label',
-        opacity: 1,
-      });
-    }
-
     m.bindPopup(poiPopupHtml(f), { maxWidth: 320, autoPan: false });
 
-    function _tooltipDisplay(marker, show) {
-      var t = marker.getTooltip();
-      if (t && t._container) t._container.style.display = show ? '' : 'none';
-    }
-
     function _lockPopup(marker) {
-      if (lockedMarkerRef) _tooltipDisplay(lockedMarkerRef, true);
+      if (lockedMarkerRef && lockedMarkerRef !== marker) { lockedMarkerRef.closePopup(); }
       map.closePopup();
       lockedMarkerId = marker._poiId;
       lockedMarkerRef = marker;
-      _tooltipDisplay(marker, false);
       marker.openPopup();
     }
 
@@ -229,13 +212,8 @@
       lockedMarkerId = null;
       lockedMarkerRef = null;
       marker.closePopup();
-      _tooltipDisplay(marker, true);
     }
 
-    m.on('mouseover', function() {
-      if (lockedMarkerId === this._poiId) return;
-      _lockPopup(this);
-    });
     m.on('click', function(e) {
       L.DomEvent.stopPropagation(e);
       if (lockedMarkerId === this._poiId) {
@@ -289,9 +267,7 @@
   // ── Init ────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
     map = L.map('map', {
-      zoomControl: false, dragging: false, scrollWheelZoom: false,
-      touchZoom: false, doubleClickZoom: false, boxZoom: false,
-      keyboard: false, tap: false, attributionControl: false,
+      zoomControl: true, attributionControl: false,
     });
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -309,9 +285,8 @@
     }
 
     map.on('click', function() {
-      if (lockedMarkerRef) { _tooltipDisplay(lockedMarkerRef, true); lockedMarkerRef = null; }
+      if (lockedMarkerRef) { lockedMarkerRef.closePopup(); lockedMarkerRef = null; }
       lockedMarkerId = null;
-      map.closePopup();
     });
 
     drawRings(CITY_LAT, CITY_LON);
