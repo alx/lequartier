@@ -791,16 +791,6 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
     overflow-y: visible;
   }
 
-  /* Landing page center-overlay: top-anchored full-width card */
-  .center-overlay {
-    top: 1rem;
-    left: 1rem;
-    right: 1rem;
-    bottom: auto;
-    transform: none;
-    width: auto;
-    max-width: none;
-  }
 }
 @media (max-width: 600px) {
   .category-toggles { grid-template-columns: 1fr 1fr; }

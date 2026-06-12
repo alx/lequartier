@@ -214,6 +214,10 @@
       marker.closePopup();
     }
 
+    m.on('mouseover', function() {
+      if (lockedMarkerId === this._poiId) return;
+      _lockPopup(this);
+    });
     m.on('click', function(e) {
       L.DomEvent.stopPropagation(e);
       if (lockedMarkerId === this._poiId) {
