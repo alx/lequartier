@@ -1,4 +1,7 @@
-.PHONY: searxng-up searxng-down enrich enrich-city enrich-curated rebuild-index backfill-scores scrub-urls
+.PHONY: dev searxng-up searxng-down enrich enrich-city enrich-curated rebuild-index backfill-scores scrub-urls
+
+dev:
+	uv run flask --app src.web.app run --port 5010 --debug
 
 # Start SearXNG and wait until it responds
 searxng-up:
