@@ -15,14 +15,20 @@ _Avoid_: city data, background GeoJSON
 **Rental Marker**: The accent-coloured circle with a white house icon placed at the rental's coordinates. Always larger than POI Markers. On the Landing Map it is a demo placeholder at the city centre. Current sizes: `RENTAL_SIZE=40px`, `POI_SIZE=32px` (Landing Map constants in `index.html`; mirror when porting to airbnb maps).
 _Avoid_: home marker, listing pin, centre marker
 
-**POI Marker**: A coloured circle with a category icon, representing a nearby place of interest. On the Landing Map, each POI Marker has a permanent visible name label (pill style) and a 3-state interaction: default (label only) → hover (enhanced popup) → click (popup locked open).
+**POI Marker**: A coloured circle with a category icon, representing a nearby place of interest. Interaction is 2-state: hover (opens popup) → click (locks popup open; second click closes). No permanent visible label.
 
 **Bakery & Food icon**: Always use `fa-cookie-bite`. Never use `fa-bread-slice`.
 
-**Landing Map**: The decorative background map on the index page. Centred on a random city. Uses City GeoJSON. Map navigation is locked; POI Markers are interactive (hover preview + click popup).
+**Landing Map**: The decorative background map on the index page. Centred on a random city. Uses City GeoJSON. Map navigation is fully enabled (zoom, pan). POI Markers are interactive (hover preview + click popup). When a host submits their listing URL, the map flies to the listing location and switches from City GeoJSON to the listing's live POI feed.
 _Avoid_: background map, index map
 
 **Demo Mode**: The Landing Map state where the Rental Marker is placed at the city centre as a placeholder, not tied to any real listing.
+
+**Host Map**: The `/p/{uuid}` page generated for a specific listing after a host pastes their URL. Always publicly accessible — guests can view the interactive map without a login. Export features (image download, QR code) require a one-time payment.
+_Avoid_: map page, listing page, share page
+
+**Export**: The three deliverables unlocked by a one-time $19 Stripe payment: downloadable map PNG (1200×800), QR code PNG pointing to the Host Map URL, and the permanent shareable Host Map URL itself.
+_Avoid_: download, assets, files
 
 **Shared Listing**: A curated listing with `is_shared: true` in its curated JSON. Visible as a pin on the Explore Page. Only operator-curated listings can be shared (gated by `EDIT_ENABLED`).
 _Avoid_: public listing, published listing (see: Published)

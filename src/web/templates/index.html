@@ -4,33 +4,69 @@
 
 {% block content %}
 
-<div class="center-overlay">
-  <div class="overlay-card">
-    <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
+<div class="center-overlay" id="lq-overlay">
 
-    <form method="POST" action="/step1/submit">
+  <!-- ── State: initial ── -->
+  <div class="overlay-card" id="state-initial">
+    <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
+    <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:0.75rem;line-height:1.5;">
+      Your Airbnb listing, mapped.<br>
+      <span style="font-size:0.84rem;">Guests see what's walkable — before they ask.</span>
+    </p>
+    <form id="form-start-map" onsubmit="lqStartMap(event)">
       <div class="form-group">
-        <label for="airbnb_url">Paste an Airbnb listing URL to generate its neighbourhood map:</label>
         <input type="url" id="airbnb_url" name="airbnb_url" required autofocus
                placeholder="https://www.airbnb.com/rooms/686559818391956388"
                style="font-size:0.95rem; padding:0.6rem 0.75rem;"
                oninput="lqValidateUrl(this)">
       </div>
-
-      <button id="btn-fetch" type="submit" class="btn btn-primary" style="width:100%; margin-top:0.4rem;" disabled>
-        <i class="fa-solid fa-map"></i> Fetch Nearby Places
+      <button id="btn-fetch" type="submit" class="btn btn-primary" style="width:100%;margin-top:0.4rem;" disabled>
+        <i class="fa-solid fa-map"></i> Generate my map
       </button>
     </form>
+    <div id="start-error" class="alert alert-error" style="display:none;margin-top:0.6rem;"></div>
+  </div>
 
-    {% if error %}
-    <div class="alert alert-error">{{ error }}</div>
-    {% endif %}
+  <!-- ── State: loading ── -->
+  <div class="overlay-card" id="state-loading" style="display:none;">
+    <div class="block-label"><i class="fa-solid fa-spinner fa-spin"></i> Finding nearby places…</div>
+    <div id="loading-location" style="font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;min-height:1.2em;"></div>
+    <div class="progress-wrap">
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="loading-bar" style="width:2%;"></div>
+      </div>
+      <div class="progress-label" id="loading-label">Starting…</div>
+    </div>
+    <div id="loading-tally" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.75rem;min-height:1.5rem;"></div>
+  </div>
+
+  <!-- ── State: results ── -->
+  <div class="overlay-card" id="state-results" style="display:none;">
+    <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
+    <div style="margin-bottom:0.55rem;">
+      <div id="results-location" style="font-size:1.05rem;font-weight:700;color:var(--text);"></div>
+      <div id="results-city" style="font-size:0.88rem;color:var(--text-muted);"></div>
+    </div>
+    <div id="results-summary" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.65rem;"></div>
+    <div id="results-tally" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.85rem;"></div>
+    <div style="border-top:1px solid var(--border);padding-top:0.85rem;">
+      <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:0.65rem;">
+        Get a downloadable map image, QR code, and a permanent shareable link for your guests.
+      </p>
+      <button id="btn-checkout" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="lqStartCheckout()">
+        <span id="checkout-label"><i class="fa-solid fa-lock"></i> Get your map — $19</span>
+        <span id="checkout-spinner" class="spinner" style="display:none;border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>
+      </button>
+      <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.45rem;">
+        Map PNG · QR code · Permanent shareable link
+      </p>
+    </div>
   </div>
 
 </div>
 
-<div class="landing-footer">
-  <span>{{ bg_city.name }}, {{ bg_city.country }}</span>
+<div class="landing-footer" id="landing-footer">
+  <span id="city-name-text">{{ bg_city.name }}, {{ bg_city.country }}</span>
   <a href="/" class="landing-random-btn" title="Random city">
     <i class="fa-solid fa-shuffle"></i>
   </a>
@@ -302,6 +338,185 @@
   window.lqValidateUrl = function(input) {
     var valid = _airbnbPattern.test(input.value.trim());
     document.getElementById('btn-fetch').disabled = !valid;
+  };
+
+  // ── Host Map AJAX flow ──────────────────────────────────────────────────
+  var _mapUuid    = null;
+  var _pollTimer  = null;
+  var _seenIds    = {};
+  var _tallyData  = {};
+  var _mapFlownTo = false;
+
+  var FA_ICONS_TALLY = {
+    'park': 'fa-tree', 'train_station': 'fa-train', 'transit': 'fa-bus',
+    'airport': 'fa-plane', 'museum': 'fa-landmark', 'monument': 'fa-monument',
+    'university': 'fa-graduation-cap', 'stadium': 'fa-futbol',
+    'market': 'fa-store', 'beach': 'fa-umbrella-beach',
+    'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
+  };
+
+  function _showState(state) {
+    ['state-initial', 'state-loading', 'state-results'].forEach(function(id) {
+      document.getElementById(id).style.display = id === state ? '' : 'none';
+    });
+    var footer = document.getElementById('landing-footer');
+    if (footer) footer.style.display = state === 'state-initial' ? '' : 'none';
+  }
+
+  function _tallyHtml(tally) {
+    return Object.keys(tally).map(function(cat) {
+      var icon = FA_ICONS_TALLY[cat] || 'fa-location-dot';
+      return '<span style="display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);' +
+             'border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;' +
+             'font-size:0.78rem;color:var(--text-muted);">' +
+             '<i class="fa-solid ' + icon + '"></i>' +
+             cat.replace(/_/g, ' ') + ' &middot; ' + tally[cat] + '</span>';
+    }).join('');
+  }
+
+  window.lqStartMap = function(e) {
+    e.preventDefault();
+    var url = document.getElementById('airbnb_url').value.trim();
+    var errEl = document.getElementById('start-error');
+    errEl.style.display = 'none';
+
+    var fd = new FormData();
+    fd.append('airbnb_url', url);
+
+    _showState('state-loading');
+    _seenIds = {};
+    _tallyData = {};
+    _mapFlownTo = false;
+
+    fetch('/api/start-map', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          _showState('state-initial');
+          errEl.textContent = data.error;
+          errEl.style.display = '';
+          return;
+        }
+        _mapUuid = data.uuid;
+        _pollOnce(data.task_id);
+      })
+      .catch(function() {
+        _showState('state-initial');
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = '';
+      });
+  };
+
+  function _pollOnce(taskId) {
+    fetch('/tasks/' + taskId + '/map-state')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { _onPoll(taskId, d); })
+      .catch(function() {
+        _pollTimer = setTimeout(function() { _pollOnce(taskId); }, 2000);
+      });
+  }
+
+  function _onPoll(taskId, d) {
+    // Fly to listing on first lat/lon
+    if (!_mapFlownTo && d.lat && d.lon && !(d.lat === 0 && d.lon === 0)) {
+      _mapFlownTo = true;
+      if (poiLayer) { map.removeLayer(poiLayer); poiLayer = null; }
+      lockedMarkerId = null; lockedMarkerRef = null;
+      map.flyToBounds(L.latLng(d.lat, d.lon).toBounds(1200 * 2), { duration: 1.8 });
+      drawRings(d.lat, d.lon);
+      placeRentalMarker(d.lat, d.lon);
+      poiLayer = L.layerGroup().addTo(map);
+    }
+
+    // Add new POI markers progressively
+    if (d.features && d.features.length) {
+      if (!poiLayer) { poiLayer = L.layerGroup().addTo(map); }
+      d.features.forEach(function(f) {
+        var fid = (f.properties && f.properties.osm_id) || JSON.stringify(f.geometry);
+        if (_seenIds[fid]) return;
+        _seenIds[fid] = true;
+        var cat = f.properties && f.properties.category;
+        if (cat) _tallyData[cat] = (_tallyData[cat] || 0) + 1;
+        makePOIMarker(f, d.lat || CITY_LAT, d.lon || CITY_LON).addTo(poiLayer);
+      });
+      document.getElementById('loading-tally').innerHTML = _tallyHtml(_tallyData);
+    }
+
+    // Update progress
+    var pct = d.progress_pct || 2;
+    document.getElementById('loading-bar').style.width = Math.max(2, pct) + '%';
+    document.getElementById('loading-label').textContent = d.progress || 'Working…';
+
+    // Update location label during loading
+    if (d.location && (d.location.city || d.location.neighbourhood)) {
+      var locParts = [];
+      if (d.location.neighbourhood) locParts.push(d.location.neighbourhood);
+      if (d.location.city) locParts.push(d.location.city);
+      document.getElementById('loading-location').textContent = locParts.join(', ');
+    } else if (d.listing_title) {
+      document.getElementById('loading-location').textContent = d.listing_title;
+    }
+
+    if (d.error) {
+      _showState('state-initial');
+      var errEl = document.getElementById('start-error');
+      errEl.textContent = d.error;
+      errEl.style.display = '';
+      return;
+    }
+
+    if (d.done) {
+      _showResults(d);
+      return;
+    }
+
+    _pollTimer = setTimeout(function() { _pollOnce(taskId); }, 1000);
+  }
+
+  function _showResults(d) {
+    var loc = d.location || {};
+    document.getElementById('results-location').textContent = loc.neighbourhood || loc.city || '';
+    var cityParts = [];
+    if (loc.neighbourhood && loc.city) cityParts.push(loc.city);
+    else if (!loc.neighbourhood && loc.city) { /* already in location */ }
+    if (loc.country) cityParts.push(loc.country);
+    document.getElementById('results-city').textContent = cityParts.join(', ');
+
+    var total = Object.values(_tallyData).reduce(function(a, b) { return a + b; }, 0);
+    document.getElementById('results-summary').innerHTML =
+      '<strong style="color:var(--text);">' + total + '</strong> places within walking distance';
+    document.getElementById('results-tally').innerHTML = _tallyHtml(_tallyData);
+
+    _showState('state-results');
+  }
+
+  window.lqStartCheckout = function() {
+    if (!_mapUuid) return;
+    var btn = document.getElementById('btn-checkout');
+    var label = document.getElementById('checkout-label');
+    var spinner = document.getElementById('checkout-spinner');
+    if (btn) btn.disabled = true;
+    if (label) label.style.display = 'none';
+    if (spinner) spinner.style.display = 'inline-block';
+
+    fetch('/api/checkout?uuid=' + _mapUuid, { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+        } else {
+          if (btn) btn.disabled = false;
+          if (label) label.style.display = '';
+          if (spinner) spinner.style.display = 'none';
+          alert(data.error || 'Something went wrong. Please try again.');
+        }
+      })
+      .catch(function() {
+        if (btn) btn.disabled = false;
+        if (label) label.style.display = '';
+        if (spinner) spinner.style.display = 'none';
+        alert('Network error. Please try again.');
+      });
   };
 })();
 </script>

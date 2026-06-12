@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if location.neighbourhood and location.city %}{{ location.neighbourhood }}, {{ location.city }} — Le Quartier{% elif location.city %}{{ location.city }} — Le Quartier{% else %}Le Quartier — Neighbourhood Map{% endif %}
+{% endblock %}
+
+{% block og_title %}
+  {% if location.neighbourhood and location.city %}{{ location.neighbourhood }}, {{ location.city }}{% elif location.city %}{{ location.city }}{% else %}Le Quartier{% endif %}
+{% endblock %}
+{% block og_description %}Walkable neighbourhood map — {{ n_pois }} places nearby.{% endblock %}
+{% block og_url %}{{ share_url }}{% endblock %}
+
+{% block content %}
+
+{% if not embed %}
+<div class="center-overlay" id="host-map-overlay">
+  <div class="overlay-card">
+    <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
+
+    <div style="margin-bottom:0.6rem;">
+      {% if location.neighbourhood and location.city %}
+        <div style="font-size:1.05rem;font-weight:700;color:var(--text);">{{ location.neighbourhood }}</div>
+        <div style="font-size:0.88rem;color:var(--text-muted);">{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}</div>
+      {% elif location.city %}
+        <div style="font-size:1.05rem;font-weight:700;color:var(--text);">{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}</div>
+      {% endif %}
+      {% if listing_title %}
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ listing_title }}">{{ listing_title }}</div>
+      {% endif %}
+    </div>
+
+    {% if n_pois > 0 %}
+    <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.65rem;">
+      <strong style="color:var(--text);">{{ n_pois }}</strong> places within walking distance
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.85rem;">
+      {% for cat, count in category_counts.items() %}
+      <span style="display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+        <i class="fa-solid {{ {'park':'fa-tree','train_station':'fa-train','transit':'fa-bus','airport':'fa-plane','museum':'fa-landmark','monument':'fa-monument','university':'fa-graduation-cap','stadium':'fa-futbol','market':'fa-store','beach':'fa-umbrella-beach','restaurant':'fa-utensils','culture':'fa-masks-theater'}.get(cat, 'fa-location-dot') }}"></i>
+        {{ cat.replace('_', ' ') }} &middot; {{ count }}
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div style="border-top:1px solid var(--border);padding-top:0.85rem;">
+      {% if unlocked %}
+        <div style="margin-bottom:0.75rem;">
+          <a href="/p/{{ uuid }}/download/map" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
+            <i class="fa-solid fa-image"></i> Download map image
+          </a>
+          <a href="/p/{{ uuid }}/download/qr" class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
+            <i class="fa-solid fa-qrcode"></i> Download QR code
+          </a>
+          <button id="btn-copy-url" class="btn btn-outline" style="width:100%;justify-content:center;" onclick="lqCopyShareUrl()">
+            <i class="fa-solid fa-link"></i> Copy shareable link
+          </button>
+        </div>
+        <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin:0;">
+          Share this page with your guests — the map is always free to view.
+        </p>
+      {% else %}
+        <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;">
+          Get a downloadable map image, QR code, and a permanent shareable link for your guests.
+        </p>
+        <button id="btn-checkout" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="lqStartCheckout()">
+          <span id="checkout-label"><i class="fa-solid fa-lock"></i> Unlock exports — $19</span>
+          <span id="checkout-spinner" class="spinner" style="display:none;border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>
+        </button>
+        <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.5rem;">
+          One-time payment · Map PNG, QR code &amp; permanent link
+        </p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<div class="landing-footer">
+  {% if location.city %}
+  <span>{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}</span>
+  {% else %}
+  <span>Le Quartier</span>
+  {% endif %}
+  <a href="/" class="landing-random-btn" title="Try with your listing">
+    <i class="fa-solid fa-house"></i>
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var POI_SIZE    = 32;
+  var RENTAL_SIZE = 40;
+  var ACCENT = '#1a6b3c';
+
+  var LAT     = {{ lat }};
+  var LON     = {{ lon }};
+  var UUID    = "{{ uuid }}";
+  var SHARE_URL = "{{ share_url }}";
+
+  var GEOJSON = {{ geojson_json | safe }};
+
+  var CIRCLE_STYLES = [
+    { radiusM: 400,  label: '5 min' },
+    { radiusM: 800,  label: '10 min' },
+    { radiusM: 1200, label: '15 min' },
+  ];
+
+  var FA_ICONS = {
+    'park': 'fa-tree', 'train_station': 'fa-train', 'transit': 'fa-bus',
+    'airport': 'fa-plane', 'museum': 'fa-landmark', 'monument': 'fa-monument',
+    'university': 'fa-graduation-cap', 'stadium': 'fa-futbol',
+    'market': 'fa-store', 'beach': 'fa-umbrella-beach',
+    'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
+  };
+
+  function poiPopupHtml(f) {
+    var props = f.properties;
+    var cat = props.category || '';
+    var icon = FA_ICONS[cat] || 'fa-location-dot';
+    var coords = f.geometry.coordinates;
+    var html = '';
+
+    if (props.wikipedia_thumb || props.wikipedia_summary) {
+      html += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;">';
+      if (props.wikipedia_thumb)
+        html += '<img src="' + props.wikipedia_thumb + '" style="width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;" alt="">';
+      if (props.wikipedia_summary)
+        html += '<p style="font-size:0.78em;color:#4b5563;line-height:1.45;margin:0;">' + props.wikipedia_summary + '</p>';
+      html += '</div>';
+    }
+
+    html += '<strong>' + props.name + '</strong><br>';
+    html += '<span style="font-size:0.82em;color:#6b7280;"><i class="fa-solid ' + icon + '"></i> ' + cat.replace(/_/g, ' ') + '</span>';
+
+    if ((cat === 'train_station' || cat === 'transit' || cat === 'transport') && props.transit_url)
+      html += '<br><a href="' + props.transit_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-train"></i> Lines &amp; schedules</a>';
+    if (cat === 'museum' && props.ticket_url)
+      html += '<br><a href="' + props.ticket_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-ticket"></i> Buy tickets</a>';
+    if (props.wikipedia_url)
+      html += '<br><a href="' + props.wikipedia_url + '" target="_blank" rel="noopener"><i class="fa-brands fa-wikipedia-w"></i> Wikipedia</a>';
+    if (cat === 'airport') {
+      var adsbUrl = 'https://globe.adsbexchange.com/?lat=' + coords[1].toFixed(4) + '&lon=' + coords[0].toFixed(4) + '&zoom=12';
+      html += '<br><a href="' + adsbUrl + '" target="_blank" rel="noopener"><i class="fa-solid fa-plane-departure"></i> Live flights nearby</a>';
+    }
+    if (cat === 'university' && props.courses_url)
+      html += '<br><a href="' + props.courses_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-graduation-cap"></i> Courses</a>';
+    if (props.website)
+      html += '<br><a href="' + props.website + '" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Website</a>';
+    if (props.video_url)
+      html += '<br><iframe src="' + props.video_url + '" style="width:100%;aspect-ratio:16/9;border:0;border-radius:4px;margin-top:6px;display:block;" allowfullscreen></iframe>';
+
+    return html;
+  }
+
+  var map, ringLayer, poiLayer, rentalMarker;
+  var lockedMarkerId = null;
+  var lockedMarkerRef = null;
+  var _idSeq = 0;
+
+  function drawRings(lat, lon) {
+    if (ringLayer) map.removeLayer(ringLayer);
+    ringLayer = L.layerGroup();
+    CIRCLE_STYLES.forEach(function(c) {
+      L.circle([lat, lon], {
+        radius: c.radiusM,
+        color: ACCENT, weight: 1.5, dashArray: '5 4',
+        fill: false, opacity: 0.6, interactive: false,
+      }).addTo(ringLayer);
+      var labelLat = lat + (c.radiusM / 111320);
+      L.marker([labelLat, lon], {
+        interactive: false,
+        icon: L.divIcon({
+          className: '',
+          html: '<div style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;' +
+                'font-size:10px;font-weight:600;color:' + ACCENT + ';' +
+                'background:rgba(255,255,255,0.88);padding:2px 7px;border-radius:20px;' +
+                'box-shadow:0 1px 4px rgba(0,0,0,.15);transform:translate(-50%,-100%);">' +
+                '<i class="fa-solid fa-person-walking" style="font-size:9px;"></i>' + c.label + '</div>',
+          iconSize: [0, 0], iconAnchor: [0, 0],
+        }),
+      }).addTo(ringLayer);
+    });
+    ringLayer.addTo(map);
+  }
+
+  function placeRentalMarker(lat, lon) {
+    if (rentalMarker) map.removeLayer(rentalMarker);
+    rentalMarker = L.marker([lat, lon], {
+      interactive: false,
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="position:relative;">' +
+              '<div style="width:' + RENTAL_SIZE + 'px;height:' + RENTAL_SIZE + 'px;border-radius:50%;background:' + ACCENT + ';' +
+              'display:flex;align-items:center;justify-content:center;' +
+              'border:2.5px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.45);">' +
+              '<i class="fa-solid fa-house" style="color:#fff;font-size:' + Math.round(RENTAL_SIZE * 0.43) + 'px;"></i></div>' +
+              '<div style="position:absolute;top:' + (RENTAL_SIZE + 4) + 'px;left:50%;transform:translateX(-50%);' +
+              'background:' + ACCENT + ';color:#fff;font-size:10px;font-weight:700;' +
+              'padding:2px 8px;border-radius:10px;white-space:nowrap;' +
+              'box-shadow:0 1px 4px rgba(0,0,0,.3);">your rental</div>' +
+              '</div>',
+        iconSize: [RENTAL_SIZE, RENTAL_SIZE],
+        iconAnchor: [RENTAL_SIZE / 2, RENTAL_SIZE / 2],
+      }),
+    }).addTo(map);
+  }
+
+  function makePOIMarker(f) {
+    var props = f.properties;
+    var coords = f.geometry.coordinates;
+    var cat = props.category || '';
+    var icon = FA_ICONS[cat] || 'fa-location-dot';
+    var color = props.color || '#6b7280';
+    var id = ++_idSeq;
+
+    var m = L.marker([coords[1], coords[0]], {
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="width:' + POI_SIZE + 'px;height:' + POI_SIZE + 'px;border-radius:50%;background:' + color +
+              ';display:flex;align-items:center;justify-content:center;' +
+              'border:2px solid rgba(255,255,255,1);box-shadow:0 1px 5px rgba(0,0,0,.4);cursor:pointer;">' +
+              '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:' + Math.round(POI_SIZE * 0.4) + 'px;"></i></div>',
+        iconSize: [POI_SIZE, POI_SIZE], iconAnchor: [POI_SIZE / 2, POI_SIZE / 2],
+      }),
+    });
+
+    m._poiId = id;
+    m.bindPopup(poiPopupHtml(f), { maxWidth: 320, autoPan: false });
+
+    function _lockPopup(marker) {
+      if (lockedMarkerRef && lockedMarkerRef !== marker) { lockedMarkerRef.closePopup(); }
+      map.closePopup();
+      lockedMarkerId = marker._poiId;
+      lockedMarkerRef = marker;
+      marker.openPopup();
+    }
+    function _unlockPopup(marker) {
+      lockedMarkerId = null;
+      lockedMarkerRef = null;
+      marker.closePopup();
+    }
+
+    m.on('mouseover', function() {
+      if (lockedMarkerId === this._poiId) return;
+      _lockPopup(this);
+    });
+    m.on('click', function(e) {
+      L.DomEvent.stopPropagation(e);
+      if (lockedMarkerId === this._poiId) {
+        _unlockPopup(this);
+      } else {
+        _lockPopup(this);
+      }
+    });
+
+    return m;
+  }
+
+  function loadPOIs() {
+    var features = (GEOJSON && GEOJSON.features) ? GEOJSON.features : [];
+    if (!features.length) return;
+    poiLayer = L.layerGroup();
+    features.forEach(function(f) {
+      if (!f.geometry || !f.geometry.coordinates) return;
+      makePOIMarker(f).addTo(poiLayer);
+    });
+    poiLayer.addTo(map);
+  }
+
+  window.lqCopyShareUrl = function() {
+    navigator.clipboard.writeText(SHARE_URL).then(function() {
+      var btn = document.getElementById('btn-copy-url');
+      if (!btn) return;
+      var orig = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+      btn.disabled = true;
+      setTimeout(function() { btn.innerHTML = orig; btn.disabled = false; }, 2000);
+    }).catch(function() {
+      prompt('Copy this link:', SHARE_URL);
+    });
+  };
+
+  window.lqStartCheckout = function() {
+    var btn = document.getElementById('btn-checkout');
+    var label = document.getElementById('checkout-label');
+    var spinner = document.getElementById('checkout-spinner');
+    if (btn) btn.disabled = true;
+    if (label) label.style.display = 'none';
+    if (spinner) spinner.style.display = 'inline-block';
+
+    fetch('/api/checkout?uuid=' + UUID, { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+        } else {
+          if (btn) btn.disabled = false;
+          if (label) label.style.display = '';
+          if (spinner) spinner.style.display = 'none';
+          alert(data.error || 'Something went wrong. Please try again.');
+        }
+      })
+      .catch(function() {
+        if (btn) btn.disabled = false;
+        if (label) label.style.display = '';
+        if (spinner) spinner.style.display = 'none';
+        alert('Network error. Please try again.');
+      });
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    map = L.map('map', {
+      zoomControl: true, attributionControl: false,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    }).addTo(map);
+
+    map.fitBounds(L.latLng(LAT, LON).toBounds(1200 * 2));
+    document.getElementById('map').classList.add('map-active');
+
+    map.on('click', function() {
+      if (lockedMarkerRef) { lockedMarkerRef.closePopup(); lockedMarkerRef = null; }
+      lockedMarkerId = null;
+    });
+
+    drawRings(LAT, LON);
+    placeRentalMarker(LAT, LON);
+    loadPOIs();
+  });
+})();
+</script>
+{% endblock %}

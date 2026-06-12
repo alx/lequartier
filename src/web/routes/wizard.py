@@ -7,6 +7,7 @@ import random
 import re
 import subprocess
 import time
+import uuid as uuid_mod
 from pathlib import Path
 
 import requests as http_requests
@@ -30,6 +31,7 @@ from .. import cache as cache_mod
 from .. import tasks as task_mod
 from .. import poi_engine
 from .. import listing_index
+from .. import maps_db
 from ... import airbnb_nearby as lib
 
 _GH_API             = "https://api.github.com"
@@ -98,6 +100,54 @@ def _require_edit_auth(f):
     return decorated
 
 
+_MAPS_DATA_DIR = Path(__file__).parent.parent.parent.parent / "data" / "maps"
+_MAPS_IMG_DIR  = Path(__file__).parent.parent / "static" / "img" / "maps"
+
+
+def _generate_exports(map_uuid: str, listing_id: str,
+                      lat: float, lon: float, result: dict) -> None:
+    """Persist the result JSON, generate a QR code PNG, and fire the Playwright
+    map-image screenshot as a background subprocess (best-effort)."""
+    try:
+        import qrcode
+
+        base_url  = os.environ.get("SITE_BASE_URL", "http://127.0.0.1:5010").rstrip("/")
+        share_url = f"{base_url}/p/{map_uuid}"
+
+        _MAPS_DATA_DIR.mkdir(parents=True, exist_ok=True)
+        result_path = str(_MAPS_DATA_DIR / f"{map_uuid}.json")
+        Path(result_path).write_text(
+            json.dumps(result, ensure_ascii=False), encoding="utf-8"
+        )
+
+        _MAPS_IMG_DIR.mkdir(parents=True, exist_ok=True)
+        qr_file = _MAPS_IMG_DIR / f"{map_uuid}_qr.png"
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr.add_data(share_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="#1a6b3c", back_color="white")
+        img.save(qr_file)  # type: ignore[arg-type]
+
+        maps_db.update_coords(map_uuid, lat, lon)
+        maps_db.set_paths(map_uuid, result_path, None, f"img/maps/{map_uuid}_qr.png")
+
+        # Fire map image generation asynchronously — the download endpoint also
+        # generates lazily on first request, so this is best-effort pre-warming.
+        preview_url = os.environ.get("PREVIEW_BASE_URL", "http://127.0.0.1:5010")
+        env = os.environ.copy()
+        env["PREVIEW_BASE_URL"] = preview_url
+        subprocess.Popen(
+            ["node", str(_SCRIPTS_DIR / "generate-map-image.js"), map_uuid],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        print(f"[maps] export generation failed for {map_uuid}: {exc}")
+
+
 def _fetch_task(
     task: task_mod.TaskState,
     airbnb_url: str,
@@ -105,6 +155,7 @@ def _fetch_task(
     lat: float | None,
     lon: float | None,
     force: bool = False,
+    map_uuid: str | None = None,
 ) -> None:
     try:
         task_mod.store.update(task.task_id, status=task_mod.Status.RUNNING,
@@ -126,13 +177,16 @@ def _fetch_task(
                 features = cached.get("geojson", {}).get("features", [])
                 if features and "status" not in features[0].get("properties", {}):
                     poi_engine.apply_status_curation(features)
+                cached_result = {**cached, "from_cache": True}
                 task_mod.store.update(
                     task.task_id,
                     status=task_mod.Status.DONE,
                     progress="Loaded from cache",
                     progress_pct=100,
-                    result={**cached, "from_cache": True},
+                    result=cached_result,
                 )
+                if map_uuid:
+                    _generate_exports(map_uuid, listing_id, rlat, rlon, cached_result)
                 return
 
         def _prog(pct, msg):
@@ -185,6 +239,8 @@ def _fetch_task(
             progress_pct=100,
             result=result,
         )
+        if map_uuid:
+            _generate_exports(map_uuid, listing_id, rlat, rlon, result)
     except SystemExit:
         task_mod.store.update(task.task_id, status=task_mod.Status.ERROR,
                               error="Could not extract coordinates — paste the Google Maps URL too.",
@@ -432,15 +488,23 @@ def task_map_state(task_id: str):
     task = task_mod.store.get(task_id)
     if not task:
         return jsonify({}), 404
+    location = {}
+    listing_title = None
+    if task.status == task_mod.Status.DONE and task.result:
+        location      = task.result.get("location", {})
+        listing_title = (task.result.get("custom_listing_title")
+                         or task.result.get("listing_title"))
     return jsonify({
-        "lat":         task.partial_lat,
-        "lon":         task.partial_lon,
-        "confidence":  task.partial_confidence,
-        "features":    task.partial_geojson.get("features", []) if task.partial_geojson else [],
+        "lat":          task.partial_lat,
+        "lon":          task.partial_lon,
+        "confidence":   task.partial_confidence,
+        "features":     task.partial_geojson.get("features", []) if task.partial_geojson else [],
         "progress_pct": task.progress_pct,
-        "progress":    task.progress,
-        "done":        task.status == task_mod.Status.DONE,
-        "error":       task.error if task.status == task_mod.Status.ERROR else None,
+        "progress":     task.progress,
+        "done":         task.status == task_mod.Status.DONE,
+        "error":        task.error if task.status == task_mod.Status.ERROR else None,
+        "location":     location,
+        "listing_title": listing_title,
     })
 
 
@@ -1194,4 +1258,202 @@ def map_page():
     return _render_map_page(
         result, privacy_circle=privacy,
         hide_poi_list=hide_poi_list, hide_overlay=hide_overlay,
+    )
+
+
+# ── Host Map: paid export flow ────────────────────────────────────────────────
+
+@wizard.post("/api/start-map")
+def api_start_map():
+    """Start a background POI task for the landing page host flow.
+
+    Returns {task_id, uuid, listing_id} so the frontend can poll
+    /tasks/<task_id>/map-state and later initiate Stripe checkout.
+    """
+    airbnb_url = request.form.get("airbnb_url", "").strip()
+    if not airbnb_url:
+        return jsonify({"error": "airbnb_url required"}), 400
+    try:
+        listing_id = poi_engine.listing_id_from_url(airbnb_url)
+    except Exception:
+        return jsonify({"error": "Could not parse an Airbnb listing ID from that URL."}), 400
+
+    map_uuid = str(uuid_mod.uuid4())
+    maps_db.create(map_uuid, listing_id, 0.0, 0.0)
+
+    task = task_mod.run_in_thread(_fetch_task, airbnb_url, None, None, None, False, map_uuid)
+    return jsonify({"task_id": task.task_id, "uuid": map_uuid, "listing_id": listing_id})
+
+
+@wizard.get("/p/<map_uuid>")
+def host_map_page(map_uuid: str):
+    """Shareable Host Map page — interactive map always visible, exports gated."""
+    rec: dict | None = maps_db.get(map_uuid)
+    if not rec:
+        abort(404)
+        return  # unreachable, satisfies type checker
+
+    # Verify payment immediately on Stripe success redirect
+    session_id_param = request.args.get("session_id", "").strip()
+    if session_id_param and not rec["unlocked"]:
+        try:
+            import stripe
+            stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+            s = stripe.checkout.Session.retrieve(session_id_param)
+            if s.payment_status == "paid":
+                maps_db.set_stripe_session(map_uuid, session_id_param)
+                maps_db.unlock(session_id_param)
+                rec = maps_db.get(map_uuid) or rec
+        except Exception:
+            pass
+
+    embed = request.args.get("embed") == "1"
+
+    result: dict = {}
+    if rec.get("result_path") and Path(rec["result_path"]).exists():
+        try:
+            result = json.loads(Path(rec["result_path"]).read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    geojson = result.get("geojson", {})
+    location = result.get("location", {})
+    listing_title = result.get("custom_listing_title") or result.get("listing_title")
+
+    category_counts: dict[str, int] = {}
+    for f in geojson.get("features", []):
+        cat = f.get("properties", {}).get("category")
+        if cat:
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+    n_pois = sum(category_counts.values())
+
+    base_url  = os.environ.get("SITE_BASE_URL", request.host_url.rstrip("/"))
+    share_url = f"{base_url}/p/{map_uuid}"
+
+    return render_template(
+        "p_uuid.html",
+        uuid=map_uuid,
+        lat=rec["lat"],
+        lon=rec["lon"],
+        geojson_json=json.dumps(geojson, ensure_ascii=False),
+        unlocked=bool(rec["unlocked"]),
+        location=location,
+        listing_title=listing_title,
+        n_pois=n_pois,
+        category_counts=category_counts,
+        share_url=share_url,
+        embed=embed,
+    )
+
+
+@wizard.post("/api/checkout")
+def api_checkout():
+    """Create a Stripe Checkout session for a Host Map export."""
+    import stripe
+
+    map_uuid = request.args.get("uuid", "").strip()
+    if not map_uuid:
+        return jsonify({"error": "uuid required"}), 400
+
+    rec = maps_db.get(map_uuid)
+    if not rec:
+        return jsonify({"error": "Map not found"}), 404
+
+    if rec["unlocked"]:
+        return jsonify({"error": "Already unlocked"}), 400
+
+    stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+    base_url = os.environ.get("SITE_BASE_URL", request.host_url.rstrip("/"))
+
+    checkout = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": "Le Quartier — Neighbourhood Map",
+                    "description": "Downloadable map PNG, QR code, and permanent shareable link for your Airbnb listing.",
+                },
+                "unit_amount": 1900,
+            },
+            "quantity": 1,
+        }],
+        metadata={"map_uuid": map_uuid},
+        success_url=f"{base_url}/p/{map_uuid}?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{base_url}/p/{map_uuid}",
+    )
+
+    maps_db.set_stripe_session(map_uuid, checkout.id)
+    return jsonify({"checkout_url": checkout.url})
+
+
+@wizard.post("/stripe/webhook")
+def stripe_webhook():
+    """Stripe webhook — marks Host Map as unlocked on payment completion."""
+    import stripe
+
+    payload = request.get_data()
+    sig     = request.headers.get("Stripe-Signature", "")
+    secret  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+
+    event = None
+    try:
+        event = stripe.Webhook.construct_event(payload, sig, secret)
+    except (ValueError, stripe.error.SignatureVerificationError):
+        abort(400)
+        return  # unreachable
+
+    if event["type"] == "checkout.session.completed":
+        session_id = event["data"]["object"]["id"]
+        maps_db.unlock(session_id)
+
+    return jsonify({"ok": True})
+
+
+@wizard.get("/p/<map_uuid>/download/map")
+def download_map_image(map_uuid: str):
+    """Download the PNG map export — generates via Playwright on first request."""
+    rec = maps_db.get(map_uuid)
+    if not rec or not rec["unlocked"]:
+        abort(403)
+
+    img_path = _MAPS_IMG_DIR / f"{map_uuid}_map.png"
+    if not img_path.exists():
+        _MAPS_IMG_DIR.mkdir(parents=True, exist_ok=True)
+        preview_url = os.environ.get("PREVIEW_BASE_URL", "http://127.0.0.1:5010")
+        env = os.environ.copy()
+        env["PREVIEW_BASE_URL"] = preview_url
+        result = subprocess.run(
+            ["node", str(_SCRIPTS_DIR / "generate-map-image.js"), map_uuid],
+            env=env, timeout=90,
+        )
+        if result.returncode != 0 or not img_path.exists():
+            abort(500)
+        maps_db.set_paths(map_uuid, rec.get("result_path"),  # type: ignore[union-attr]
+                          f"img/maps/{map_uuid}_map.png", rec.get("qr_path"))  # type: ignore[union-attr]
+
+    return send_file(
+        img_path,
+        as_attachment=True,
+        download_name=f"lequartier-{map_uuid[:8]}.png",
+        mimetype="image/png",
+    )
+
+
+@wizard.get("/p/<map_uuid>/download/qr")
+def download_qr(map_uuid: str):
+    """Download the QR code PNG — pre-generated when task completed."""
+    rec = maps_db.get(map_uuid)
+    if not rec or not rec["unlocked"]:
+        abort(403)
+
+    qr_path = _MAPS_IMG_DIR / f"{map_uuid}_qr.png"
+    if not qr_path.exists():
+        abort(404)
+
+    return send_file(
+        qr_path,
+        as_attachment=True,
+        download_name=f"lequartier-qr-{map_uuid[:8]}.png",
+        mimetype="image/png",
     )

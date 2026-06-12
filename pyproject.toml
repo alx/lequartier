@@ -13,6 +13,8 @@ dependencies = [
     "rich>=13.0",
     "tqdm>=4.66",
     "staticmap>=0.5",
+    "stripe>=8.0",
+    "qrcode[pil]>=7.0",
 ]
 
 [project.scripts]

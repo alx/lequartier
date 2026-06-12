@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.11"
 
 [[package]]
@@ -212,9 +212,11 @@ dependencies = [
     { name = "gunicorn" },
     { name = "overpass" },
     { name = "python-dotenv" },
+    { name = "qrcode", extra = ["pil"] },
     { name = "requests" },
     { name = "rich" },
     { name = "staticmap" },
+    { name = "stripe" },
     { name = "tqdm" },
     { name = "werkzeug" },
 ]
@@ -226,9 +228,11 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=23.0" },
     { name = "overpass", specifier = ">=0.7" },
     { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "qrcode", extras = ["pil"], specifier = ">=7.0" },
     { name = "requests", specifier = ">=2.31" },
     { name = "rich", specifier = ">=13.0" },
     { name = "staticmap", specifier = ">=0.5" },
+    { name = "stripe", specifier = ">=8.0" },
     { name = "tqdm", specifier = ">=4.66" },
     { name = "werkzeug", specifier = ">=3.0" },
 ]
@@ -551,6 +555,23 @@ wheels = [
 ]
 
 [[package]]
+name = "qrcode"
+version = "8.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/b2/7fc2931bfae0af02d5f53b174e9cf701adbb35f39d69c2af63d4a39f81a9/qrcode-8.2.tar.gz", hash = "sha256:35c3f2a4172b33136ab9f6b3ef1c00260dd2f66f858f24d88418a015f446506c", size = 43317, upload-time = "2025-05-01T15:44:24.726Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/b8/d2d6d731733f51684bbf76bf34dab3b70a9148e8f2cef2bb544fccec681a/qrcode-8.2-py3-none-any.whl", hash = "sha256:16e64e0716c14960108e85d853062c9e8bba5ca8252c0b4d0231b9df4060ff4f", size = 45986, upload-time = "2025-05-01T15:44:22.781Z" },
+]
+
+[package.optional-dependencies]
+pil = [
+    { name = "pillow" },
+]
+
+[[package]]
 name = "requests"
 version = "2.34.2"
 source = { registry = "https://pypi.org/simple" }
@@ -657,6 +678,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/36/a8/939282f5e368ce0211b0a78f3adb55b3111a8a400b872e759ed1013cc407/staticmap-0.5.7.tar.gz", hash = "sha256:c7a96b902ba61292e818c20b0810619d6b81a6cdb50bcc1ab92d50ac4db20a7f", size = 7740, upload-time = "2023-08-01T12:33:05.598Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/39/69/6f6c04591cced82a807b4b1e71e892ca7dc40c96d337ec6bd00f7be7035d/staticmap-0.5.7-py3-none-any.whl", hash = "sha256:f4ffc40ee4502b92e91045e0df85a46a2fd68483b4e7e404a6b545fd7396ea01", size = 7027, upload-time = "2023-08-01T12:33:03.987Z" },
+]
+
+[[package]]
+name = "stripe"
+version = "15.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d0/28/c3550f39d9e258c21bcba81a89ef3ca7af352ad2cb14fe16b80248841644/stripe-15.2.0.tar.gz", hash = "sha256:f795d8a8ff27433e9ab03099afc0f5c4e992a8a6f92b9f839dc0048bb12f76f6", size = 1520207, upload-time = "2026-05-27T20:34:44.256Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/2b/697003ba6349058b65a5cb6b0bd8a8b0e909ed35911f7beebfc24b0563ee/stripe-15.2.0-py3-none-any.whl", hash = "sha256:e74d45bb07bb912fdc4ce81ffbdf184bcb92ce6e210cb7939966e537021c1842", size = 2168459, upload-time = "2026-05-27T20:34:42.312Z" },
 ]
 
 [[package]]
