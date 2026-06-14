@@ -1343,6 +1343,7 @@ def host_map_page(map_uuid: str):
             pass
 
     embed = request.args.get("embed") == "1"
+    export_mode = request.args.get("export_mode") == "true"
 
     result: dict = {}
     if rec.get("result_path") and Path(rec["result_path"]).exists():
@@ -1380,6 +1381,7 @@ def host_map_page(map_uuid: str):
         category_colors=CATEGORY_COLORS,
         share_url=share_url,
         embed=embed,
+        export_mode=export_mode,
     )
 
 
@@ -1449,31 +1451,50 @@ def stripe_webhook():
 
 @wizard.get("/p/<map_uuid>/download/map")
 def download_map_image(map_uuid: str):
-    """Download the PNG map export — generates via Playwright on first request."""
+    """Download the PNG map export — async pre-warm at payment time; 202 on cache miss."""
     rec = maps_db.get(map_uuid)
     if not rec or not rec["unlocked"]:
         abort(403)
 
-    img_path = _MAPS_IMG_DIR / f"{map_uuid}_map.png"
-    if not img_path.exists():
-        _MAPS_IMG_DIR.mkdir(parents=True, exist_ok=True)
-        preview_url = os.environ.get("PREVIEW_BASE_URL", "http://127.0.0.1:5010")
-        env = os.environ.copy()
-        env["PREVIEW_BASE_URL"] = preview_url
-        result = subprocess.run(
-            ["node", str(_SCRIPTS_DIR / "generate-map-image.js"), map_uuid],
-            env=env, timeout=90,
+    img_path = _MAPS_IMG_DIR / f"{map_uuid}_map_v2.png"
+    if img_path.exists():
+        maps_db.set_paths(
+            map_uuid,
+            rec.get("result_path"),  # type: ignore[union-attr]
+            f"img/maps/{map_uuid}_map_v2.png",
+            rec.get("qr_path"),  # type: ignore[union-attr]
         )
-        if result.returncode != 0 or not img_path.exists():
-            abort(500)
-        maps_db.set_paths(map_uuid, rec.get("result_path"),  # type: ignore[union-attr]
-                          f"img/maps/{map_uuid}_map.png", rec.get("qr_path"))  # type: ignore[union-attr]
+        return send_file(
+            img_path,
+            as_attachment=True,
+            download_name=f"lequartier-{map_uuid[:8]}.png",
+            mimetype="image/png",
+        )
 
-    return send_file(
-        img_path,
-        as_attachment=True,
-        download_name=f"lequartier-{map_uuid[:8]}.png",
-        mimetype="image/png",
+    # PNG not ready — fire async generation and return a self-refreshing wait page.
+    # Never block the gunicorn worker with a synchronous Playwright call.
+    _MAPS_IMG_DIR.mkdir(parents=True, exist_ok=True)
+    preview_url = os.environ.get("PREVIEW_BASE_URL", "http://127.0.0.1:5010")
+    env = os.environ.copy()
+    env["PREVIEW_BASE_URL"] = preview_url
+    subprocess.Popen(
+        ["node", str(_SCRIPTS_DIR / "generate-map-image.js"), map_uuid],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return Response(
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<meta http-equiv='refresh' content='30'></head>"
+        "<body style='font-family:sans-serif;padding:2rem;max-width:480px;margin:auto;'>"
+        "<h2 style='color:#1a6b3c;'>Your map is being generated</h2>"
+        "<p>This page will refresh automatically in 30 seconds.</p>"
+        "<p style='color:#6b7280;font-size:0.9rem;'>If this page keeps refreshing after "
+        "2 minutes, email <a href='mailto:support@lequartier.co'>support@lequartier.co</a> "
+        "and we'll send your map manually.</p>"
+        "</body></html>",
+        status=202,
+        mimetype="text/html",
     )
 
 

@@ -12,6 +12,44 @@
 
 {% block content %}
 
+{% if export_mode %}
+<div id="export-header">
+  <span class="export-city-label">
+    {%- if location.neighbourhood and location.city -%}
+      {{ location.neighbourhood }}, {{ location.city }}
+    {%- elif location.city -%}
+      {{ location.city }}
+    {%- elif location.address -%}
+      {{ location.address }}
+    {%- endif -%}
+  </span>
+  <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Le Quartier" class="export-logo">
+</div>
+<style>
+  #export-header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 80px;
+    z-index: 10;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    border-bottom: 2px solid #1a6b3c;
+    box-sizing: border-box;
+  }
+  .export-city-label {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #111827;
+    letter-spacing: -0.01em;
+  }
+  .export-logo { height: 32px; width: auto; }
+  #map { top: 80px !important; }
+</style>
+{% endif %}
+
 {% if not embed %}
 <div class="center-overlay" id="host-map-overlay">
   <div class="overlay-card">
@@ -103,6 +141,7 @@
   var SHARE_URL = "{{ share_url }}";
 
   var GEOJSON = {{ geojson_json | safe }};
+  var EXPORT_MODE = {{ export_mode | tojson }};
 
   var CIRCLE_STYLES = [
     { radiusM: 400,  label: '5 min' },
@@ -233,13 +272,26 @@
     var color = props.color || CATEGORY_COLORS[cat] || '#6b7280';
     var id = ++_idSeq;
 
+    var exportLabel = '';
+    if (EXPORT_MODE && props.name) {
+      var labelText = props.name.length > 18 ? props.name.substring(0, 17) + '…' : props.name;
+      exportLabel = '<div style="position:absolute;left:' + (POI_SIZE + 4) + 'px;top:50%;' +
+        'transform:translateY(-50%);white-space:nowrap;' +
+        'font-size:9px;font-weight:600;color:#1a1a1a;' +
+        'background:rgba(255,255,255,0.92);padding:2px 6px;border-radius:20px;' +
+        'box-shadow:0 1px 4px rgba(0,0,0,.18);pointer-events:none;">' + labelText + '</div>';
+    }
+
     var m = L.marker([coords[1], coords[0]], {
       icon: L.divIcon({
         className: '',
-        html: '<div style="width:' + POI_SIZE + 'px;height:' + POI_SIZE + 'px;border-radius:50%;background:' + color +
+        html: '<div style="position:relative;width:' + POI_SIZE + 'px;height:' + POI_SIZE + 'px;overflow:visible;">' +
+              '<div style="width:' + POI_SIZE + 'px;height:' + POI_SIZE + 'px;border-radius:50%;background:' + color +
               ';display:flex;align-items:center;justify-content:center;' +
               'border:2px solid rgba(255,255,255,1);box-shadow:0 1px 5px rgba(0,0,0,.4);cursor:pointer;">' +
-              '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:' + Math.round(POI_SIZE * 0.4) + 'px;"></i></div>',
+              '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:' + Math.round(POI_SIZE * 0.4) + 'px;"></i></div>' +
+              exportLabel +
+              '</div>',
         iconSize: [POI_SIZE, POI_SIZE], iconAnchor: [POI_SIZE / 2, POI_SIZE / 2],
       }),
     });
@@ -279,6 +331,20 @@
   function loadPOIs() {
     var features = (GEOJSON && GEOJSON.features) ? GEOJSON.features : [];
     if (!features.length) return;
+
+    if (EXPORT_MODE) {
+      // Keep primary POIs only, top 2 per category by score for a clean export
+      var perCat = {};
+      features = features
+        .filter(function(f) { return f.properties.status !== 'secondary'; })
+        .sort(function(a, b) { return (b.properties.score || 0) - (a.properties.score || 0); })
+        .filter(function(f) {
+          var cat = f.properties.category || '?';
+          perCat[cat] = (perCat[cat] || 0) + 1;
+          return perCat[cat] <= 2;
+        });
+    }
+
     poiLayer = L.layerGroup();
     features.forEach(function(f) {
       if (!f.geometry || !f.geometry.coordinates) return;
@@ -339,6 +405,7 @@
     }).addTo(map);
 
     map.fitBounds(L.latLng(LAT, LON).toBounds(1200 * 2));
+    if (EXPORT_MODE) { map.setZoom(map.getZoom() + 2); }
     document.getElementById('map').classList.add('map-active');
 
     map.on('click', function() {
@@ -347,7 +414,7 @@
     });
 
     drawRings(LAT, LON);
-    placeRentalMarker(LAT, LON);
+    {% if not export_mode %}placeRentalMarker(LAT, LON);{% endif %}
     loadPOIs();
   });
 })();

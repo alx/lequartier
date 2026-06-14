@@ -2,8 +2,9 @@
 /**
  * scripts/generate-map-image.js
  *
- * Generates a 1200×800 PNG map export for a Host Map page (/p/<uuid>).
- * Screenshots /p/<uuid>?embed=1 using Playwright.
+ * Generates a 1200×960 PNG map export for a Host Map page (/p/<uuid>).
+ * Screenshots /p/<uuid>?embed=1&export_mode=true using Playwright.
+ * The 960px height accommodates an 80px branded header above an 880px map.
  *
  * Usage:
  *   node scripts/generate-map-image.js <uuid>
@@ -12,7 +13,7 @@
  *   PREVIEW_BASE_URL  Base URL of the running Flask app (default: http://127.0.0.1:5010)
  *
  * Output:
- *   src/web/static/img/maps/<uuid>_map.png
+ *   src/web/static/img/maps/<uuid>_map_v2.png
  */
 
 const { chromium } = require('playwright');
@@ -28,13 +29,13 @@ if (!mapUuid) {
 const BASE_URL  = process.env.PREVIEW_BASE_URL || 'http://127.0.0.1:5010';
 const OUT_DIR   = path.resolve(__dirname, '..', 'src', 'web', 'static', 'img', 'maps');
 const WIDTH     = 1200;
-const HEIGHT    = 800;
+const HEIGHT    = 960;
 const TILE_WAIT = 3000;
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
-const url     = `${BASE_URL}/p/${mapUuid}?embed=1`;
-const outFile = path.join(OUT_DIR, `${mapUuid}_map.png`);
+const url     = `${BASE_URL}/p/${mapUuid}?embed=1&export_mode=true`;
+const outFile = path.join(OUT_DIR, `${mapUuid}_map_v2.png`);
 
 console.log(`Generating map image for ${mapUuid}`);
 console.log(`  URL : ${url}`);
