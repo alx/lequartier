@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
 {% block title %}
-  {% if location.neighbourhood and location.city %}{{ location.neighbourhood }}, {{ location.city }} — Le Quartier{% elif location.city %}{{ location.city }} — Le Quartier{% else %}Le Quartier — Neighbourhood Map{% endif %}
+  {% if location.city %}{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}{% if location.neighbourhood %} — {{ location.neighbourhood }}{% endif %} — Le Quartier{% else %}Le Quartier — Neighbourhood Map{% endif %}
 {% endblock %}
 
 {% block og_title %}
-  {% if location.neighbourhood and location.city %}{{ location.neighbourhood }}, {{ location.city }}{% elif location.city %}{{ location.city }}{% else %}Le Quartier{% endif %}
+  {% if location.city %}{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}{% elif location.neighbourhood %}{{ location.neighbourhood }}{% else %}Le Quartier{% endif %}
 {% endblock %}
 {% block og_description %}Walkable neighbourhood map — {{ n_pois }} places nearby.{% endblock %}
 {% block og_url %}{{ share_url }}{% endblock %}
@@ -56,11 +56,13 @@
     <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
 
     <div style="margin-bottom:0.6rem;">
-      {% if location.neighbourhood and location.city %}
-        <div style="font-size:1.05rem;font-weight:700;color:var(--text);">{{ location.neighbourhood }}</div>
-        <div style="font-size:0.88rem;color:var(--text-muted);">{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}</div>
-      {% elif location.city %}
+      {% if location.city %}
         <div style="font-size:1.05rem;font-weight:700;color:var(--text);">{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}</div>
+        {% if location.neighbourhood %}
+        <div style="font-size:0.88rem;color:var(--text-muted);">{{ location.neighbourhood }}</div>
+        {% endif %}
+      {% elif location.neighbourhood %}
+        <div style="font-size:1.05rem;font-weight:700;color:var(--text);">{{ location.neighbourhood }}</div>
       {% endif %}
       {% if listing_title %}
         <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ listing_title }}">{{ listing_title }}</div>
@@ -71,9 +73,9 @@
     <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.65rem;">
       <strong style="color:var(--text);">{{ n_pois }}</strong> places within walking distance
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.85rem;">
+    <div id="cat-pills-container" style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;margin-bottom:0.85rem;">
       {% for cat, count in category_counts.items() %}
-      <span style="display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+      <span class="cat-pill" data-cat="{{ cat }}" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
         <i class="fa-solid {{ category_icons.get(cat, 'fa-location-dot') }}" style="color:{{ category_colors.get(cat, 'var(--text-muted)') }};"></i>
         {{ cat.replace('_', ' ') }} &middot; {{ count }}
       </span>
@@ -143,6 +145,16 @@
   var GEOJSON = {{ geojson_json | safe }};
   var EXPORT_MODE = {{ export_mode | tojson }};
 
+  var _catMarkers      = {};
+  var _hiddenCats      = {};
+  var _secondaryMarkers = [];
+  var _secondaryVisible = false;
+  var PILL_ORDER = [
+    'Supermarket', 'Park', 'Playground',
+    'Bakery & Food', 'Restaurant', 'Market',
+    'Transit', 'Bike Share', 'Health',
+  ];
+
   var CIRCLE_STYLES = [
     { radiusM: 400,  label: '5 min' },
     { radiusM: 800,  label: '10 min' },
@@ -157,7 +169,7 @@
     'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
     'Park': 'fa-tree', 'Transit': 'fa-bus', 'Restaurant': 'fa-utensils',
     'Market': 'fa-store', 'Supermarket': 'fa-cart-shopping',
-    'Bakery & Food': 'fa-bread-slice', 'Bike Share': 'fa-bicycle',
+    'Bakery & Food': 'fa-cookie-bite', 'Bike Share': 'fa-bicycle',
     'Health': 'fa-kit-medical', 'Playground': 'fa-child-reaching',
     'Activity': 'fa-person-running', 'Culture': 'fa-masks-theater',
     'Wellness': 'fa-spa',
@@ -348,7 +360,14 @@
     poiLayer = L.layerGroup();
     features.forEach(function(f) {
       if (!f.geometry || !f.geometry.coordinates) return;
-      makePOIMarker(f).addTo(poiLayer);
+      if (f.properties && f.properties.status === 'secondary') {
+        _secondaryMarkers.push(makePOIMarker(f));
+        return;
+      }
+      var m = makePOIMarker(f);
+      var cat = (f.properties && f.properties.category) || '';
+      if (cat) (_catMarkers[cat] = _catMarkers[cat] || []).push(m);
+      m.addTo(poiLayer);
     });
     poiLayer.addTo(map);
   }
@@ -416,7 +435,54 @@
     drawRings(LAT, LON);
     {% if not export_mode %}placeRentalMarker(LAT, LON);{% endif %}
     loadPOIs();
+
+    // Wire category pills
+    var pillContainer = document.getElementById('cat-pills-container');
+    if (pillContainer) {
+      var pillEls = Array.from(pillContainer.querySelectorAll('.cat-pill'));
+      var bycat = {};
+      pillEls.forEach(function(el) { bycat[el.dataset.cat] = el; });
+      PILL_ORDER.forEach(function(cat) {
+        if (bycat[cat]) pillContainer.appendChild(bycat[cat]);
+      });
+      pillEls.forEach(function(el) {
+        el.onclick = function() { _toggleCat(el.dataset.cat); };
+      });
+      if (_secondaryMarkers.length) {
+        var link = document.createElement('a');
+        link.id = 'show-more-link';
+        link.href = '#';
+        link.textContent = 'Show more…';
+        link.style.cssText = 'font-size:0.78rem;color:var(--text-muted);text-decoration:underline;align-self:center;white-space:nowrap;';
+        link.onclick = function(e) { e.preventDefault(); _toggleSecondary(); };
+        pillContainer.appendChild(link);
+      }
+    }
   });
+
+  function _toggleCat(cat) {
+    _hiddenCats[cat] = !_hiddenCats[cat];
+    var markers = _catMarkers[cat] || [];
+    markers.forEach(function(m) {
+      if (_hiddenCats[cat]) poiLayer.removeLayer(m);
+      else poiLayer.addLayer(m);
+    });
+    var pillContainer = document.getElementById('cat-pills-container');
+    if (pillContainer) {
+      var el = pillContainer.querySelector('[data-cat="' + cat + '"]');
+      if (el) el.style.opacity = _hiddenCats[cat] ? '0.45' : '1';
+    }
+  }
+
+  function _toggleSecondary() {
+    _secondaryVisible = !_secondaryVisible;
+    _secondaryMarkers.forEach(function(m) {
+      if (_secondaryVisible) poiLayer.addLayer(m);
+      else poiLayer.removeLayer(m);
+    });
+    var link = document.getElementById('show-more-link');
+    if (link) link.textContent = _secondaryVisible ? 'Show less…' : 'Show more…';
+  }
 })();
 </script>
 {% endblock %}

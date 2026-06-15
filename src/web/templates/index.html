@@ -150,7 +150,7 @@
     'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
     'Park': 'fa-tree', 'Transit': 'fa-bus', 'Restaurant': 'fa-utensils',
     'Market': 'fa-store', 'Supermarket': 'fa-cart-shopping',
-    'Bakery & Food': 'fa-bread-slice', 'Bike Share': 'fa-bicycle',
+    'Bakery & Food': 'fa-cookie-bite', 'Bike Share': 'fa-bicycle',
     'Health': 'fa-kit-medical', 'Playground': 'fa-child-reaching',
     'Activity': 'fa-person-running', 'Culture': 'fa-masks-theater',
     'Wellness': 'fa-spa',
@@ -431,6 +431,17 @@
   var _tallyData  = {};
   var _mapFlownTo = false;
 
+  var _catMarkers      = {};
+  var _hiddenCats      = {};
+  var _secondaryMarkers = [];
+  var _secondaryVisible = false;
+
+  var PILL_ORDER = [
+    'Supermarket', 'Park', 'Playground',
+    'Bakery & Food', 'Restaurant', 'Market',
+    'Transit', 'Bike Share', 'Health',
+  ];
+
   var FA_ICONS_TALLY = FA_ICONS;
 
   function _showState(state) {
@@ -444,16 +455,50 @@
   }
 
   function _tallyHtml(tally) {
-    return Object.keys(tally).map(function(cat) {
-      var icon = FA_ICONS_TALLY[cat] || 'fa-location-dot';
-      var color = CATEGORY_COLORS[cat] || 'var(--text-muted)';
-      return '<span style="display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);' +
-             'border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;' +
-             'font-size:0.78rem;color:var(--text-muted);">' +
-             '<i class="fa-solid ' + icon + '" style="color:' + color + ';"></i>' +
-             cat.replace(/_/g, ' ') + ' &middot; ' + tally[cat] + '</span>';
+    var ordered = PILL_ORDER.filter(function(c) { return tally[c]; })
+      .concat(Object.keys(tally).filter(function(c) {
+        return PILL_ORDER.indexOf(c) < 0 && tally[c];
+      }));
+    var pills = ordered.map(function(cat) {
+      var icon    = FA_ICONS_TALLY[cat] || 'fa-location-dot';
+      var color   = CATEGORY_COLORS[cat] || 'var(--text-muted)';
+      var opacity = _hiddenCats[cat] ? '0.45' : '1';
+      return '<span data-cat="' + cat + '" onclick="_toggleCat(this)" '
+        + 'style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;'
+        + 'background:var(--surface2);border:1px solid var(--border);border-radius:20px;'
+        + 'padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);opacity:' + opacity + ';">'
+        + '<i class="fa-solid ' + icon + '" style="color:' + color + ';"></i>'
+        + cat.replace(/_/g, ' ') + ' &middot; ' + tally[cat] + '</span>';
     }).join('');
+    var showMore = _secondaryMarkers.length
+      ? '<a id="show-more-link" href="#" onclick="_toggleSecondary(event)" '
+        + 'style="font-size:0.78rem;color:var(--text-muted);text-decoration:underline;'
+        + 'align-self:center;white-space:nowrap;">'
+        + (_secondaryVisible ? 'Show less…' : 'Show more…') + '</a>'
+      : '';
+    return pills + showMore;
   }
+
+  window._toggleCat = function(el) {
+    var cat = el.dataset.cat;
+    _hiddenCats[cat] = !_hiddenCats[cat];
+    var markers = _catMarkers[cat] || [];
+    markers.forEach(function(m) {
+      if (_hiddenCats[cat]) poiLayer.removeLayer(m);
+      else poiLayer.addLayer(m);
+    });
+    document.getElementById('results-tally').innerHTML = _tallyHtml(_tallyData);
+  };
+
+  window._toggleSecondary = function(e) {
+    e.preventDefault();
+    _secondaryVisible = !_secondaryVisible;
+    _secondaryMarkers.forEach(function(m) {
+      if (_secondaryVisible) poiLayer.addLayer(m);
+      else poiLayer.removeLayer(m);
+    });
+    document.getElementById('results-tally').innerHTML = _tallyHtml(_tallyData);
+  };
 
   window.lqStartMap = function(e) {
     e.preventDefault();
@@ -468,6 +513,7 @@
     _seenIds = {};
     _tallyData = {};
     _mapFlownTo = false;
+    _catMarkers = {}; _hiddenCats = {}; _secondaryMarkers = []; _secondaryVisible = false;
 
     fetch('/api/start-map', { method: 'POST', body: fd })
       .then(function(r) { return r.json(); })
@@ -518,8 +564,13 @@
         _seenIds[fid] = true;
         var cat = f.properties && f.properties.category;
         if (cat) _tallyData[cat] = (_tallyData[cat] || 0) + 1;
-        if (f.properties && f.properties.status === 'secondary') return;
-        makePOIMarker(f, d.lat || CITY_LAT, d.lon || CITY_LON).addTo(poiLayer);
+        if (f.properties && f.properties.status === 'secondary') {
+          _secondaryMarkers.push(makePOIMarker(f, d.lat || CITY_LAT, d.lon || CITY_LON));
+          return;
+        }
+        var marker = makePOIMarker(f, d.lat || CITY_LAT, d.lon || CITY_LON);
+        marker.addTo(poiLayer);
+        if (cat) { (_catMarkers[cat] = _catMarkers[cat] || []).push(marker); }
       });
       document.getElementById('loading-tally').innerHTML = _tallyHtml(_tallyData);
     }
@@ -557,12 +608,12 @@
 
   function _showResults(d) {
     var loc = d.location || {};
-    document.getElementById('results-location').textContent = loc.neighbourhood || loc.city || '';
-    var cityParts = [];
-    if (loc.neighbourhood && loc.city) cityParts.push(loc.city);
-    else if (!loc.neighbourhood && loc.city) { /* already in location */ }
-    if (loc.country) cityParts.push(loc.country);
-    document.getElementById('results-city').textContent = cityParts.join(', ');
+    var headerParts = [];
+    if (loc.city) headerParts.push(loc.city);
+    if (loc.country) headerParts.push(loc.country);
+    document.getElementById('results-location').textContent =
+      headerParts.join(', ') || loc.neighbourhood || '';
+    document.getElementById('results-city').textContent = loc.neighbourhood || '';
 
     var total = Object.values(_tallyData).reduce(function(a, b) { return a + b; }, 0);
     document.getElementById('results-summary').innerHTML =
@@ -577,6 +628,8 @@
     document.getElementById('bar-link-text').textContent = shareUrl;
     document.getElementById('bar-qr-img').src = '/static/img/maps/' + uuid + '_qr.png';
     _pollMapPng(uuid);
+
+    history.pushState(null, '', '/p/' + uuid);
   }
 
   function _pollMapPng(uuid) {
