@@ -53,18 +53,22 @@ def resolve_coords(
 
 
 def fetch_all(
-    airbnb_url: str,
-    lat: float,
-    lon: float,
+    airbnb_url: str = "",
+    lat: float = 0,
+    lon: float = 0,
     categories: list[str] | None = None,
     radius: float | None = None,
     progress_cb=None,
     partial_cb=None,
     log_cb=None,
+    listing_id: str | None = None,
 ) -> tuple[dict, dict, dict, str]:
     cfg = lib.get_config()
     cats   = categories or cfg.default_categories
     radius = radius or cfg.search_radius_m
+
+    if listing_id is None:
+        listing_id = lib.listing_id_from_url(airbnb_url)
 
     def _prog(pct, msg):
         if progress_cb:
@@ -74,17 +78,14 @@ def fetch_all(
         if log_cb:
             log_cb(msg)
 
-    def _emit_partial(filtered_partial, listing_id, location_partial=None):
+    def _emit_partial(filtered_partial, location_partial=None):
         if not partial_cb:
             return
-        slug = f"airbnb/{listing_id}"
         partial_gj = lib.build_geojson(
-            airbnb_url, lat, lon, filtered_partial, radius, slug,
+            airbnb_url, lat, lon, filtered_partial, radius, listing_id,
             location=location_partial or {},
         )
         partial_cb(partial_gj)
-
-    listing_id = lib.listing_id_from_url(airbnb_url)
 
     def _per_cat(cat_key):
         label = lib.CATEGORIES.get(cat_key, {}).get("label", cat_key)
@@ -95,7 +96,7 @@ def fetch_all(
 
     if osm:
         osm_filtered = lib.filter_and_limit(lib.merge_results(osm, None), lat, lon)
-        _emit_partial(osm_filtered, listing_id)
+        _emit_partial(osm_filtered)
 
     api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
     google  = None
@@ -111,10 +112,9 @@ def fetch_all(
     filtered = lib.filter_and_limit(merged, lat, lon)
 
     _prog(90, "Building GeoJSON…")
-    location   = lib.reverse_geocode(lat, lon)
-    slug       = f"airbnb/{listing_id}"
-    geojson    = lib.build_geojson(airbnb_url, lat, lon, filtered, radius, slug,
-                                   location=location)
+    location = lib.reverse_geocode(lat, lon)
+    geojson  = lib.build_geojson(airbnb_url, lat, lon, filtered, radius, listing_id,
+                                  location=location)
 
     return filtered, geojson, location, listing_id
 

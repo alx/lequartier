@@ -6,6 +6,8 @@
       zillow.com/homedetails/{{ listing_id }}
     {%- elif listing_id_prefix == 'map' -%}
       {{ listing_id }}
+    {%- elif listing_id_prefix == 'geo' -%}
+      {{ listing_id }}
     {%- else -%}
       airbnb.com/rooms/{{ listing_id }}
     {%- endif -%}

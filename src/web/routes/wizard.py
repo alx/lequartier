@@ -404,6 +404,76 @@ def _fetch_task_direct(
                               error=str(exc), progress_pct=100)
 
 
+def _fetch_task_geo(
+    task: task_mod.TaskState,
+    listing_id: str,
+    lat: float,
+    lon: float,
+) -> None:
+    """Task runner for coordinate-based map generation — no Airbnb URL involved."""
+    try:
+        task_mod.store.update(task.task_id, status=task_mod.Status.RUNNING,
+                              progress="Checking cache…", progress_pct=10,
+                              partial_lat=lat, partial_lon=lon, partial_confidence="high")
+
+        cfg        = poi_engine.get_cfg()
+        categories = cfg.default_categories if cfg else []
+
+        cached = cache_mod.get(listing_id, lat, lon, categories,
+                               ttl_days=cfg.cache_ttl_days if cfg else 7)
+        if cached:
+            features = cached.get("geojson", {}).get("features", [])
+            if features and "status" not in features[0].get("properties", {}):
+                poi_engine.apply_status_curation(features)
+            task_mod.store.update(task.task_id,
+                                  status=task_mod.Status.DONE,
+                                  progress="Loaded from cache",
+                                  progress_pct=100,
+                                  result={**cached, "from_cache": True})
+            return
+
+        def _prog(pct, msg):
+            task_mod.store.update(task.task_id, progress=msg, progress_pct=pct)
+
+        def _partial(partial_gj):
+            task_mod.store.update(task.task_id, partial_geojson=partial_gj)
+
+        def _log(msg):
+            task_mod.store.update(task.task_id, progress=msg)
+
+        _filtered, geojson, location, _ = poi_engine.fetch_all(
+            lat=lat, lon=lon,
+            listing_id=listing_id,
+            progress_cb=_prog, partial_cb=_partial, log_cb=_log,
+        )
+
+        n_pois = len(geojson.get("features", []))
+        result = {
+            "lat":           lat,
+            "lon":           lon,
+            "confidence":    "high",
+            "listing_id":    listing_id,
+            "location":      location,
+            "geojson":       geojson,
+            "n_pois":        n_pois,
+            "airbnb_url":    "",
+            "from_cache":    False,
+            "listing_title": None,
+            "listing_photo": None,
+        }
+
+        cache_mod.put(listing_id, lat, lon, categories, result)
+
+        task_mod.store.update(task.task_id,
+                              status=task_mod.Status.DONE,
+                              progress="Done!",
+                              progress_pct=100,
+                              result=result)
+    except Exception as exc:
+        task_mod.store.update(task.task_id, status=task_mod.Status.ERROR,
+                              error=str(exc), progress_pct=100)
+
+
 def _random_city() -> dict:
     cities = current_app.config.get("TOP100_CITIES", [])
     return random.choice(cities) if cities else {"lat": 48.8566, "lon": 2.3522, "name": "Paris", "country": "FR"}
@@ -411,17 +481,8 @@ def _random_city() -> dict:
 
 @wizard.get("/")
 def index():
-    recent = cache_mod.recent(6)
-    for entry in recent:
-        lid = entry["listing_id"]
-        og_path = _OG_IMAGES_DIR / f"{lid}.png"
-        if og_path.exists():
-            entry["thumb_url"] = url_for("static", filename=f"img/og/{lid}.png")
-        else:
-            entry["thumb_url"] = url_for("wizard.airbnb_preview_jpg", listing_id=lid)
-        entry["map_url"] = url_for("wizard.airbnb_page", listing_id=lid)
     all_cities = current_app.config.get("TOP100_CITIES", [])
-    return render_template("index.html", bg_city=_random_city(), recent_maps=recent, all_cities=all_cities, stripe_active=_stripe_active())
+    return render_template("index.html", bg_city=_random_city(), all_cities=all_cities, stripe_active=_stripe_active())
 
 
 @wizard.get("/api/listing-preview")
@@ -634,6 +695,41 @@ def airbnb_page(listing_id: str):
     airbnb_url = f"https://www.airbnb.com/rooms/{listing_id}"
     task = task_mod.run_in_thread(_fetch_task, airbnb_url, None, None, None, refresh)
     return redirect(url_for("wizard.airbnb_page", listing_id=listing_id, task_id=task.task_id))
+
+
+@wizard.get("/geo/<coords>")
+def geo_page(coords: str):
+    """Loading gate for coordinate-based maps — /geo/9.4781,100.0472 → /p/<uuid>."""
+    try:
+        p1, p2 = coords.split(",", 1)
+        lat = round(float(p1), 4)
+        lon = round(float(p2), 4)
+    except (ValueError, AttributeError):
+        abort(400)
+        return
+
+    listing_id = f"geo/{lat},{lon}"
+    task_id    = request.args.get("task_id")
+
+    if task_id:
+        task = task_mod.store.get(task_id)
+        if task and task.status == task_mod.Status.DONE:
+            r = task.result
+            map_uuid = _get_or_create_host_map(r["listing_id"], r["lat"], r["lon"], r)
+            return redirect(url_for("wizard.host_map_page", map_uuid=map_uuid))
+        if task and task.status == task_mod.Status.ERROR:
+            return render_template("airbnb.html", mode="error", listing_id=coords,
+                                   listing_id_prefix="geo", error=task.error, readonly=True)
+        return render_template("airbnb.html", mode="loading", listing_id=coords,
+                               listing_id_prefix="geo", task_id=task_id, readonly=True)
+
+    cached = cache_mod.get(listing_id, lat, lon)
+    if cached:
+        map_uuid = _get_or_create_host_map(listing_id, cached["lat"], cached["lon"], cached)
+        return redirect(url_for("wizard.host_map_page", map_uuid=map_uuid))
+
+    task = task_mod.run_in_thread(_fetch_task_geo, listing_id, lat, lon)
+    return redirect(url_for("wizard.geo_page", coords=coords, task_id=task.task_id))
 
 
 @wizard.get("/airbnb/<listing_id>/edit")
