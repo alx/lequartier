@@ -241,9 +241,15 @@
       var pillEls = Array.from(pillContainer.querySelectorAll('.cat-pill'));
       var bycat = {};
       pillEls.forEach(function(el) { bycat[el.dataset.cat] = el; });
-      PILL_ORDER.forEach(function(cat) {
-        if (bycat[cat]) pillContainer.appendChild(bycat[cat]);
-      });
+      var DEFAULT_ON = ['Supermarket', 'Park', 'Playground'];
+      var extraCats = pillEls.map(function(el) { return el.dataset.cat; })
+        .filter(function(c) { return PILL_ORDER.indexOf(c) < 0; });
+      DEFAULT_ON
+        .concat(PILL_ORDER.filter(function(c) { return DEFAULT_ON.indexOf(c) < 0; }))
+        .concat(extraCats)
+        .forEach(function(cat) {
+          if (bycat[cat]) pillContainer.appendChild(bycat[cat]);
+        });
       pillEls.forEach(function(el) {
         if (LQ.hiddenCats[el.dataset.cat]) el.style.opacity = '0.45';
         el.onclick = function() { _toggleCat(el.dataset.cat); };

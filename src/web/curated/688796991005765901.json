@@ -344,7 +344,7 @@
           },
           "properties": {
             "name": "Lamai Fresh Food Market",
-            "category": "Culture",
+            "category": "Market",
             "icon": "🏛️",
             "coord_source": "google_maps_pin",
             "coord_accuracy": "high",
@@ -862,30 +862,6 @@
             "phone": "+66 81 823 5159",
             "status": "primary",
             "score": 35
-          }
-        },
-        {
-          "type": "Feature",
-          "id": "airbnb/688796991005765901-044",
-          "geometry": {
-            "type": "Point",
-            "coordinates": [
-              100.0484012,
-              9.4703435
-            ]
-          },
-          "properties": {
-            "name": "Wi Num Korat",
-            "category": "Restaurant",
-            "icon": "🍽️",
-            "coord_source": "nominatim",
-            "coord_accuracy": "medium",
-            "source": "curated",
-            "listing_url": "https://www.airbnb.com/rooms/688796991005765901",
-            "generated_name": false,
-            "phone": "+66 63 236 1891",
-            "status": "primary",
-            "score": 62
           }
         },
         {
