@@ -19,6 +19,7 @@ from flask import (
     abort,
     current_app,
     jsonify,
+    make_response,
     redirect,
     render_template,
     request,
@@ -420,7 +421,7 @@ def index():
             entry["thumb_url"] = url_for("wizard.airbnb_preview_jpg", listing_id=lid)
         entry["map_url"] = url_for("wizard.airbnb_page", listing_id=lid)
     all_cities = current_app.config.get("TOP100_CITIES", [])
-    return render_template("index.html", bg_city=_random_city(), recent_maps=recent, all_cities=all_cities)
+    return render_template("index.html", bg_city=_random_city(), recent_maps=recent, all_cities=all_cities, stripe_active=_stripe_active())
 
 
 @wizard.get("/api/listing-preview")
@@ -458,6 +459,20 @@ def step1_submit():
     return redirect(url_for("wizard.airbnb_edit_page", listing_id=listing_id, task_id=task.task_id))
 
 
+def _get_or_create_host_map(listing_id: str, lat: float, lon: float, result: dict) -> str:
+    """Return the stable UUID for listing_id, creating one if absent."""
+    existing = maps_db.get_by_listing_id(listing_id)
+    if existing:
+        map_uuid = existing["uuid"]
+        if not existing.get("result_path") or not Path(existing["result_path"]).exists():
+            _generate_exports(map_uuid, listing_id, lat, lon, result)
+        return map_uuid
+    map_uuid = str(uuid_mod.uuid4())
+    maps_db.create(map_uuid, listing_id, lat, lon)
+    _generate_exports(map_uuid, listing_id, lat, lon, result)
+    return map_uuid
+
+
 def _poll_task(task_id: str, readonly: bool = False):
     task = task_mod.store.get(task_id)
     if not task:
@@ -469,10 +484,16 @@ def _poll_task(task_id: str, readonly: bool = False):
                                progress=task.error, error=True, readonly=readonly)
 
     if task.status == task_mod.Status.DONE:
-        r   = task.result
+        r = task.result
+        if readonly:
+            map_uuid = _get_or_create_host_map(
+                r["listing_id"], r["lat"], r["lon"], r
+            )
+            resp = make_response("")
+            resp.headers["HX-Redirect"] = url_for("wizard.host_map_page", map_uuid=map_uuid)
+            return resp
         cfg = poi_engine.get_cfg()
-        if not readonly:
-            session["active_result"] = r
+        session["active_result"] = r
         location = dict(r.get("location", {}))
         if r.get("custom_neighbourhood"):
             location["neighbourhood"] = r["custom_neighbourhood"]
@@ -492,7 +513,7 @@ def _poll_task(task_id: str, readonly: bool = False):
             categories=cfg.categories if cfg else {},
             listing_title=listing_title,
             listing_photo=r.get("listing_photo"),
-            readonly=readonly,
+            readonly=False,
         )
 
     return render_template("fragments/loading_fetch.html",
@@ -586,14 +607,16 @@ def _render_airbnb_map(r: dict, readonly: bool = False, embed: bool = False) -> 
 
 @wizard.get("/airbnb/<listing_id>")
 def airbnb_page(listing_id: str):
-    """Read-only map view — no editing UI."""
+    """Loading gate — redirects to /p/<uuid> once data is ready."""
     task_id = request.args.get("task_id")
     refresh = request.args.get("refresh") == "1"
 
     if task_id:
         task = task_mod.store.get(task_id)
         if task and task.status == task_mod.Status.DONE:
-            return _render_airbnb_map(task.result, readonly=True)
+            r = task.result
+            map_uuid = _get_or_create_host_map(r["listing_id"], r["lat"], r["lon"], r)
+            return redirect(url_for("wizard.host_map_page", map_uuid=map_uuid))
         if task and task.status == task_mod.Status.ERROR:
             return render_template("airbnb.html", mode="error", listing_id=listing_id,
                                    listing_id_prefix="airbnb", error=task.error, readonly=True)
@@ -603,7 +626,10 @@ def airbnb_page(listing_id: str):
     if not refresh:
         cached = cache_mod.get(listing_id)
         if cached:
-            return _render_airbnb_map(cached, readonly=True)
+            map_uuid = _get_or_create_host_map(
+                cached["listing_id"], cached["lat"], cached["lon"], cached
+            )
+            return redirect(url_for("wizard.host_map_page", map_uuid=map_uuid))
 
     airbnb_url = f"https://www.airbnb.com/rooms/{listing_id}"
     task = task_mod.run_in_thread(_fetch_task, airbnb_url, None, None, None, refresh)

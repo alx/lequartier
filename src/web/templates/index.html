@@ -24,9 +24,9 @@
         <button id="btn-fetch" type="submit" class="btn btn-primary" style="flex:2;" disabled>
           <i class="fa-solid fa-map"></i> Generate my map
         </button>
-        <button type="button" class="btn btn-outline" style="flex:1;" onclick="lqTryExample(event)">
+        <a href="/p/a49e2136-e5f0-4187-a257-1c5af63ab930" class="btn btn-outline" style="flex:1;text-decoration:none;">
           <i class="fa-solid fa-map-location-dot"></i> Peek at a map
-        </button>
+        </a>
       </div>
     </form>
     <div id="start-error" class="alert alert-error" style="display:none;margin-top:0.6rem;"></div>
@@ -102,12 +102,29 @@
       </div>
     </div>
   </div>
+  {% if stripe_active %}
   <div>
     <button id="btn-checkout" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="lqStartCheckout()">
       <span id="checkout-label"><i class="fa-solid fa-lock"></i> Get your map — $19</span>
       <span id="checkout-spinner" class="spinner" style="display:none;border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>
     </button>
   </div>
+  {% else %}
+  <div id="bar-free-actions" style="display:none;">
+    <a id="btn-dl-map" href="#" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
+      <i class="fa-solid fa-image"></i> Download map image
+    </a>
+    <a id="btn-dl-qr" href="#" class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
+      <i class="fa-solid fa-qrcode"></i> Download QR code
+    </a>
+    <button class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:0.4rem;" onclick="lqCopyShareLink()">
+      <i class="fa-solid fa-link"></i> Copy shareable link
+    </button>
+    <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin:0;">
+      Share this page with your guests — the map is always free to view.
+    </p>
+  </div>
+  {% endif %}
 </div>
 
 <div class="landing-footer" id="landing-footer">
@@ -213,14 +230,6 @@
   window.lqValidateUrl = function(input) {
     var valid = _airbnbPattern.test(input.value.trim());
     document.getElementById('btn-fetch').disabled = !valid;
-  };
-
-  window.lqTryExample = function(e) {
-    e.preventDefault();
-    var input = document.getElementById('airbnb_url');
-    input.value = 'https://www.airbnb.com/rooms/10349749';
-    lqValidateUrl(input);
-    document.getElementById('form-start-map').dispatchEvent(new Event('submit', {cancelable: true}));
   };
 
   // ── Host Map AJAX flow ──────────────────────────────────────────────────
@@ -408,6 +417,14 @@
     document.getElementById('bar-link-text').textContent = shareUrl;
     document.getElementById('bar-qr-img').src = '/static/img/maps/' + uuid + '_qr.png';
     _pollMapPng(uuid);
+
+    // Free mode: wire download links
+    var dlMap = document.getElementById('btn-dl-map');
+    var dlQr = document.getElementById('btn-dl-qr');
+    var freeActions = document.getElementById('bar-free-actions');
+    if (dlMap) dlMap.href = '/p/' + uuid + '/download/map';
+    if (dlQr) dlQr.href = '/p/' + uuid + '/download/qr';
+    if (freeActions) freeActions.style.display = '';
 
     history.pushState(null, '', '/p/' + uuid);
   }

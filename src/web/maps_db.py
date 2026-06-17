@@ -83,3 +83,12 @@ def get(map_uuid: str) -> dict | None:
             "SELECT * FROM maps WHERE uuid=?", (map_uuid,)
         ).fetchone()
     return dict(row) if row else None
+
+
+def get_by_listing_id(listing_id: str) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM maps WHERE listing_id=? ORDER BY created_at DESC LIMIT 1",
+            (listing_id,),
+        ).fetchone()
+    return dict(row) if row else None
