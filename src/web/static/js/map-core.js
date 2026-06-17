@@ -113,15 +113,17 @@
     }
     if (cat === 'university' && props.courses_url)
       html += '<br><a href="' + props.courses_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-graduation-cap"></i> Courses</a>';
-    if (props.website)
-      html += '<br><a href="' + props.website + '" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Website</a>';
-    if (props.video_url)
-      html += '<br><iframe src="' + props.video_url + '" style="width:100%;aspect-ratio:16/9;border:0;border-radius:4px;margin-top:6px;display:block;" allowfullscreen></iframe>';
-
     var mapsUrl = 'https://www.google.com/maps/search/?api=1&query='
       + encodeURIComponent(props.name) + '+'
       + coords[1].toFixed(6) + ',' + coords[0].toFixed(6);
-    html += '<br><a href="' + mapsUrl + '" target="_blank" rel="noopener"><i class="fa-brands fa-google"></i> Google Maps</a>';
+    var bottomLinks = [];
+    if (props.website)
+      bottomLinks.push('<a href="' + props.website + '" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Website</a>');
+    bottomLinks.push('<a href="' + mapsUrl + '" target="_blank" rel="noopener"><i class="fa-brands fa-google"></i> Google Maps</a>');
+    html += '<br>' + bottomLinks.join(' · ');
+
+    if (props.video_url)
+      html += '<br><iframe src="' + props.video_url + '" style="width:100%;aspect-ratio:16/9;border:0;border-radius:4px;margin-top:6px;display:block;" allowfullscreen></iframe>';
 
     return html;
   }
