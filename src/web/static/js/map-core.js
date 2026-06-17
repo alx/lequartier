@@ -202,6 +202,7 @@
     });
 
     m._poiId = id;
+    m._cat   = cat;
     m.bindPopup(poiPopupHtml(f), { maxWidth: 320, autoPan: false });
 
     m.on('mouseover', function () {
@@ -234,8 +235,11 @@
   function toggleSecondary() {
     _secondaryVisible = !_secondaryVisible;
     _secondaryMarkers.forEach(function (m) {
-      if (_secondaryVisible) poiLayer.addLayer(m);
-      else poiLayer.removeLayer(m);
+      if (_secondaryVisible) {
+        if (!_hiddenCats[m._cat]) poiLayer.addLayer(m);
+      } else {
+        poiLayer.removeLayer(m);
+      }
     });
     return _secondaryVisible;
   }

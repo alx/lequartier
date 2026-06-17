@@ -53,27 +53,20 @@
 {% if not embed %}
 <div class="center-overlay" id="host-map-overlay">
   <div class="overlay-card">
-    <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
-
-    <div style="margin-bottom:0.6rem;">
-      {% if location.city %}
-        <div style="font-size:1.05rem;font-weight:700;color:var(--text);">{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}</div>
-        {% if location.neighbourhood %}
-        <div style="font-size:0.88rem;color:var(--text-muted);">{{ location.neighbourhood }}</div>
-        {% endif %}
-      {% elif location.neighbourhood %}
-        <div style="font-size:1.05rem;font-weight:700;color:var(--text);">{{ location.neighbourhood }}</div>
-      {% endif %}
-      {% if listing_title %}
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ listing_title }}">{{ listing_title }}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.55rem;">
+      <div class="block-label" style="margin-bottom:0;"><i class="fa-solid fa-house"></i> Le Quartier</div>
+      {% if airbnb_url %}
+      <a href="{{ airbnb_url }}" target="_blank" rel="noopener"
+         style="display:inline-flex;align-items:center;gap:0.3rem;
+                padding:0.2rem 0.6rem;border-radius:4px;background:#FF5A5F;color:#fff;
+                font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0;">
+        <i class="fa-brands fa-airbnb"></i> View on Airbnb
+      </a>
       {% endif %}
     </div>
 
     {% if n_pois > 0 %}
-    <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.65rem;">
-      <strong style="color:var(--text);">{{ n_pois }}</strong> places within walking distance
-    </div>
-    <div id="cat-pills-container" style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;margin-bottom:0.85rem;">
+    <div id="cat-pills-container" style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;border-top:1px solid var(--border);padding-top:0.55rem;">
       {% for cat, count in category_counts.items() %}
       <span class="cat-pill" data-cat="{{ cat }}" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
         <i class="fa-solid {{ category_icons.get(cat, 'fa-location-dot') }}" style="color:{{ category_colors.get(cat, 'var(--text-muted)') }};"></i>
@@ -83,48 +76,27 @@
     </div>
     {% endif %}
 
-    <div style="border-top:1px solid var(--border);padding-top:0.85rem;">
-      {% if unlocked %}
-        <div style="margin-bottom:0.75rem;">
-          <a href="/p/{{ uuid }}/download/map" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
-            <i class="fa-solid fa-image"></i> Download map image
-          </a>
-          <a href="/p/{{ uuid }}/download/qr" class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
-            <i class="fa-solid fa-qrcode"></i> Download QR code
-          </a>
-          <button id="btn-copy-url" class="btn btn-outline" style="width:100%;justify-content:center;" onclick="lqCopyShareUrl()">
-            <i class="fa-solid fa-link"></i> Copy shareable link
-          </button>
-        </div>
-        <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin:0;">
-          Share this page with your guests — the map is always free to view.
-        </p>
-      {% else %}
-        <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;">
-          Get a downloadable map image, QR code, and a permanent shareable link for your guests.
-        </p>
-        <button id="btn-checkout" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="lqStartCheckout()">
-          <span id="checkout-label"><i class="fa-solid fa-lock"></i> Unlock exports — $19</span>
-          <span id="checkout-spinner" class="spinner" style="display:none;border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>
-        </button>
-        <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.5rem;">
-          One-time payment · Map PNG, QR code &amp; permanent link
-        </p>
-      {% endif %}
-    </div>
-
   </div>
 </div>
 
-<div class="landing-footer">
-  {% if location.city %}
-  <span>{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}</span>
-  {% else %}
-  <span>Le Quartier</span>
-  {% endif %}
-  <a href="/" class="landing-random-btn" title="Try with your listing">
-    <i class="fa-solid fa-house"></i>
-  </a>
+<div class="landing-footer landing-footer--wide">
+  <div class="landing-footer__left">
+    <a href="/" class="landing-random-btn" title="Go home">
+      <i class="fa-solid fa-house"></i>
+    </a>
+    <span>{% if location.city %}{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}{% else %}Le Quartier{% endif %}</span>
+  </div>
+  <div class="landing-footer__right">
+    <span id="share-copied-msg" style="display:none;font-size:0.72rem;color:var(--accent);white-space:nowrap;">link copied</span>
+    <a href="#" class="landing-random-btn" title="Copy share link" onclick="lqCopyShareUrl();return false;">
+      <i class="fa-solid fa-share-nodes"></i>
+    </a>
+    {% if unlocked %}
+    <a href="/p/{{ uuid }}/download/map" class="landing-random-btn" title="Download map image">
+      <i class="fa-solid fa-download"></i>
+    </a>
+    {% endif %}
+  </div>
 </div>
 {% endif %}
 
@@ -186,43 +158,13 @@
 
   window.lqCopyShareUrl = function() {
     navigator.clipboard.writeText(SHARE_URL).then(function() {
-      var btn = document.getElementById('btn-copy-url');
-      if (!btn) return;
-      var orig = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
-      btn.disabled = true;
-      setTimeout(function() { btn.innerHTML = orig; btn.disabled = false; }, 2000);
+      var msg = document.getElementById('share-copied-msg');
+      if (!msg) return;
+      msg.style.display = '';
+      setTimeout(function() { msg.style.display = 'none'; }, 2000);
     }).catch(function() {
       prompt('Copy this link:', SHARE_URL);
     });
-  };
-
-  window.lqStartCheckout = function() {
-    var btn = document.getElementById('btn-checkout');
-    var label = document.getElementById('checkout-label');
-    var spinner = document.getElementById('checkout-spinner');
-    if (btn) btn.disabled = true;
-    if (label) label.style.display = 'none';
-    if (spinner) spinner.style.display = 'inline-block';
-
-    fetch('/api/checkout?uuid=' + UUID, { method: 'POST' })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.checkout_url) {
-          window.location.href = data.checkout_url;
-        } else {
-          if (btn) btn.disabled = false;
-          if (label) label.style.display = '';
-          if (spinner) spinner.style.display = 'none';
-          alert(data.error || 'Something went wrong. Please try again.');
-        }
-      })
-      .catch(function() {
-        if (btn) btn.disabled = false;
-        if (label) label.style.display = '';
-        if (spinner) spinner.style.display = 'none';
-        alert('Network error. Please try again.');
-      });
   };
 
   document.addEventListener('DOMContentLoaded', function() {
@@ -230,6 +172,10 @@
     LQ.map.fitBounds(L.latLng(LAT, LON).toBounds(600));
     if (EXPORT_MODE) { LQ.map.setZoom(LQ.map.getZoom() + 2); }
     document.getElementById('map').classList.add('map-active');
+
+    if (!EXPORT_MODE && window.innerWidth <= 768) {
+      LQ.map.panBy([0, -Math.round(window.innerHeight * 0.16)], { animate: false });
+    }
 
     LQ.drawRings(LAT, LON);
     {% if not export_mode %}LQ.placeRentalMarker(LAT, LON);{% endif %}

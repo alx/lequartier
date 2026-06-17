@@ -105,10 +105,10 @@ main { max-width: 100%; padding: 0; margin: 0; }
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   color: var(--accent);
   background: #ffffff;
-  padding: 0.3rem 0.75rem;
+  padding: 0.65rem 0.9rem;
   border-radius: 6px;
   border: 1px solid rgba(0,0,0,0.08);
   border-top: 3px solid var(--accent);
@@ -766,6 +766,13 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
 .footer-sep { margin: 0 0.3rem; }
 .footer-commit { font-family: monospace; }
 
+/* ── Landing page button row ─────────── */
+.lq-btn-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
 /* ── Responsive ─────────────────────── */
 @media (max-width: 768px) {
   /* Left overlay: bottom sheet anchored at 55vh */
@@ -786,6 +793,58 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
     overflow-y: visible;
   }
 
+  /* Landing page: stack Generate / Peek buttons vertically */
+  .lq-btn-row {
+    flex-direction: column;
+  }
+  .lq-btn-row .btn {
+    flex: unset !important;
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Host map overlay: full-width strip at the top */
+  #host-map-overlay {
+    left: 0;
+    right: 0;
+    top: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  #host-map-overlay .overlay-card {
+    border-radius: 0;
+  }
+  #host-map-overlay .block-label {
+    display: none;
+  }
+
+  /* Wide footer (p_uuid.html) */
+  .landing-footer--wide {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    justify-content: space-between;
+    padding: 0.3rem 1rem env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Wide footer inner layout (all breakpoints) */
+.landing-footer--wide {
+  justify-content: space-between;
+}
+.landing-footer__left,
+.landing-footer__right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.landing-footer__right {
+  gap: 0.75rem;
+  padding-left: 0.75rem;
 }
 @media (max-width: 600px) {
   .category-toggles { grid-template-columns: 1fr 1fr; }

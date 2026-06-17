@@ -1492,6 +1492,10 @@ def host_map_page(map_uuid: str):
     base_url  = os.environ.get("SITE_BASE_URL", request.host_url.rstrip("/"))
     share_url = f"{base_url}/p/{map_uuid}"
 
+    airbnb_url = result.get("airbnb_url", "")
+    if airbnb_url and rec.get("listing_id", "").startswith("geo/"):
+        airbnb_url = ""
+
     return render_template(
         "p_uuid.html",
         uuid=map_uuid,
@@ -1508,6 +1512,7 @@ def host_map_page(map_uuid: str):
         share_url=share_url,
         embed=embed,
         export_mode=export_mode,
+        airbnb_url=airbnb_url,
     )
 
 
