@@ -118,6 +118,11 @@
     if (props.video_url)
       html += '<br><iframe src="' + props.video_url + '" style="width:100%;aspect-ratio:16/9;border:0;border-radius:4px;margin-top:6px;display:block;" allowfullscreen></iframe>';
 
+    var mapsUrl = 'https://www.google.com/maps/search/?api=1&query='
+      + encodeURIComponent(props.name) + '+'
+      + coords[1].toFixed(6) + ',' + coords[0].toFixed(6);
+    html += '<br><a href="' + mapsUrl + '" target="_blank" rel="noopener"><i class="fa-brands fa-google"></i> Google Maps</a>';
+
     return html;
   }
 
