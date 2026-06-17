@@ -1298,6 +1298,10 @@ def map_page():
 
 # ── Host Map: paid export flow ────────────────────────────────────────────────
 
+def _stripe_active() -> bool:
+    return bool(os.environ.get("STRIPE_SECRET_KEY", "").strip())
+
+
 @wizard.post("/api/start-map")
 def api_start_map():
     """Start a background POI task for the landing page host flow.
@@ -1372,7 +1376,7 @@ def host_map_page(map_uuid: str):
         lat=rec["lat"],
         lon=rec["lon"],
         geojson_json=json.dumps(geojson, ensure_ascii=False),
-        unlocked=bool(rec["unlocked"]),
+        unlocked=bool(rec["unlocked"]) or not _stripe_active(),
         location=location,
         listing_title=listing_title,
         n_pois=n_pois,
@@ -1461,7 +1465,7 @@ def stripe_webhook():
 def download_map_image(map_uuid: str):
     """Download the PNG map export — async pre-warm at payment time; 202 on cache miss."""
     rec = maps_db.get(map_uuid)
-    if not rec or not rec["unlocked"]:
+    if not rec or (not rec["unlocked"] and _stripe_active()):
         abort(403)
 
     img_path = _MAPS_IMG_DIR / f"{map_uuid}_map_v2.png"
@@ -1510,7 +1514,7 @@ def download_map_image(map_uuid: str):
 def download_qr(map_uuid: str):
     """Download the QR code PNG — pre-generated when task completed."""
     rec = maps_db.get(map_uuid)
-    if not rec or not rec["unlocked"]:
+    if not rec or (not rec["unlocked"] and _stripe_active()):
         abort(403)
 
     qr_path = _MAPS_IMG_DIR / f"{map_uuid}_qr.png"

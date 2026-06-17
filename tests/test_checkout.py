@@ -151,11 +151,12 @@ def _make_rec_with_result(tmp_path):
 
 def test_host_map_page_locked_shows_checkout_button(client, tmp_path):
     rec = _make_rec_with_result(tmp_path)
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec):
+    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
+         patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}):
         resp = client.get(f"/p/{_UUID}")
     assert resp.status_code == 200
-    assert b"btn-checkout" in resp.data
     assert b"Unlock exports" in resp.data
+    assert b"download/map" not in resp.data
 
 
 def test_host_map_page_unlocked_shows_downloads(client, tmp_path):
@@ -206,14 +207,16 @@ def test_host_map_page_session_id_not_paid_stays_locked(client, tmp_path):
 
 def test_download_map_requires_unlock(client):
     locked_rec = {**_BASE_REC, "unlocked": 0}
-    with patch("src.web.routes.wizard.maps_db.get", return_value=locked_rec):
+    with patch("src.web.routes.wizard.maps_db.get", return_value=locked_rec), \
+         patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}):
         resp = client.get(f"/p/{_UUID}/download/map")
     assert resp.status_code == 403
 
 
 def test_download_qr_requires_unlock(client):
     locked_rec = {**_BASE_REC, "unlocked": 0}
-    with patch("src.web.routes.wizard.maps_db.get", return_value=locked_rec):
+    with patch("src.web.routes.wizard.maps_db.get", return_value=locked_rec), \
+         patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}):
         resp = client.get(f"/p/{_UUID}/download/qr")
     assert resp.status_code == 403
 
@@ -256,3 +259,30 @@ def test_download_map_returns_202_when_not_ready(client, tmp_path):
 
     assert resp.status_code == 202
     assert b"being generated" in resp.data
+
+
+# ── Stripe-inactive free-access mode ──────────────────────────────────────────
+
+def test_host_map_page_unlocked_when_stripe_inactive(client, tmp_path):
+    """When STRIPE_SECRET_KEY is unset, all maps render as unlocked."""
+    rec = _make_rec_with_result(tmp_path)  # unlocked=0
+    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
+         patch.dict("os.environ", {"STRIPE_SECRET_KEY": ""}):
+        resp = client.get(f"/p/{_UUID}")
+    assert resp.status_code == 200
+    assert b"download/map" in resp.data
+    assert b"Unlock exports" not in resp.data  # checkout CTA must not appear
+
+
+def test_downloads_allowed_when_stripe_inactive(client, tmp_path):
+    """Download endpoints are accessible for locked maps when Stripe is not configured."""
+    qr = tmp_path / f"{_UUID}_qr.png"
+    qr.write_bytes(b"\x89PNG\r\n")
+    rec = {**_BASE_REC, "unlocked": 0}
+
+    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
+         patch("src.web.routes.wizard._MAPS_IMG_DIR", tmp_path), \
+         patch.dict("os.environ", {"STRIPE_SECRET_KEY": ""}):
+        resp = client.get(f"/p/{_UUID}/download/qr")
+
+    assert resp.status_code == 200
