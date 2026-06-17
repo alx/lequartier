@@ -47,7 +47,7 @@ CATEGORY_ICONS: dict[str, str] = {
     "restaurant": "fa-utensils", "culture": "fa-masks-theater",
     "Park": "fa-tree", "Transit": "fa-bus", "Restaurant": "fa-utensils",
     "Market": "fa-store", "Supermarket": "fa-cart-shopping",
-    "Bakery & Food": "fa-bread-slice", "Bike Share": "fa-bicycle",
+    "Bakery & Food": "fa-cookie-bite", "Bike Share": "fa-bicycle",
     "Health": "fa-kit-medical", "Playground": "fa-child-reaching",
     "Activity": "fa-person-running", "Culture": "fa-masks-theater",
     "Wellness": "fa-spa",
@@ -1401,26 +1401,34 @@ def api_checkout():
     if rec["unlocked"]:
         return jsonify({"error": "Already unlocked"}), 400
 
-    stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+    secret_key = os.environ.get("STRIPE_SECRET_KEY", "")
+    if not secret_key:
+        return jsonify({"error": "Payments are not configured yet. Please try again later."}), 503
+
+    stripe.api_key = secret_key
     base_url = os.environ.get("SITE_BASE_URL", request.host_url.rstrip("/"))
 
-    checkout = stripe.checkout.Session.create(
-        mode="payment",
-        line_items=[{
-            "price_data": {
-                "currency": "usd",
-                "product_data": {
-                    "name": "Le Quartier — Neighbourhood Map",
-                    "description": "Downloadable map PNG, QR code, and permanent shareable link for your Airbnb listing.",
+    try:
+        checkout = stripe.checkout.Session.create(
+            mode="payment",
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": "Le Quartier — Neighbourhood Map",
+                        "description": "Downloadable map PNG, QR code, and permanent shareable link for your Airbnb listing.",
+                    },
+                    "unit_amount": 1900,
                 },
-                "unit_amount": 1900,
-            },
-            "quantity": 1,
-        }],
-        metadata={"map_uuid": map_uuid},
-        success_url=f"{base_url}/p/{map_uuid}?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{base_url}/p/{map_uuid}",
-    )
+                "quantity": 1,
+            }],
+            metadata={"map_uuid": map_uuid},
+            success_url=f"{base_url}/p/{map_uuid}?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{base_url}/p/{map_uuid}",
+        )
+    except Exception as exc:
+        current_app.logger.error("Stripe checkout error for %s: %s", map_uuid, exc)
+        return jsonify({"error": "Could not create checkout session. Please try again."}), 502
 
     maps_db.set_stripe_session(map_uuid, checkout.id)
     return jsonify({"checkout_url": checkout.url})

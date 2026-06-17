@@ -1,0 +1,48 @@
+name: Publish Airbnb extension
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'chrome-extension/airbnb-hood-map/**'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check version bump
+        id: version
+        run: |
+          NEW=$(jq -r .version chrome-extension/airbnb-hood-map/manifest.json)
+          OLD=$(git show HEAD~1:chrome-extension/airbnb-hood-map/manifest.json 2>/dev/null \
+                | jq -r .version || echo "none")
+          if [ "$NEW" = "$OLD" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "Version unchanged ($NEW) — skipping publish."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Publishing $OLD → $NEW"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Zip extension
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          cd chrome-extension/airbnb-hood-map
+          zip -r ../../airbnb-extension.zip . \
+            --exclude "*.DS_Store" --exclude "*.map" --exclude "__MACOSX/*"
+
+      - name: Upload & publish to Chrome Web Store
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          npx chrome-webstore-upload-cli@3 upload \
+            --source airbnb-extension.zip \
+            --extension-id "${{ secrets.AIRBNB_EXTENSION_ID }}" \
+            --client-id "${{ secrets.CWS_CLIENT_ID }}" \
+            --client-secret "${{ secrets.CWS_CLIENT_SECRET }}" \
+            --refresh-token "${{ secrets.CWS_REFRESH_TOKEN }}" \
+            --auto-publish

@@ -7,9 +7,14 @@ use_default_settings: true
 
 engines:
   - name: bing
-    disabled: false
+    disabled: true
   - name: duckduckgo
     disabled: false
+    tokens: []
+    # how long (seconds) to suspend after a captcha hit
+    suspended_times:
+      SearxEngineCaptchaException: 3600  # back off 1h instead of 0s
+
 
 server:
   # Generate with: openssl rand -hex 32

@@ -1,0 +1,76 @@
+/* ── Le Quartier inline map (Airbnb) ────────────────────────────────────── */
+
+#lq-airbnb-map-root {
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.lq-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-left: 3px solid #ff5a5f;
+  background: #fff8f7;
+}
+
+.lq-map-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #222;
+}
+
+.lq-full-map-link {
+  font-size: 13px;
+  color: #ff5a5f;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.lq-full-map-link:hover {
+  color: #e0494e;
+}
+
+#lq-airbnb-map-root iframe {
+  display: block;
+  width: 100%;
+  height: 480px;
+  border: none;
+}
+
+/* ── Top-bar anchor button ──────────────────────────────────────────────── */
+
+.lq-airbnb-top-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.lq-airbnb-top-btn button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: inherit;
+  font-family: inherit;
+  position: relative;
+  top: -2px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.lq-airbnb-top-btn button:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.lq-airbnb-top-btn button span:last-child {
+  text-decoration: underline;
+}

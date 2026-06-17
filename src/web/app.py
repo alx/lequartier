@@ -170,7 +170,7 @@ def run_prod() -> None:
             return self.application
 
     options = {
-        "bind": "127.0.0.1:5010",
+        "bind": "0.0.0.0:5010",
         "workers": 1,
         "worker_class": "gthread",
         "threads": 4,

@@ -15,7 +15,7 @@ _Avoid_: city data, background GeoJSON
 **Rental Marker**: The accent-coloured circle with a white house icon placed at the rental's coordinates. Always larger than POI Markers. On the Landing Map it is a demo placeholder at the city centre. Current sizes: `RENTAL_SIZE=40px`, `POI_SIZE=32px` (Landing Map constants in `index.html`; mirror when porting to airbnb maps).
 _Avoid_: home marker, listing pin, centre marker
 
-**POI Marker**: A coloured circle with a category icon, representing a nearby place of interest. Interaction is 2-state: hover (opens popup) → click (locks popup open; second click closes). No permanent visible label.
+**POI Marker**: A coloured circle with a category icon, representing a nearby place of interest. Interaction is 2-state: hover (opens popup) → click (locks popup open; second click closes). Primary POI Markers display a permanent name label below the circle; secondary POI Markers show no label. "No permanent visible label" in older notes referred to popup-style tooltip labels, not the pill label below the circle.
 
 **Bakery & Food icon**: Always use `fa-cookie-bite`. Never use `fa-bread-slice`.
 
@@ -70,7 +70,7 @@ Per-category content shown in the click popup, rendered only when the correspond
 
 **Category** — a named type of POI (e.g. Supermarket, Bakery & Food, Market, Restaurant). Categories can be toggled on/off on the map.
 
-**Default visible categories** — the 3 categories shown enabled by default when the map loads: `Supermarket`, `Bakery & Food`, `Market`. All other categories start hidden.
+**Default visible categories** — the 3 categories shown enabled by default when any map loads: `Supermarket`, `Park`, `Playground`. All other categories start hidden (dimmed pill, markers not on map). Consistent across the Landing Map and Host Map. Export mode always shows all categories.
 
 **GeoJSON endpoint** — the path-based backend API that returns POI data for a listing: `GET /{site}/{listing_id}.geojson`. No coordinates are sent by the client — the backend resolves them from the listing ID.
 

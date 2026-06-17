@@ -181,13 +181,7 @@ window.copyLocationUrl   = function() {
     maxZoom: 19,
   }).addTo(map);
 
-  var FA_ICON_FALLBACK = {
-    'Supermarket': 'fa-cart-shopping', 'Bakery & Food': 'fa-cookie-bite',
-    'Market': 'fa-store', 'Night Shop': 'fa-moon', 'Park': 'fa-tree',
-    'Playground': 'fa-child-reaching', 'Dog Park': 'fa-dog', 'Transit': 'fa-bus',
-    'Activity': 'fa-person-running', 'Culture': 'fa-landmark', 'Wellness': 'fa-spa',
-    'Restaurant': 'fa-utensils', 'Health': 'fa-pills', 'Bike Share': 'fa-bicycle',
-  };
+  var FA_ICON_FALLBACK = LQ.FA_ICONS;
 
   var seenIds = new Set();
   var mapInitialized = false;

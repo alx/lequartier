@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Le Quartier – Airbnb",
+  "version": "1.0.0",
+  "description": "Embeds a neighbourhood map inline on Airbnb listing pages.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Le Quartier"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.airbnb.fr/rooms/*",
+        "https://www.airbnb.com/rooms/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "https://lequartier.girard-davila.net/*"
+  ]
+}

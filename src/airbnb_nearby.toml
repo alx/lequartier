@@ -79,7 +79,7 @@ google_types = ["supermarket", "grocery_store", "convenience_store"]
 [categories.bakery]
 label        = "Bakery & Food"
 icon         = "🥖"
-fa_icon      = "fa-bread-slice"
+fa_icon      = "fa-cookie-bite"
 max          = 4
 dist_cap     = 800
 radius       = 700

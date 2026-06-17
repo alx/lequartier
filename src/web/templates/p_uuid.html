@@ -133,213 +133,21 @@
 {% block extra_js %}
 <script>
 (function () {
-  var POI_SIZE    = 32;
-  var RENTAL_SIZE = 40;
-  var ACCENT = '#1a6b3c';
-
-  var LAT     = {{ lat }};
-  var LON     = {{ lon }};
-  var UUID    = "{{ uuid }}";
-  var SHARE_URL = "{{ share_url }}";
-
-  var GEOJSON = {{ geojson_json | safe }};
+  // ── Page-specific data ──────────────────────────────────────────────────
+  var LAT         = {{ lat }};
+  var LON         = {{ lon }};
+  var UUID        = "{{ uuid }}";
+  var SHARE_URL   = "{{ share_url }}";
+  var GEOJSON     = {{ geojson_json | safe }};
   var EXPORT_MODE = {{ export_mode | tojson }};
 
-  var _catMarkers      = {};
-  var _hiddenCats      = {};
-  var _secondaryMarkers = [];
-  var _secondaryVisible = false;
   var PILL_ORDER = [
     'Supermarket', 'Park', 'Playground',
     'Bakery & Food', 'Restaurant', 'Market',
     'Transit', 'Bike Share', 'Health',
   ];
 
-  var CIRCLE_STYLES = [
-    { radiusM: 400,  label: '5 min' },
-    { radiusM: 800,  label: '10 min' },
-    { radiusM: 1200, label: '15 min' },
-  ];
-
-  var FA_ICONS = {
-    'park': 'fa-tree', 'train_station': 'fa-train', 'transit': 'fa-bus',
-    'airport': 'fa-plane', 'museum': 'fa-landmark', 'monument': 'fa-monument',
-    'university': 'fa-graduation-cap', 'stadium': 'fa-futbol',
-    'market': 'fa-store', 'beach': 'fa-umbrella-beach',
-    'restaurant': 'fa-utensils', 'culture': 'fa-masks-theater',
-    'Park': 'fa-tree', 'Transit': 'fa-bus', 'Restaurant': 'fa-utensils',
-    'Market': 'fa-store', 'Supermarket': 'fa-cart-shopping',
-    'Bakery & Food': 'fa-cookie-bite', 'Bike Share': 'fa-bicycle',
-    'Health': 'fa-kit-medical', 'Playground': 'fa-child-reaching',
-    'Activity': 'fa-person-running', 'Culture': 'fa-masks-theater',
-    'Wellness': 'fa-spa',
-  };
-
-  var CATEGORY_COLORS = {
-    'Park': '#16a34a', 'Transit': '#1d4ed8', 'Restaurant': '#b45309',
-    'Market': '#b45309', 'Supermarket': '#0f766e', 'Bakery & Food': '#b45309',
-    'Bike Share': '#0891b2', 'Health': '#dc2626', 'Playground': '#7c3aed',
-    'Activity': '#0369a1', 'Culture': '#be123c', 'Wellness': '#059669',
-    'park': '#16a34a', 'transit': '#1d4ed8', 'restaurant': '#b45309',
-    'market': '#b45309', 'museum': '#b45309', 'culture': '#be123c',
-  };
-
-  function poiPopupHtml(f) {
-    var props = f.properties;
-    var cat = props.category || '';
-    var icon = FA_ICONS[cat] || 'fa-location-dot';
-    var coords = f.geometry.coordinates;
-    var html = '';
-
-    if (props.wikipedia_thumb || props.wikipedia_summary) {
-      html += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;">';
-      if (props.wikipedia_thumb)
-        html += '<img src="' + props.wikipedia_thumb + '" style="width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;" alt="">';
-      if (props.wikipedia_summary)
-        html += '<p style="font-size:0.78em;color:#4b5563;line-height:1.45;margin:0;">' + props.wikipedia_summary + '</p>';
-      html += '</div>';
-    }
-
-    html += '<strong>' + props.name + '</strong><br>';
-    html += '<span style="font-size:0.82em;color:#6b7280;"><i class="fa-solid ' + icon + '"></i> ' + cat.replace(/_/g, ' ') + '</span>';
-
-    if ((cat === 'train_station' || cat === 'transit' || cat === 'transport') && props.transit_url)
-      html += '<br><a href="' + props.transit_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-train"></i> Lines &amp; schedules</a>';
-    if (cat === 'museum' && props.ticket_url)
-      html += '<br><a href="' + props.ticket_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-ticket"></i> Buy tickets</a>';
-    if (props.wikipedia_url)
-      html += '<br><a href="' + props.wikipedia_url + '" target="_blank" rel="noopener"><i class="fa-brands fa-wikipedia-w"></i> Wikipedia</a>';
-    if (cat === 'airport') {
-      var adsbUrl = 'https://globe.adsbexchange.com/?lat=' + coords[1].toFixed(4) + '&lon=' + coords[0].toFixed(4) + '&zoom=12';
-      html += '<br><a href="' + adsbUrl + '" target="_blank" rel="noopener"><i class="fa-solid fa-plane-departure"></i> Live flights nearby</a>';
-    }
-    if (cat === 'university' && props.courses_url)
-      html += '<br><a href="' + props.courses_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-graduation-cap"></i> Courses</a>';
-    if (props.website)
-      html += '<br><a href="' + props.website + '" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Website</a>';
-    if (props.video_url)
-      html += '<br><iframe src="' + props.video_url + '" style="width:100%;aspect-ratio:16/9;border:0;border-radius:4px;margin-top:6px;display:block;" allowfullscreen></iframe>';
-
-    return html;
-  }
-
-  var map, ringLayer, poiLayer, rentalMarker;
-  var lockedMarkerId = null;
-  var lockedMarkerRef = null;
-  var _idSeq = 0;
-
-  function drawRings(lat, lon) {
-    if (ringLayer) map.removeLayer(ringLayer);
-    ringLayer = L.layerGroup();
-    CIRCLE_STYLES.forEach(function(c) {
-      L.circle([lat, lon], {
-        radius: c.radiusM,
-        color: ACCENT, weight: 1.5, dashArray: '5 4',
-        fill: false, opacity: 0.6, interactive: false,
-      }).addTo(ringLayer);
-      var labelLat = lat + (c.radiusM / 111320);
-      L.marker([labelLat, lon], {
-        interactive: false,
-        icon: L.divIcon({
-          className: '',
-          html: '<div style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;' +
-                'font-size:10px;font-weight:600;color:' + ACCENT + ';' +
-                'background:rgba(255,255,255,0.88);padding:2px 7px;border-radius:20px;' +
-                'box-shadow:0 1px 4px rgba(0,0,0,.15);transform:translate(-50%,-100%);">' +
-                '<i class="fa-solid fa-person-walking" style="font-size:9px;"></i>' + c.label + '</div>',
-          iconSize: [0, 0], iconAnchor: [0, 0],
-        }),
-      }).addTo(ringLayer);
-    });
-    ringLayer.addTo(map);
-  }
-
-  function placeRentalMarker(lat, lon) {
-    if (rentalMarker) map.removeLayer(rentalMarker);
-    rentalMarker = L.marker([lat, lon], {
-      interactive: false,
-      icon: L.divIcon({
-        className: '',
-        html: '<div style="position:relative;">' +
-              '<div style="width:' + RENTAL_SIZE + 'px;height:' + RENTAL_SIZE + 'px;border-radius:50%;background:' + ACCENT + ';' +
-              'display:flex;align-items:center;justify-content:center;' +
-              'border:2.5px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.45);">' +
-              '<i class="fa-solid fa-house" style="color:#fff;font-size:' + Math.round(RENTAL_SIZE * 0.43) + 'px;"></i></div>' +
-              '<div style="position:absolute;top:' + (RENTAL_SIZE + 4) + 'px;left:50%;transform:translateX(-50%);' +
-              'background:' + ACCENT + ';color:#fff;font-size:10px;font-weight:700;' +
-              'padding:2px 8px;border-radius:10px;white-space:nowrap;' +
-              'box-shadow:0 1px 4px rgba(0,0,0,.3);">your rental</div>' +
-              '</div>',
-        iconSize: [RENTAL_SIZE, RENTAL_SIZE],
-        iconAnchor: [RENTAL_SIZE / 2, RENTAL_SIZE / 2],
-      }),
-    }).addTo(map);
-  }
-
-  function makePOIMarker(f) {
-    var props = f.properties;
-    var coords = f.geometry.coordinates;
-    var cat = props.category || '';
-    var icon = FA_ICONS[cat] || 'fa-location-dot';
-    var color = props.color || CATEGORY_COLORS[cat] || '#6b7280';
-    var id = ++_idSeq;
-
-    var exportLabel = '';
-    if (EXPORT_MODE && props.name) {
-      var labelText = props.name.length > 18 ? props.name.substring(0, 17) + '…' : props.name;
-      exportLabel = '<div style="position:absolute;left:' + (POI_SIZE + 4) + 'px;top:50%;' +
-        'transform:translateY(-50%);white-space:nowrap;' +
-        'font-size:9px;font-weight:600;color:#1a1a1a;' +
-        'background:rgba(255,255,255,0.92);padding:2px 6px;border-radius:20px;' +
-        'box-shadow:0 1px 4px rgba(0,0,0,.18);pointer-events:none;">' + labelText + '</div>';
-    }
-
-    var m = L.marker([coords[1], coords[0]], {
-      icon: L.divIcon({
-        className: '',
-        html: '<div style="position:relative;width:' + POI_SIZE + 'px;height:' + POI_SIZE + 'px;overflow:visible;">' +
-              '<div style="width:' + POI_SIZE + 'px;height:' + POI_SIZE + 'px;border-radius:50%;background:' + color +
-              ';display:flex;align-items:center;justify-content:center;' +
-              'border:2px solid rgba(255,255,255,1);box-shadow:0 1px 5px rgba(0,0,0,.4);cursor:pointer;">' +
-              '<i class="fa-solid ' + icon + '" style="color:#fff;font-size:' + Math.round(POI_SIZE * 0.4) + 'px;"></i></div>' +
-              exportLabel +
-              '</div>',
-        iconSize: [POI_SIZE, POI_SIZE], iconAnchor: [POI_SIZE / 2, POI_SIZE / 2],
-      }),
-    });
-
-    m._poiId = id;
-    m.bindPopup(poiPopupHtml(f), { maxWidth: 320, autoPan: false });
-
-    function _lockPopup(marker) {
-      if (lockedMarkerRef && lockedMarkerRef !== marker) { lockedMarkerRef.closePopup(); }
-      map.closePopup();
-      lockedMarkerId = marker._poiId;
-      lockedMarkerRef = marker;
-      marker.openPopup();
-    }
-    function _unlockPopup(marker) {
-      lockedMarkerId = null;
-      lockedMarkerRef = null;
-      marker.closePopup();
-    }
-
-    m.on('mouseover', function() {
-      if (lockedMarkerId === this._poiId) return;
-      _lockPopup(this);
-    });
-    m.on('click', function(e) {
-      L.DomEvent.stopPropagation(e);
-      if (lockedMarkerId === this._poiId) {
-        _unlockPopup(this);
-      } else {
-        _lockPopup(this);
-      }
-    });
-
-    return m;
-  }
-
+  // ── Load POIs ───────────────────────────────────────────────────────────
   function loadPOIs() {
     var features = (GEOJSON && GEOJSON.features) ? GEOJSON.features : [];
     if (!features.length) return;
@@ -357,19 +165,23 @@
         });
     }
 
-    poiLayer = L.layerGroup();
+    LQ.poiLayer = L.layerGroup();
     features.forEach(function(f) {
       if (!f.geometry || !f.geometry.coordinates) return;
       if (f.properties && f.properties.status === 'secondary') {
-        _secondaryMarkers.push(makePOIMarker(f));
+        LQ.secondaryMarkers.push(LQ.makePOIMarker(f));
         return;
       }
-      var m = makePOIMarker(f);
+      var m = LQ.makePOIMarker(f);
       var cat = (f.properties && f.properties.category) || '';
-      if (cat) (_catMarkers[cat] = _catMarkers[cat] || []).push(m);
-      m.addTo(poiLayer);
+      if (cat) (LQ.catMarkers[cat] = LQ.catMarkers[cat] || []).push(m);
+      if (!EXPORT_MODE && !LQ.DEFAULT_CATS[cat]) {
+        LQ.hiddenCats[cat] = true;
+      } else {
+        m.addTo(LQ.poiLayer);
+      }
     });
-    poiLayer.addTo(map);
+    LQ.poiLayer.addTo(LQ.map);
   }
 
   window.lqCopyShareUrl = function() {
@@ -414,26 +226,13 @@
   };
 
   document.addEventListener('DOMContentLoaded', function() {
-    map = L.map('map', {
-      zoomControl: true, attributionControl: false,
-    });
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    }).addTo(map);
-
-    map.fitBounds(L.latLng(LAT, LON).toBounds(1200 * 2));
-    if (EXPORT_MODE) { map.setZoom(map.getZoom() + 2); }
+    LQ.initMap({});
+    LQ.map.fitBounds(L.latLng(LAT, LON).toBounds(600));
+    if (EXPORT_MODE) { LQ.map.setZoom(LQ.map.getZoom() + 2); }
     document.getElementById('map').classList.add('map-active');
 
-    map.on('click', function() {
-      if (lockedMarkerRef) { lockedMarkerRef.closePopup(); lockedMarkerRef = null; }
-      lockedMarkerId = null;
-    });
-
-    drawRings(LAT, LON);
-    {% if not export_mode %}placeRentalMarker(LAT, LON);{% endif %}
+    LQ.drawRings(LAT, LON);
+    {% if not export_mode %}LQ.placeRentalMarker(LAT, LON);{% endif %}
     loadPOIs();
 
     // Wire category pills
@@ -446,9 +245,10 @@
         if (bycat[cat]) pillContainer.appendChild(bycat[cat]);
       });
       pillEls.forEach(function(el) {
+        if (LQ.hiddenCats[el.dataset.cat]) el.style.opacity = '0.45';
         el.onclick = function() { _toggleCat(el.dataset.cat); };
       });
-      if (_secondaryMarkers.length) {
+      if (LQ.secondaryMarkers.length) {
         var link = document.createElement('a');
         link.id = 'show-more-link';
         link.href = '#';
@@ -461,27 +261,18 @@
   });
 
   function _toggleCat(cat) {
-    _hiddenCats[cat] = !_hiddenCats[cat];
-    var markers = _catMarkers[cat] || [];
-    markers.forEach(function(m) {
-      if (_hiddenCats[cat]) poiLayer.removeLayer(m);
-      else poiLayer.addLayer(m);
-    });
+    LQ.toggleCat(cat);
     var pillContainer = document.getElementById('cat-pills-container');
     if (pillContainer) {
       var el = pillContainer.querySelector('[data-cat="' + cat + '"]');
-      if (el) el.style.opacity = _hiddenCats[cat] ? '0.45' : '1';
+      if (el) el.style.opacity = LQ.hiddenCats[cat] ? '0.45' : '1';
     }
   }
 
   function _toggleSecondary() {
-    _secondaryVisible = !_secondaryVisible;
-    _secondaryMarkers.forEach(function(m) {
-      if (_secondaryVisible) poiLayer.addLayer(m);
-      else poiLayer.removeLayer(m);
-    });
+    LQ.toggleSecondary();
     var link = document.getElementById('show-more-link');
-    if (link) link.textContent = _secondaryVisible ? 'Show less…' : 'Show more…';
+    if (link) link.textContent = LQ.secondaryVisible ? 'Show less…' : 'Show more…';
   }
 })();
 </script>

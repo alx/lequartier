@@ -75,13 +75,15 @@ main { max-width: 100%; padding: 0; margin: 0; }
 /* ── Centered overlay (landing + loading) ── */
 .center-overlay {
   position: fixed;
-  top: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 1.5rem;
+  right: 1.5rem;
   z-index: 200;
-  width: 480px;
+  width: 360px;
   max-width: calc(100vw - 2rem);
   pointer-events: all;
+}
+#lq-overlay {
+  width: 480px;
 }
 .center-overlay .overlay-card {
   background: #ffffff;
@@ -765,13 +767,6 @@ details[open] > summary { color: var(--accent); margin-bottom: 0; }
 .footer-commit { font-family: monospace; }
 
 /* ── Responsive ─────────────────────── */
-@media (min-width: 769px) {
-  .center-overlay {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
-  }
-}
 @media (max-width: 768px) {
   /* Left overlay: bottom sheet anchored at 55vh */
   .left-overlay {

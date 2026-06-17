@@ -153,36 +153,14 @@
   let showSecondary = true;
   const categoryOverrides = {};
 
-  const PALETTE = [
-    '#16a34a','#2563eb','#f97316','#9333ea','#dc2626',
-    '#0891b2','#ca8a04','#be185d','#15803d','#1d4ed8',
-    '#ea580c','#7c3aed','#b91c1c','#0e7490',
-  ];
-  const FA_ICON_FALLBACK = {
-    'Supermarket':   'fa-cart-shopping',
-    'Bakery & Food': 'fa-cookie-bite',
-    'Market':        'fa-store',
-    'Night Shop':    'fa-moon',
-    'Park':          'fa-tree',
-    'Playground':    'fa-child-reaching',
-    'Dog Park':      'fa-dog',
-    'Transit':       'fa-bus',
-    'Activity':      'fa-person-running',
-    'Culture':       'fa-landmark',
-    'Wellness':      'fa-spa',
-    'Restaurant':    'fa-utensils',
-    'Health':        'fa-pills',
-    'Bike Share':    'fa-bicycle',
-  };
-
   const catColors  = {};
   const catFaIcons = {};
   const catMeta    = RAW_GEOJSON._meta?.category_meta || {};
   Object.entries(catMeta).forEach(([label, m], i) => {
-    catColors[label]  = m.color || PALETTE[i % PALETTE.length];
+    catColors[label]  = m.color || LQ.CATEGORY_COLORS[label] || '#6b7280';
     catFaIcons[label] = (m.fa_icon && m.fa_icon !== 'fa-location-dot')
       ? m.fa_icon
-      : FA_ICON_FALLBACK[label];
+      : (LQ.FA_ICONS[label] || 'fa-location-dot');
   });
 
   function darkenHex(hex, f = 0.8) {
