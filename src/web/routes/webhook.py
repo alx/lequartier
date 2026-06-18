@@ -68,6 +68,15 @@ def github_webhook():
 
     def _pull():
         try:
+            stash = subprocess.run(
+                ["git", "stash", "--include-untracked"],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            stashed = stash.returncode == 0 and "No local changes" not in stash.stdout
+
             r = subprocess.run(
                 ["git", "pull", "--ff-only", "origin", "main"],
                 cwd=project_root,
@@ -77,9 +86,13 @@ def github_webhook():
             )
             if r.returncode == 0:
                 logger.info("git pull succeeded: %s", r.stdout.strip())
+                if stashed:
+                    subprocess.run(["git", "stash", "drop"], cwd=project_root, capture_output=True)
                 _reload_gunicorn(project_root)
             else:
                 logger.error("git pull failed (rc=%d): %s %s", r.returncode, r.stdout, r.stderr)
+                if stashed:
+                    subprocess.run(["git", "stash", "pop"], cwd=project_root, capture_output=True)
         except Exception as exc:
             logger.exception("git pull error: %s", exc)
 
