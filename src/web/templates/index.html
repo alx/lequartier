@@ -111,9 +111,6 @@
   </div>
   {% else %}
   <div id="bar-free-actions" style="display:none;">
-    <a id="btn-dl-map" href="#" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
-      <i class="fa-solid fa-image"></i> Download map image
-    </a>
     <a id="btn-dl-qr" href="#" class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
       <i class="fa-solid fa-qrcode"></i> Download QR code
     </a>
@@ -236,7 +233,8 @@
   var _mapUuid    = null;
   var _pollTimer  = null;
   var _seenIds    = {};
-  var _tallyData  = {};
+  var _tallyData      = {};
+  var _secondaryTally = {};
   var _mapFlownTo = false;
 
   function _showState(state) {
@@ -274,15 +272,25 @@
     return pills + showMore;
   }
 
+  function _currentDisplayTally() {
+    var t = Object.assign({}, _tallyData);
+    if (LQ.secondaryVisible) {
+      Object.keys(_secondaryTally).forEach(function(cat) {
+        t[cat] = (t[cat] || 0) + _secondaryTally[cat];
+      });
+    }
+    return t;
+  }
+
   window._toggleCat = function(el) {
     LQ.toggleCat(el.dataset.cat);
-    document.getElementById('results-tally').innerHTML = _tallyHtml(_tallyData);
+    document.getElementById('results-tally').innerHTML = _tallyHtml(_currentDisplayTally());
   };
 
   window._toggleSecondary = function(e) {
     e.preventDefault();
     LQ.toggleSecondary();
-    document.getElementById('results-tally').innerHTML = _tallyHtml(_tallyData);
+    document.getElementById('results-tally').innerHTML = _tallyHtml(_currentDisplayTally());
   };
 
   window.lqStartMap = function(e) {
@@ -348,11 +356,12 @@
         if (_seenIds[fid]) return;
         _seenIds[fid] = true;
         var cat = f.properties && f.properties.category;
-        if (cat) _tallyData[cat] = (_tallyData[cat] || 0) + 1;
         if (f.properties && f.properties.status === 'secondary') {
           LQ.secondaryMarkers.push(LQ.makePOIMarker(f));
+          if (cat) _secondaryTally[cat] = (_secondaryTally[cat] || 0) + 1;
           return;
         }
+        if (cat) _tallyData[cat] = (_tallyData[cat] || 0) + 1;
         var marker = LQ.makePOIMarker(f);
         if (cat && !LQ.DEFAULT_CATS[cat]) {
           LQ.hiddenCats[cat] = true;
@@ -419,10 +428,8 @@
     _pollMapPng(uuid);
 
     // Free mode: wire download links
-    var dlMap = document.getElementById('btn-dl-map');
     var dlQr = document.getElementById('btn-dl-qr');
     var freeActions = document.getElementById('bar-free-actions');
-    if (dlMap) dlMap.href = '/p/' + uuid + '/download/map';
     if (dlQr) dlQr.href = '/p/' + uuid + '/download/qr';
     if (freeActions) freeActions.style.display = '';
 

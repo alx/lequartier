@@ -68,9 +68,9 @@
     {% if n_pois > 0 %}
     <div id="cat-pills-container" style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;border-top:1px solid var(--border);padding-top:0.55rem;">
       {% for cat, count in category_counts.items() %}
-      <span class="cat-pill" data-cat="{{ cat }}" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+      <span class="cat-pill" data-cat="{{ cat }}" data-primary-count="{{ count }}" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
         <i class="fa-solid {{ category_icons.get(cat, 'fa-location-dot') }}" style="color:{{ category_colors.get(cat, 'var(--text-muted)') }};"></i>
-        {{ cat.replace('_', ' ') }} &middot; {{ count }}
+        {{ cat.replace('_', ' ') }} &middot; <span class="pill-count">{{ count }}</span>
       </span>
       {% endfor %}
     </div>
@@ -91,11 +91,6 @@
     <a href="#" class="landing-random-btn" title="Copy share link" onclick="lqCopyShareUrl();return false;">
       <i class="fa-solid fa-share-nodes"></i>
     </a>
-    {% if unlocked %}
-    <a href="/p/{{ uuid }}/download/map" class="landing-random-btn" title="Download map image">
-      <i class="fa-solid fa-download"></i>
-    </a>
-    {% endif %}
   </div>
 </div>
 {% endif %}
@@ -110,8 +105,9 @@
   var LON         = {{ lon }};
   var UUID        = "{{ uuid }}";
   var SHARE_URL   = "{{ share_url }}";
-  var GEOJSON     = {{ geojson_json | safe }};
-  var EXPORT_MODE = {{ export_mode | tojson }};
+  var GEOJSON          = {{ geojson_json | safe }};
+  var EXPORT_MODE      = {{ export_mode | tojson }};
+  var SECONDARY_COUNTS = {{ secondary_counts | tojson }};
 
   var PILL_ORDER = [
     'Supermarket', 'Park', 'Playground',
@@ -222,9 +218,15 @@
   }
 
   function _toggleSecondary() {
-    LQ.toggleSecondary();
+    var isNowVisible = LQ.toggleSecondary();
     var link = document.getElementById('show-more-link');
-    if (link) link.textContent = LQ.secondaryVisible ? 'Show less…' : 'Show more…';
+    if (link) link.textContent = isNowVisible ? 'Show less…' : 'Show more…';
+    document.querySelectorAll('#cat-pills-container .cat-pill[data-primary-count]').forEach(function(el) {
+      var base  = parseInt(el.dataset.primaryCount, 10);
+      var delta = SECONDARY_COUNTS[el.dataset.cat] || 0;
+      var span  = el.querySelector('.pill-count');
+      if (span) span.textContent = base + (isNowVisible ? delta : 0);
+    });
   }
 })();
 </script>

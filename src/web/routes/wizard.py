@@ -409,6 +409,7 @@ def _fetch_task_geo(
     listing_id: str,
     lat: float,
     lon: float,
+    map_uuid: str | None = None,
 ) -> None:
     """Task runner for coordinate-based map generation — no Airbnb URL involved."""
     try:
@@ -469,6 +470,8 @@ def _fetch_task_geo(
                               progress="Done!",
                               progress_pct=100,
                               result=result)
+        if map_uuid:
+            _generate_exports(map_uuid, listing_id, lat, lon, result)
     except Exception as exc:
         task_mod.store.update(task.task_id, status=task_mod.Status.ERROR,
                               error=str(exc), progress_pct=100)
@@ -481,6 +484,12 @@ def _random_city() -> dict:
 
 @wizard.get("/")
 def index():
+    all_cities = current_app.config.get("TOP100_CITIES", [])
+    return render_template("landing.html", bg_city=_random_city(), all_cities=all_cities)
+
+
+@wizard.get("/airbnb/")
+def airbnb_index():
     all_cities = current_app.config.get("TOP100_CITIES", [])
     return render_template("index.html", bg_city=_random_city(), all_cities=all_cities, stripe_active=_stripe_active())
 
@@ -1446,6 +1455,24 @@ def api_start_map():
     return jsonify({"task_id": task.task_id, "uuid": map_uuid, "listing_id": listing_id})
 
 
+@wizard.post("/api/start-map-geo")
+def api_start_map_geo():
+    """Start a background POI task from GPS coordinates (landing page geo flow)."""
+    data = request.get_json(force=True) or {}
+    try:
+        lat = float(data["lat"])
+        lon = float(data["lon"])
+    except (KeyError, TypeError, ValueError):
+        return jsonify({"error": "lat and lon are required"}), 400
+
+    listing_id = f"geo/{lat:.4f},{lon:.4f}"
+    map_uuid   = str(uuid_mod.uuid4())
+    maps_db.create(map_uuid, listing_id, lat, lon)
+
+    task = task_mod.run_in_thread(_fetch_task_geo, listing_id, lat, lon, map_uuid)
+    return jsonify({"task_id": task.task_id, "uuid": map_uuid})
+
+
 @wizard.get("/p/<map_uuid>")
 def host_map_page(map_uuid: str):
     """Shareable Host Map page — interactive map always visible, exports gated."""
@@ -1483,9 +1510,15 @@ def host_map_page(map_uuid: str):
     listing_title = result.get("custom_listing_title") or result.get("listing_title")
 
     category_counts: dict[str, int] = {}
+    secondary_counts: dict[str, int] = {}
     for f in geojson.get("features", []):
-        cat = f.get("properties", {}).get("category")
-        if cat:
+        props = f.get("properties", {})
+        cat = props.get("category")
+        if not cat:
+            continue
+        if props.get("status") == "secondary":
+            secondary_counts[cat] = secondary_counts.get(cat, 0) + 1
+        else:
             category_counts[cat] = category_counts.get(cat, 0) + 1
     n_pois = sum(category_counts.values())
 
@@ -1507,6 +1540,7 @@ def host_map_page(map_uuid: str):
         listing_title=listing_title,
         n_pois=n_pois,
         category_counts=category_counts,
+        secondary_counts=secondary_counts,
         category_icons=CATEGORY_ICONS,
         category_colors=CATEGORY_COLORS,
         share_url=share_url,

@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Le Quartier - Neighbourhood map{% endblock %}
+
+{% block content %}
+
+<div class="center-overlay" id="lq-overlay">
+
+  <!-- ── State: initial ── -->
+  <div class="overlay-card" id="state-location">
+    <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
+    <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:0.75rem;line-height:1.5;">
+      What's walkable around you?
+    </p>
+    <button id="btn-locate" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="lqGetLocation()">
+      <i class="fa-solid fa-location-crosshairs"></i> Get current location
+    </button>
+    <div id="locate-error" class="alert alert-error" style="display:none;margin-top:0.6rem;"></div>
+  </div>
+
+  <!-- ── State: loading / results ── -->
+  <div class="overlay-card" id="state-loading" style="display:none;">
+    <div id="loading-status" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">
+      <i class="fa-solid fa-spinner fa-spin"></i> Getting nearby places…
+    </div>
+    <div id="loading-tally" style="display:flex;flex-wrap:wrap;gap:0.3rem;min-height:1.5rem;"></div>
+  </div>
+
+</div>
+
+<!-- ── Initial footer: city name + shuffle ── -->
+<div class="landing-footer" id="landing-footer">
+  <span id="city-name-text">{{ bg_city.name }}, {{ bg_city.country }}</span>
+  <a href="#" class="landing-random-btn" title="Random city" onclick="randomCity(); return false;">
+    <i class="fa-solid fa-shuffle"></i>
+  </a>
+</div>
+
+<!-- ── Geo footer: location name + share (shown after getting position) ── -->
+<div class="landing-footer landing-footer--wide" id="geo-footer" style="display:none;">
+  <div class="landing-footer__left">
+    <a href="/" class="landing-random-btn" title="Go home">
+      <i class="fa-solid fa-house"></i>
+    </a>
+    <span id="geo-location-name" style="font-size:0.85rem;"></span>
+  </div>
+  <div class="landing-footer__right">
+    <span id="share-copied-msg" style="display:none;font-size:0.72rem;color:var(--accent);white-space:nowrap;">link copied</span>
+    <a href="#" class="landing-random-btn" title="Copy share link" onclick="lqCopyShareUrl();return false;">
+      <i class="fa-solid fa-share-nodes"></i>
+    </a>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var CITY_LAT     = {{ bg_city.lat }};
+  var CITY_LON     = {{ bg_city.lon }};
+  var CITY_SLUG    = "{{ bg_city.slug }}";
+  var CITY_NAME    = "{{ bg_city.name }}";
+  var CITY_COUNTRY = "{{ bg_city.country }}";
+  var ALL_CITIES   = {{ all_cities | tojson }};
+
+  var currentCity = { lat: CITY_LAT, lon: CITY_LON, slug: CITY_SLUG, name: CITY_NAME, country: CITY_COUNTRY };
+
+  var PILL_ORDER = [
+    'Supermarket', 'Park', 'Playground',
+    'Bakery & Food', 'Restaurant', 'Market',
+    'Transit', 'Bike Share', 'Health',
+  ];
+
+  // ── City background POIs ────────────────────────────────────────────────
+  function loadCityPOIs(slug) {
+    if (LQ.poiLayer) { LQ.map.removeLayer(LQ.poiLayer); LQ.poiLayer = null; }
+    LQ.lockedMarkerId = null;
+    LQ.lockedMarkerRef = null;
+    fetch('/static/data/cities/' + slug + '.geojson')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(gj) {
+        if (!gj) return;
+        LQ.poiLayer = L.layerGroup();
+        gj.features.forEach(function(f) {
+          if (f.properties.kind !== 'poi') return;
+          if (f.properties.status === 'secondary') return;
+          LQ.makePOIMarker(f).addTo(LQ.poiLayer);
+        });
+        LQ.poiLayer.addTo(LQ.map);
+      });
+  }
+
+  // ── Random city ─────────────────────────────────────────────────────────
+  window.randomCity = function() {
+    var candidates = ALL_CITIES.filter(function(c) { return c.slug !== currentCity.slug; });
+    if (!candidates.length) return;
+    var city = candidates[Math.floor(Math.random() * candidates.length)];
+    currentCity = city;
+
+    if (LQ.poiLayer) { LQ.map.removeLayer(LQ.poiLayer); LQ.poiLayer = null; }
+    LQ.lockedMarkerId = null;
+
+    LQ.map.flyToBounds(L.latLng(city.lat, city.lon).toBounds(1200 * 2), { duration: 1.5 });
+    LQ.drawRings(city.lat, city.lon);
+    LQ.placeRentalMarker(city.lat, city.lon);
+
+    var nameText = document.getElementById('city-name-text');
+    if (nameText) nameText.textContent = city.name + ', ' + city.country;
+
+    LQ.map.once('moveend', function() { loadCityPOIs(city.slug); });
+  };
+
+  // ── Init ────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    LQ.initMap({ keepBuffer: 4 });
+    LQ.map.fitBounds(L.latLng(CITY_LAT, CITY_LON).toBounds(1200 * 2));
+    document.getElementById('map').classList.add('map-active');
+
+    if (window.innerWidth <= 768) {
+      LQ.map.panBy([0, -Math.round(window.innerHeight * 0.16)], { animate: false });
+    }
+
+    LQ.drawRings(CITY_LAT, CITY_LON);
+    LQ.placeRentalMarker(CITY_LAT, CITY_LON);
+    loadCityPOIs(CITY_SLUG);
+    prefetchWorldTiles();
+  });
+
+  function prefetchWorldTiles() {
+    var subdomains = ['a', 'b', 'c', 'd'];
+    var MAX_ZOOM = 4;
+    for (var z = 0; z <= MAX_ZOOM; z++) {
+      var n = Math.pow(2, z);
+      for (var x = 0; x < n; x++) {
+        for (var y = 0; y < n; y++) {
+          var s = subdomains[(x + y) % subdomains.length];
+          fetch('https://' + s + '.basemaps.cartocdn.com/light_all/' + z + '/' + x + '/' + y + '.png', { priority: 'low' });
+        }
+      }
+    }
+  }
+
+  // ── Category pill tally ─────────────────────────────────────────────────
+  var _tallyData = {};
+
+  function _tallyHtml(tally) {
+    var ordered = PILL_ORDER.filter(function(c) { return tally[c]; })
+      .concat(Object.keys(tally).filter(function(c) {
+        return PILL_ORDER.indexOf(c) < 0 && tally[c];
+      }));
+    return ordered.map(function(cat) {
+      var icon    = LQ.FA_ICONS[cat] || 'fa-location-dot';
+      var color   = LQ.CATEGORY_COLORS[cat] || 'var(--text-muted)';
+      var opacity = LQ.hiddenCats[cat] ? '0.45' : '1';
+      return '<span data-cat="' + cat + '" onclick="_toggleCat(this)" '
+        + 'style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;'
+        + 'background:var(--surface2);border:1px solid var(--border);border-radius:20px;'
+        + 'padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);opacity:' + opacity + ';">'
+        + '<i class="fa-solid ' + icon + '" style="color:' + color + ';"></i>'
+        + cat.replace(/_/g, ' ') + ' &middot; ' + tally[cat] + '</span>';
+    }).join('');
+  }
+
+  window._toggleCat = function(el) {
+    LQ.toggleCat(el.dataset.cat);
+    document.getElementById('loading-tally').innerHTML = _tallyHtml(_tallyData);
+  };
+
+  // ── Share ───────────────────────────────────────────────────────────────
+  var _shareUrl = null;
+
+  window.lqCopyShareUrl = function() {
+    if (!_shareUrl) return;
+    navigator.clipboard.writeText(_shareUrl).then(function() {
+      var msg = document.getElementById('share-copied-msg');
+      if (!msg) return;
+      msg.style.display = '';
+      setTimeout(function() { msg.style.display = 'none'; }, 2000);
+    }).catch(function() { prompt('Copy this link:', _shareUrl); });
+  };
+
+  // ── Geo flow ────────────────────────────────────────────────────────────
+  var _mapUuid   = null;
+  var _pollTimer = null;
+  var _seenIds   = {};
+
+  window.lqGetLocation = function() {
+    var btn   = document.getElementById('btn-locate');
+    var errEl = document.getElementById('locate-error');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Locating…';
+
+    if (!navigator.geolocation) {
+      errEl.textContent = 'Geolocation is not supported by your browser.';
+      errEl.style.display = '';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Get current location';
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      function(pos) { _startGeoMap(pos.coords.latitude, pos.coords.longitude); },
+      function() {
+        errEl.textContent = 'Could not get your location. Please allow location access and try again.';
+        errEl.style.display = '';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Get current location';
+      }
+    );
+  };
+
+  function _startGeoMap(lat, lon) {
+    // Fly to user location immediately
+    if (LQ.poiLayer) { LQ.map.removeLayer(LQ.poiLayer); LQ.poiLayer = null; }
+    LQ.lockedMarkerId = null; LQ.lockedMarkerRef = null;
+    LQ.map.flyToBounds(L.latLng(lat, lon).toBounds(600), { duration: 1.8 });
+    LQ.drawRings(lat, lon);
+    LQ.placeRentalMarker(lat, lon);
+    LQ.poiLayer = L.layerGroup().addTo(LQ.map);
+
+    // Switch overlay to loading state immediately
+    document.getElementById('state-location').style.display = 'none';
+    document.getElementById('state-loading').style.display = '';
+
+    // Switch footer immediately
+    document.getElementById('landing-footer').style.display = 'none';
+    document.getElementById('geo-footer').style.display = '';
+
+    _seenIds   = {};
+    _tallyData = {};
+
+    fetch('/api/start-map-geo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat: lat, lon: lon })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) { _showError(data.error); return; }
+        _mapUuid  = data.uuid;
+        _shareUrl = window.location.origin + '/p/' + data.uuid;
+        _pollOnce(data.task_id);
+      })
+      .catch(function() { _showError('Network error. Please try again.'); });
+  }
+
+  function _pollOnce(taskId) {
+    fetch('/tasks/' + taskId + '/map-state')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { _onPoll(taskId, d); })
+      .catch(function() {
+        _pollTimer = setTimeout(function() { _pollOnce(taskId); }, 2000);
+      });
+  }
+
+  function _onPoll(taskId, d) {
+    // Update status text
+    if (d.progress) {
+      document.getElementById('loading-status').innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i> ' + d.progress;
+    }
+
+    // Update location name in geo footer as soon as it's available
+    if (d.location && (d.location.city || d.location.neighbourhood)) {
+      var parts = [];
+      if (d.location.neighbourhood) parts.push(d.location.neighbourhood);
+      if (d.location.city) parts.push(d.location.city);
+      document.getElementById('geo-location-name').textContent = parts.join(', ');
+    }
+
+    // Add POI markers progressively, update tally
+    if (d.features && d.features.length) {
+      if (!LQ.poiLayer) { LQ.poiLayer = L.layerGroup().addTo(LQ.map); }
+      d.features.forEach(function(f) {
+        var fid = (f.properties && f.properties.osm_id) || JSON.stringify(f.geometry);
+        if (_seenIds[fid]) return;
+        _seenIds[fid] = true;
+        var cat = f.properties && f.properties.category;
+        if (f.properties && f.properties.status === 'secondary') {
+          LQ.secondaryMarkers.push(LQ.makePOIMarker(f));
+          return;
+        }
+        if (cat) _tallyData[cat] = (_tallyData[cat] || 0) + 1;
+        var marker = LQ.makePOIMarker(f);
+        if (cat && !LQ.DEFAULT_CATS[cat]) {
+          LQ.hiddenCats[cat] = true;
+        } else {
+          marker.addTo(LQ.poiLayer);
+        }
+        if (cat) { (LQ.catMarkers[cat] = LQ.catMarkers[cat] || []).push(marker); }
+      });
+      document.getElementById('loading-tally').innerHTML = _tallyHtml(_tallyData);
+    }
+
+    if (d.error) { _showError(d.error); return; }
+
+    if (d.done) {
+      _reRenderFinal(d.features);
+      var total = Object.values(_tallyData).reduce(function(a, b) { return a + b; }, 0);
+      document.getElementById('loading-status').innerHTML =
+        '<i class="fa-solid fa-check" style="color:var(--accent);"></i> '
+        + '<strong style="color:var(--text);">' + total + '</strong> places within walking distance';
+      history.pushState(null, '', '/p/' + _mapUuid);
+      return;
+    }
+
+    _pollTimer = setTimeout(function() { _pollOnce(taskId); }, 1000);
+  }
+
+  function _reRenderFinal(features) {
+    if (!features || !features.length) return;
+    // Clear all progressive markers and reset state
+    if (LQ.poiLayer) { LQ.map.removeLayer(LQ.poiLayer); }
+    LQ.resetState();
+    _tallyData = {};
+
+    LQ.poiLayer = L.layerGroup();
+    features.forEach(function(f) {
+      if (!f.geometry || !f.geometry.coordinates) return;
+      var cat = f.properties && f.properties.category;
+      if (f.properties && f.properties.status === 'secondary') {
+        LQ.secondaryMarkers.push(LQ.makePOIMarker(f));
+        return;
+      }
+      if (cat) _tallyData[cat] = (_tallyData[cat] || 0) + 1;
+      var marker = LQ.makePOIMarker(f);
+      if (cat) { (LQ.catMarkers[cat] = LQ.catMarkers[cat] || []).push(marker); }
+      if (cat && !LQ.DEFAULT_CATS[cat]) {
+        LQ.hiddenCats[cat] = true;
+      } else {
+        marker.addTo(LQ.poiLayer);
+      }
+    });
+    LQ.poiLayer.addTo(LQ.map);
+    document.getElementById('loading-tally').innerHTML = _tallyHtml(_tallyData);
+  }
+
+  function _showError(msg) {
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('state-location').style.display = '';
+    document.getElementById('geo-footer').style.display = 'none';
+    document.getElementById('landing-footer').style.display = '';
+    var errEl = document.getElementById('locate-error');
+    errEl.textContent = msg;
+    errEl.style.display = '';
+    var btn = document.getElementById('btn-locate');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Get current location';
+  }
+})();
+</script>
+{% endblock %}
