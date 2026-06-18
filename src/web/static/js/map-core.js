@@ -113,8 +113,7 @@
     }
     if (cat === 'university' && props.courses_url)
       html += '<br><a href="' + props.courses_url + '" target="_blank" rel="noopener"><i class="fa-solid fa-graduation-cap"></i> Courses</a>';
-    var mapsUrl = 'https://www.google.com/maps/search/?api=1&query='
-      + encodeURIComponent(props.name) + '+'
+    var mapsUrl = 'https://www.google.com/maps?q='
       + coords[1].toFixed(6) + ',' + coords[0].toFixed(6);
     var bottomLinks = [];
     if (props.website)
