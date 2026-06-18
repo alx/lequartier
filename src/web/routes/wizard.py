@@ -485,13 +485,18 @@ def _random_city() -> dict:
 @wizard.get("/")
 def index():
     all_cities = current_app.config.get("TOP100_CITIES", [])
-    return render_template("landing.html", bg_city=_random_city(), all_cities=all_cities)
+    return render_template("index.html", bg_city=_random_city(), all_cities=all_cities, stripe_active=_stripe_active())
 
 
 @wizard.get("/airbnb/")
 def airbnb_index():
+    return redirect(url_for("wizard.index"))
+
+
+@wizard.get("/geo/")
+def geo_index():
     all_cities = current_app.config.get("TOP100_CITIES", [])
-    return render_template("index.html", bg_city=_random_city(), all_cities=all_cities, stripe_active=_stripe_active())
+    return render_template("landing.html", bg_city=_random_city(), all_cities=all_cities)
 
 
 @wizard.get("/api/listing-preview")
