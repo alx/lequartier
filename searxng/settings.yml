@@ -26,6 +26,7 @@ server:
 
 search:
   safe_search: 0
+  default_lang: "fr"
   formats:
     - html
     - json

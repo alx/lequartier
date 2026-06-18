@@ -368,7 +368,7 @@
     const PALETTE = ['#16a34a','#2563eb','#f97316','#9333ea','#dc2626',
                      '#0891b2','#ca8a04','#be185d','#15803d','#1d4ed8'];
     const FA_FALLBACK = {
-      'Supermarket': 'fa-cart-shopping', 'Bakery & Food': 'fa-bread-slice',
+      'Supermarket': 'fa-cart-shopping', 'Bakery & Food': 'fa-cookie-bite',
       'Market': 'fa-store', 'Night Shop': 'fa-moon', 'Park': 'fa-tree',
       'Playground': 'fa-child-reaching', 'Dog Park': 'fa-dog', 'Transit': 'fa-bus',
       'Activity': 'fa-person-running', 'Culture': 'fa-landmark', 'Wellness': 'fa-spa',
