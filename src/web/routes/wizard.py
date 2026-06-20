@@ -9,6 +9,7 @@ import subprocess
 import time
 import uuid as uuid_mod
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 import requests as http_requests
 from functools import wraps
@@ -72,11 +73,24 @@ def _gh_headers(token: str) -> dict:
     }
 
 
+def _build_github_contents_url(base_url: str, repo: str, path: str) -> str:
+    try:
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        if "/../" in path or re.search(r"/%2e%2e/", path, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        parsed = urlparse(base_url)
+        parsed = parsed._replace(path=f"/repos/{repo}/contents/{path}")
+        return urlunparse(parsed)
+    except Exception:
+        raise ValueError("Invalid URL")
+
+
 def _gh_put_file(hdrs: dict, branch: str, path: str, content: str, message: str) -> None:
     encoded = base64.b64encode(content.encode()).decode()
     body: dict = {"message": message, "content": encoded, "branch": branch}
     existing = http_requests.get(
-        f"{_GH_API}/repos/{_GH_REPO}/contents/{path}",
+        _build_github_contents_url(_GH_API, _GH_REPO, path),
         headers=hdrs,
         params={"ref": branch},
         timeout=15,
@@ -84,7 +98,7 @@ def _gh_put_file(hdrs: dict, branch: str, path: str, content: str, message: str)
     if existing.status_code == 200:
         body["sha"] = existing.json()["sha"]
     resp = http_requests.put(
-        f"{_GH_API}/repos/{_GH_REPO}/contents/{path}",
+        _build_github_contents_url(_GH_API, _GH_REPO, path),
         headers=hdrs,
         json=body,
         timeout=20,

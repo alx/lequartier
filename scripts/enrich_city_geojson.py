@@ -31,11 +31,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import random
 import sys
 import time
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse, urlencode
 
 import requests
 from dotenv import load_dotenv
@@ -259,6 +260,35 @@ def search_youtube(query: str, api_key: str) -> str | None:
 
 # ── SearXNG ───────────────────────────────────────────────────────────────────
 
+def _build_searxng_url(base_url: str, q: str, format_param: str, categories: str, language: str, pageno: int) -> str:
+    try:
+        # Minimal path validation
+        if "/../" in base_url or re.search(r"/%2e%2e/", base_url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        
+        parsed = urlparse(base_url)
+        
+        # Protocol + host checks
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+        allowed_domains = ["example.com"]  # add your allowed domains here
+        if parsed.hostname.lower() not in allowed_domains:
+            raise ValueError("Invalid host")
+        
+        # Rebuild path with /search
+        parsed = parsed._replace(path=f"{parsed.path.rstrip('/')}/search")
+        
+        # Add query parameters
+        query = {"q": q, "format": format_param, "categories": categories, "language": language, "pageno": pageno}
+        parsed = parsed._replace(query=urlencode(query))
+        
+        return urlunparse(parsed)
+    except Exception:
+        raise ValueError("Invalid URL")
+
+
 def search_searxng(query: str, base_url: str, validator=None) -> str | None:
     """Return the first SearXNG result URL that passes validator(), or None.
 
@@ -266,10 +296,9 @@ def search_searxng(query: str, base_url: str, validator=None) -> str | None:
     """
     tqdm.write(f"    [searxng] searching: {query!r}")
     try:
+        url = _build_searxng_url(base_url, query, "json", "general", "auto", 1)
         r = requests.get(
-            f"{base_url.rstrip('/')}/search",
-            params={"q": query, "format": "json", "categories": "general",
-                    "language": "auto", "pageno": 1},
+            url,
             headers={"Accept": "application/json"},
             timeout=10,
         )
