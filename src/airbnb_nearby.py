@@ -913,7 +913,11 @@ def reverse_geocode(lat: float, lon: float) -> dict:
 
 def cache_save(slug: str, lat: float, lon: float, categories: list[str], n_pois: int) -> None:
     """B08 — save GeoJSON fetch metadata for staleness checks."""
-    cache_dir = REPO_ROOT / "static" / slug
+    base_real = os.path.realpath(REPO_ROOT / "static")
+    target_real = os.path.realpath(REPO_ROOT / "static" / slug)
+    if os.path.commonpath([base_real, target_real]) != base_real:
+        raise ValueError("Invalid file path")
+    cache_dir = Path(target_real)
     cache_dir.mkdir(parents=True, exist_ok=True)
     (cache_dir / ".cache.json").write_text(json.dumps({
         "generated_at": datetime.now(timezone.utc).isoformat(),

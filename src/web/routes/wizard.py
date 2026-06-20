@@ -140,7 +140,11 @@ def _generate_exports(map_uuid: str, listing_id: str,
 
         _MAPS_DATA_DIR.mkdir(parents=True, exist_ok=True)
         result_path = str(_MAPS_DATA_DIR / f"{map_uuid}.json")
-        Path(result_path).write_text(
+        base_real = os.path.realpath(_MAPS_DATA_DIR)
+        target_real = os.path.realpath(result_path)
+        if os.path.commonpath([base_real, target_real]) != base_real:
+            raise Exception("Invalid file path")
+        Path(target_real).write_text(
             json.dumps(result, ensure_ascii=False), encoding="utf-8"
         )
 
