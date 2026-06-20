@@ -1,55 +1,125 @@
 {% extends "base.html" %}
 
-{% block title %}Le Quartier - Neighbourhood map{% endblock %}
+{% block title %}Le Quartier - Neighbourhood map for Airbnb listings{% endblock %}
 
 {% block content %}
 
 <div class="center-overlay" id="lq-overlay">
 
   <!-- ── State: initial ── -->
-  <div class="overlay-card" id="state-location">
+  <div class="overlay-card" id="state-initial">
     <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
     <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:0.75rem;line-height:1.5;">
-      What's walkable around you?
+      Your Airbnb listing, mapped.<br>
+      <span style="font-size:0.84rem;">Guests see what's walkable — before they ask.</span>
     </p>
-    <button id="btn-locate" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="lqGetLocation()">
-      <i class="fa-solid fa-location-crosshairs"></i> Get current location
-    </button>
-    <div id="locate-error" class="alert alert-error" style="display:none;margin-top:0.6rem;"></div>
+    <form id="form-start-map" onsubmit="lqStartMap(event)">
+      <div class="form-group">
+        <input type="url" id="airbnb_url" name="airbnb_url" required autofocus
+               placeholder="https://www.airbnb.com/rooms/686559818391956388"
+               style="font-size:0.95rem; padding:0.6rem 0.75rem;"
+               oninput="lqValidateUrl(this)">
+      </div>
+      <div class="lq-btn-row">
+        <button id="btn-fetch" type="submit" class="btn btn-primary" style="flex:2;" disabled>
+          <i class="fa-solid fa-map"></i> Generate my map
+        </button>
+        <a href="/p/a49e2136-e5f0-4187-a257-1c5af63ab930" class="btn btn-outline" style="flex:1;text-decoration:none;">
+          <i class="fa-solid fa-map-location-dot"></i> Peek at a map
+        </a>
+      </div>
+    </form>
+    <div id="start-error" class="alert alert-error" style="display:none;margin-top:0.6rem;"></div>
   </div>
 
-  <!-- ── State: loading / results ── -->
+  <!-- ── State: loading ── -->
   <div class="overlay-card" id="state-loading" style="display:none;">
-    <div id="loading-status" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">
-      <i class="fa-solid fa-spinner fa-spin"></i> Getting nearby places…
+    <div class="block-label"><i class="fa-solid fa-spinner fa-spin"></i> Finding nearby places…</div>
+    <div id="loading-location" style="font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;min-height:1.2em;"></div>
+    <div class="progress-wrap">
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="loading-bar" style="width:2%;"></div>
+      </div>
+      <div class="progress-label" id="loading-label">Starting…</div>
     </div>
-    <div id="loading-tally" style="display:flex;flex-wrap:wrap;gap:0.3rem;min-height:1.5rem;"></div>
+    <div id="loading-tally" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.75rem;min-height:1.5rem;"></div>
+  </div>
+
+  <!-- ── State: results ── -->
+  <div class="overlay-card" id="state-results" style="display:none;">
+    <div class="block-label"><i class="fa-solid fa-house"></i> Le Quartier</div>
+    <div style="margin-bottom:0.55rem;">
+      <div id="results-location" style="font-size:1.05rem;font-weight:700;color:var(--text);"></div>
+      <div id="results-city" style="font-size:0.88rem;color:var(--text-muted);"></div>
+    </div>
+    <div id="results-summary" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.65rem;"></div>
+    <div id="results-tally" style="display:flex;flex-wrap:wrap;gap:0.35rem;"></div>
   </div>
 
 </div>
 
-<!-- ── Initial footer: city name + shuffle ── -->
+<!-- ── Deliverables bottom bar ── -->
+<div id="bar-deliverables" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+     width:480px;max-width:calc(100vw - 2rem);
+     background:#ffffff;border:1px solid rgba(0,0,0,0.08);border-top:3px solid var(--accent);
+     border-radius:6px;padding:0.85rem 1rem 0.9rem;z-index:1000;
+     box-shadow:0 4px 24px rgba(0,0,0,0.15);">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;
+       margin-bottom:0.65rem;">
+    <!-- Col 1: Map PNG -->
+    <div style="text-align:center;">
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.3rem;font-weight:600;letter-spacing:.02em;">Map PNG</div>
+      <div id="bar-map-wrap" style="height:68px;background:var(--surface2);
+           border:1px solid var(--border);border-radius:6px;overflow:hidden;
+           display:flex;align-items:center;justify-content:center;">
+        <span id="bar-map-spinner" class="spinner" style="border-color:var(--border);border-top-color:var(--accent);"></span>
+        <img id="bar-map-img" src="" alt="Map preview"
+             style="display:none;width:100%;height:100%;object-fit:cover;">
+      </div>
+    </div>
+    <!-- Col 2: QR code -->
+    <div style="text-align:center;">
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.3rem;font-weight:600;letter-spacing:.02em;">QR code</div>
+      <div style="height:68px;background:var(--surface2);
+           border:1px solid var(--border);border-radius:6px;overflow:hidden;
+           display:flex;align-items:center;justify-content:center;">
+        <img id="bar-qr-img" src="" alt="QR code"
+             style="width:100%;height:100%;object-fit:contain;padding:4px;">
+      </div>
+    </div>
+    <!-- Col 3: Share link -->
+    <div style="text-align:center;">
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.3rem;font-weight:600;letter-spacing:.02em;">Share link</div>
+      <div style="height:68px;background:var(--surface2);border:1px solid var(--border);
+           border-radius:6px;display:flex;flex-direction:column;
+           align-items:center;justify-content:center;gap:0.25rem;padding:0.3rem;">
+        <span id="bar-link-text" style="font-size:0.62rem;color:var(--text-muted);
+              word-break:break-all;line-height:1.2;max-height:2.6em;overflow:hidden;"></span>
+        <button id="bar-copy-btn" onclick="lqCopyShareLink()"
+                style="font-size:0.68rem;padding:0.12rem 0.45rem;border-radius:4px;
+                       border:1px solid var(--border);background:var(--surface);cursor:pointer;
+                       color:var(--text-muted);">Copy</button>
+      </div>
+    </div>
+  </div>
+  <div id="bar-free-actions" style="display:none;">
+    <a id="btn-dl-qr" href="#" class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
+      <i class="fa-solid fa-qrcode"></i> Download QR code
+    </a>
+    <button class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:0.4rem;" onclick="lqCopyShareLink()">
+      <i class="fa-solid fa-link"></i> Copy shareable link
+    </button>
+    <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin:0;">
+      Share this page with your guests — the map is always free to view.
+    </p>
+  </div>
+</div>
+
 <div class="landing-footer" id="landing-footer">
   <span id="city-name-text">{{ bg_city.name }}, {{ bg_city.country }}</span>
   <a href="#" class="landing-random-btn" title="Random city" onclick="randomCity(); return false;">
     <i class="fa-solid fa-shuffle"></i>
   </a>
-</div>
-
-<!-- ── Geo footer: location name + share (shown after getting position) ── -->
-<div class="landing-footer landing-footer--wide" id="geo-footer" style="display:none;">
-  <div class="landing-footer__left">
-    <a href="/geo/" class="landing-random-btn" title="Go home">
-      <i class="fa-solid fa-house"></i>
-    </a>
-    <span id="geo-location-name" style="font-size:0.85rem;"></span>
-  </div>
-  <div class="landing-footer__right">
-    <span id="share-copied-msg" style="display:none;font-size:0.72rem;color:var(--accent);white-space:nowrap;">link copied</span>
-    <a href="#" class="landing-random-btn" title="Copy share link" onclick="lqCopyShareUrl();return false;">
-      <i class="fa-solid fa-share-nodes"></i>
-    </a>
-  </div>
 </div>
 
 {% endblock %}
@@ -72,7 +142,6 @@
     'Transit', 'Bike Share', 'Health',
   ];
 
-  // ── City background POIs ────────────────────────────────────────────────
   function loadCityPOIs(slug) {
     if (LQ.poiLayer) { LQ.map.removeLayer(LQ.poiLayer); LQ.poiLayer = null; }
     LQ.lockedMarkerId = null;
@@ -91,7 +160,6 @@
       });
   }
 
-  // ── Random city ─────────────────────────────────────────────────────────
   window.randomCity = function() {
     var candidates = ALL_CITIES.filter(function(c) { return c.slug !== currentCity.slug; });
     if (!candidates.length) return;
@@ -111,7 +179,6 @@
     LQ.map.once('moveend', function() { loadCityPOIs(city.slug); });
   };
 
-  // ── Init ────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
     LQ.initMap({ keepBuffer: 4 });
     LQ.map.fitBounds(L.latLng(CITY_LAT, CITY_LON).toBounds(1200 * 2));
@@ -141,15 +208,35 @@
     }
   }
 
-  // ── Category pill tally ─────────────────────────────────────────────────
-  var _tallyData = {};
+  var _airbnbPattern = /airbnb\.[a-z]{2,}\/rooms\/\d+/i;
+  window.lqValidateUrl = function(input) {
+    var valid = _airbnbPattern.test(input.value.trim());
+    document.getElementById('btn-fetch').disabled = !valid;
+  };
+
+  var _mapUuid    = null;
+  var _pollTimer  = null;
+  var _seenIds    = {};
+  var _tallyData      = {};
+  var _secondaryTally = {};
+  var _mapFlownTo = false;
+
+  function _showState(state) {
+    ['state-initial', 'state-loading', 'state-results'].forEach(function(id) {
+      document.getElementById(id).style.display = id === state ? '' : 'none';
+    });
+    var footer = document.getElementById('landing-footer');
+    if (footer) footer.style.display = state === 'state-initial' ? '' : 'none';
+    var bar = document.getElementById('bar-deliverables');
+    if (bar) bar.style.display = state === 'state-results' ? '' : 'none';
+  }
 
   function _tallyHtml(tally) {
     var ordered = PILL_ORDER.filter(function(c) { return tally[c]; })
       .concat(Object.keys(tally).filter(function(c) {
         return PILL_ORDER.indexOf(c) < 0 && tally[c];
       }));
-    return ordered.map(function(cat) {
+    var pills = ordered.map(function(cat) {
       var icon    = LQ.FA_ICONS[cat] || 'fa-location-dot';
       var color   = LQ.CATEGORY_COLORS[cat] || 'var(--text-muted)';
       var opacity = LQ.hiddenCats[cat] ? '0.45' : '1';
@@ -160,91 +247,69 @@
         + '<i class="fa-solid ' + icon + '" style="color:' + color + ';"></i>'
         + cat.replace(/_/g, ' ') + ' &middot; ' + tally[cat] + '</span>';
     }).join('');
+    var showMore = LQ.secondaryMarkers.length
+      ? '<a id="show-more-link" href="#" onclick="_toggleSecondary(event)" '
+        + 'style="font-size:0.78rem;color:var(--text-muted);text-decoration:underline;'
+        + 'align-self:center;white-space:nowrap;">'
+        + (LQ.secondaryVisible ? 'Show less…' : 'Show more…') + '</a>'
+      : '';
+    return pills + showMore;
+  }
+
+  function _currentDisplayTally() {
+    var t = Object.assign({}, _tallyData);
+    if (LQ.secondaryVisible) {
+      Object.keys(_secondaryTally).forEach(function(cat) {
+        t[cat] = (t[cat] || 0) + _secondaryTally[cat];
+      });
+    }
+    return t;
   }
 
   window._toggleCat = function(el) {
     LQ.toggleCat(el.dataset.cat);
-    document.getElementById('loading-tally').innerHTML = _tallyHtml(_tallyData);
+    document.getElementById('results-tally').innerHTML = _tallyHtml(_currentDisplayTally());
   };
 
-  // ── Share ───────────────────────────────────────────────────────────────
-  var _shareUrl = null;
-
-  window.lqCopyShareUrl = function() {
-    if (!_shareUrl) return;
-    navigator.clipboard.writeText(_shareUrl).then(function() {
-      var msg = document.getElementById('share-copied-msg');
-      if (!msg) return;
-      msg.style.display = '';
-      setTimeout(function() { msg.style.display = 'none'; }, 2000);
-    }).catch(function() { prompt('Copy this link:', _shareUrl); });
+  window._toggleSecondary = function(e) {
+    e.preventDefault();
+    LQ.toggleSecondary();
+    document.getElementById('results-tally').innerHTML = _tallyHtml(_currentDisplayTally());
   };
 
-  // ── Geo flow ────────────────────────────────────────────────────────────
-  var _mapUuid   = null;
-  var _pollTimer = null;
-  var _seenIds   = {};
-
-  window.lqGetLocation = function() {
-    var btn   = document.getElementById('btn-locate');
-    var errEl = document.getElementById('locate-error');
+  window.lqStartMap = function(e) {
+    e.preventDefault();
+    var url = document.getElementById('airbnb_url').value.trim();
+    var errEl = document.getElementById('start-error');
     errEl.style.display = 'none';
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Locating…';
 
-    if (!navigator.geolocation) {
-      errEl.textContent = 'Geolocation is not supported by your browser.';
-      errEl.style.display = '';
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Get current location';
-      return;
-    }
+    var fd = new FormData();
+    fd.append('airbnb_url', url);
 
-    navigator.geolocation.getCurrentPosition(
-      function(pos) { _startGeoMap(pos.coords.latitude, pos.coords.longitude); },
-      function() {
-        errEl.textContent = 'Could not get your location. Please allow location access and try again.';
-        errEl.style.display = '';
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Get current location';
-      }
-    );
-  };
-
-  function _startGeoMap(lat, lon) {
-    // Fly to user location immediately
-    if (LQ.poiLayer) { LQ.map.removeLayer(LQ.poiLayer); LQ.poiLayer = null; }
-    LQ.lockedMarkerId = null; LQ.lockedMarkerRef = null;
-    LQ.map.flyToBounds(L.latLng(lat, lon).toBounds(600), { duration: 1.8 });
-    LQ.drawRings(lat, lon);
-    LQ.placeRentalMarker(lat, lon);
-    LQ.poiLayer = L.layerGroup().addTo(LQ.map);
-
-    // Switch overlay to loading state immediately
-    document.getElementById('state-location').style.display = 'none';
-    document.getElementById('state-loading').style.display = '';
-
-    // Switch footer immediately
-    document.getElementById('landing-footer').style.display = 'none';
-    document.getElementById('geo-footer').style.display = '';
-
-    _seenIds   = {};
+    _showState('state-loading');
+    _seenIds = {};
     _tallyData = {};
+    _mapFlownTo = false;
+    LQ.resetState();
 
-    fetch('/api/start-map-geo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lat: lat, lon: lon })
-    })
+    fetch('/api/start-map', { method: 'POST', body: fd })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (data.error) { _showError(data.error); return; }
-        _mapUuid  = data.uuid;
-        _shareUrl = window.location.origin + '/p/' + data.uuid;
+        if (data.error) {
+          _showState('state-initial');
+          errEl.textContent = data.error;
+          errEl.style.display = '';
+          return;
+        }
+        _mapUuid = data.uuid;
         _pollOnce(data.task_id);
       })
-      .catch(function() { _showError('Network error. Please try again.'); });
-  }
+      .catch(function() {
+        _showState('state-initial');
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = '';
+      });
+  };
 
   function _pollOnce(taskId) {
     fetch('/tasks/' + taskId + '/map-state')
@@ -256,21 +321,16 @@
   }
 
   function _onPoll(taskId, d) {
-    // Update status text
-    if (d.progress) {
-      document.getElementById('loading-status').innerHTML =
-        '<i class="fa-solid fa-spinner fa-spin"></i> ' + d.progress;
+    if (!_mapFlownTo && d.lat && d.lon && !(d.lat === 0 && d.lon === 0)) {
+      _mapFlownTo = true;
+      if (LQ.poiLayer) { LQ.map.removeLayer(LQ.poiLayer); LQ.poiLayer = null; }
+      LQ.lockedMarkerId = null; LQ.lockedMarkerRef = null;
+      LQ.map.flyToBounds(L.latLng(d.lat, d.lon).toBounds(600), { duration: 1.8 });
+      LQ.drawRings(d.lat, d.lon);
+      LQ.placeRentalMarker(d.lat, d.lon);
+      LQ.poiLayer = L.layerGroup().addTo(LQ.map);
     }
 
-    // Update location name in geo footer as soon as it's available
-    if (d.location && (d.location.city || d.location.neighbourhood)) {
-      var parts = [];
-      if (d.location.neighbourhood) parts.push(d.location.neighbourhood);
-      if (d.location.city) parts.push(d.location.city);
-      document.getElementById('geo-location-name').textContent = parts.join(', ');
-    }
-
-    // Add POI markers progressively, update tally
     if (d.features && d.features.length) {
       if (!LQ.poiLayer) { LQ.poiLayer = L.layerGroup().addTo(LQ.map); }
       d.features.forEach(function(f) {
@@ -280,6 +340,7 @@
         var cat = f.properties && f.properties.category;
         if (f.properties && f.properties.status === 'secondary') {
           LQ.secondaryMarkers.push(LQ.makePOIMarker(f));
+          if (cat) _secondaryTally[cat] = (_secondaryTally[cat] || 0) + 1;
           return;
         }
         if (cat) _tallyData[cat] = (_tallyData[cat] || 0) + 1;
@@ -294,61 +355,87 @@
       document.getElementById('loading-tally').innerHTML = _tallyHtml(_tallyData);
     }
 
-    if (d.error) { _showError(d.error); return; }
+    var pct = d.progress_pct || 2;
+    document.getElementById('loading-bar').style.width = Math.max(2, pct) + '%';
+    document.getElementById('loading-label').textContent = d.progress || 'Working…';
+
+    if (d.location && (d.location.city || d.location.neighbourhood)) {
+      var locParts = [];
+      if (d.location.neighbourhood) locParts.push(d.location.neighbourhood);
+      if (d.location.city) locParts.push(d.location.city);
+      document.getElementById('loading-location').textContent = locParts.join(', ');
+    } else if (d.listing_title) {
+      document.getElementById('loading-location').textContent = d.listing_title;
+    }
+
+    if (d.error) {
+      _showState('state-initial');
+      var errEl = document.getElementById('start-error');
+      errEl.textContent = d.error;
+      errEl.style.display = '';
+      return;
+    }
 
     if (d.done) {
-      _reRenderFinal(d.features);
-      var total = Object.values(_tallyData).reduce(function(a, b) { return a + b; }, 0);
-      document.getElementById('loading-status').innerHTML =
-        '<i class="fa-solid fa-check" style="color:var(--accent);"></i> '
-        + '<strong style="color:var(--text);">' + total + '</strong> places within walking distance';
-      history.pushState(null, '', '/p/' + _mapUuid);
+      _showResults(d);
       return;
     }
 
     _pollTimer = setTimeout(function() { _pollOnce(taskId); }, 1000);
   }
 
-  function _reRenderFinal(features) {
-    if (!features || !features.length) return;
-    // Clear all progressive markers and reset state
-    if (LQ.poiLayer) { LQ.map.removeLayer(LQ.poiLayer); }
-    LQ.resetState();
-    _tallyData = {};
+  function _showResults(d) {
+    var loc = d.location || {};
+    var headerParts = [];
+    if (loc.city) headerParts.push(loc.city);
+    if (loc.country) headerParts.push(loc.country);
+    document.getElementById('results-location').textContent =
+      headerParts.join(', ') || loc.neighbourhood || '';
+    document.getElementById('results-city').textContent = loc.neighbourhood || '';
 
-    LQ.poiLayer = L.layerGroup();
-    features.forEach(function(f) {
-      if (!f.geometry || !f.geometry.coordinates) return;
-      var cat = f.properties && f.properties.category;
-      if (f.properties && f.properties.status === 'secondary') {
-        LQ.secondaryMarkers.push(LQ.makePOIMarker(f));
-        return;
-      }
-      if (cat) _tallyData[cat] = (_tallyData[cat] || 0) + 1;
-      var marker = LQ.makePOIMarker(f);
-      if (cat) { (LQ.catMarkers[cat] = LQ.catMarkers[cat] || []).push(marker); }
-      if (cat && !LQ.DEFAULT_CATS[cat]) {
-        LQ.hiddenCats[cat] = true;
-      } else {
-        marker.addTo(LQ.poiLayer);
-      }
+    var total = Object.values(_tallyData).reduce(function(a, b) { return a + b; }, 0);
+    document.getElementById('results-summary').innerHTML =
+      '<strong style="color:var(--text);">' + total + '</strong> places within walking distance';
+    document.getElementById('results-tally').innerHTML = _tallyHtml(_tallyData);
+
+    _showState('state-results');
+
+    var uuid = _mapUuid;
+    var shareUrl = window.location.origin + '/p/' + uuid;
+    document.getElementById('bar-link-text').textContent = shareUrl;
+    document.getElementById('bar-qr-img').src = '/static/img/maps/' + uuid + '_qr.png';
+    _pollMapPng(uuid);
+
+    var dlQr = document.getElementById('btn-dl-qr');
+    var freeActions = document.getElementById('bar-free-actions');
+    if (dlQr) dlQr.href = '/p/' + uuid + '/download/qr';
+    if (freeActions) freeActions.style.display = '';
+
+    history.pushState(null, '', '/p/' + uuid);
+  }
+
+  function _pollMapPng(uuid) {
+    var img = new Image();
+    img.onload = function() {
+      document.getElementById('bar-map-spinner').style.display = 'none';
+      var el = document.getElementById('bar-map-img');
+      el.src = '/static/img/maps/' + uuid + '_map_v2.png';
+      el.style.display = '';
+    };
+    img.onerror = function() {
+      setTimeout(function() { _pollMapPng(uuid); }, 2000);
+    };
+    img.src = '/static/img/maps/' + uuid + '_map_v2.png?t=' + Date.now();
+  }
+
+  window.lqCopyShareLink = function() {
+    var url = window.location.origin + '/p/' + _mapUuid;
+    navigator.clipboard.writeText(url).then(function() {
+      var btn = document.getElementById('bar-copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
     });
-    LQ.poiLayer.addTo(LQ.map);
-    document.getElementById('loading-tally').innerHTML = _tallyHtml(_tallyData);
-  }
-
-  function _showError(msg) {
-    document.getElementById('state-loading').style.display = 'none';
-    document.getElementById('state-location').style.display = '';
-    document.getElementById('geo-footer').style.display = 'none';
-    document.getElementById('landing-footer').style.display = '';
-    var errEl = document.getElementById('locate-error');
-    errEl.textContent = msg;
-    errEl.style.display = '';
-    var btn = document.getElementById('btn-locate');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Get current location';
-  }
+  };
 })();
 </script>
 {% endblock %}

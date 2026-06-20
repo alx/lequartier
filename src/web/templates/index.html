@@ -102,14 +102,6 @@
       </div>
     </div>
   </div>
-  {% if stripe_active %}
-  <div>
-    <button id="btn-checkout" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="lqStartCheckout()">
-      <span id="checkout-label"><i class="fa-solid fa-lock"></i> Get your map — $19</span>
-      <span id="checkout-spinner" class="spinner" style="display:none;border-color:rgba(255,255,255,.4);border-top-color:#fff;"></span>
-    </button>
-  </div>
-  {% else %}
   <div id="bar-free-actions" style="display:none;">
     <a id="btn-dl-qr" href="#" class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:0.4rem;text-decoration:none;">
       <i class="fa-solid fa-qrcode"></i> Download QR code
@@ -121,7 +113,6 @@
       Share this page with your guests — the map is always free to view.
     </p>
   </div>
-  {% endif %}
 </div>
 
 <div class="landing-footer" id="landing-footer">
@@ -459,34 +450,6 @@
     });
   };
 
-  window.lqStartCheckout = function() {
-    if (!_mapUuid) return;
-    var btn = document.getElementById('btn-checkout');
-    var label = document.getElementById('checkout-label');
-    var spinner = document.getElementById('checkout-spinner');
-    if (btn) btn.disabled = true;
-    if (label) label.style.display = 'none';
-    if (spinner) spinner.style.display = 'inline-block';
-
-    fetch('/api/checkout?uuid=' + _mapUuid, { method: 'POST' })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.checkout_url) {
-          window.location.href = data.checkout_url;
-        } else {
-          if (btn) btn.disabled = false;
-          if (label) label.style.display = '';
-          if (spinner) spinner.style.display = 'none';
-          alert(data.error || 'Something went wrong. Please try again.');
-        }
-      })
-      .catch(function() {
-        if (btn) btn.disabled = false;
-        if (label) label.style.display = '';
-        if (spinner) spinner.style.display = 'none';
-        alert('Network error. Please try again.');
-      });
-  };
 })();
 </script>
 {% endblock %}
