@@ -667,8 +667,8 @@
         },
         "properties": {
           "name": "Chalay Rock Bar",
-          "category": "Culture",
-          "icon": "🏛️",
+          "category": "Restaurant",
+          "icon": "🍽️",
           "coord_source": "nominatim",
           "coord_accuracy": "medium",
           "source": "curated",
