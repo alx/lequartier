@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -89,8 +90,13 @@ def put(
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     path = _cache_path(listing_id)
 
+    base_real = os.path.realpath(CACHE_DIR)
+    target_real = os.path.realpath(path)
+    if os.path.commonpath([base_real, target_real]) != base_real:
+        raise Exception("Invalid file path")
+
     try:
-        records: list[dict] = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+        records: list[dict] = json.loads(Path(target_real).read_text(encoding="utf-8")) if Path(target_real).exists() else []
     except Exception:
         records = []
 
@@ -111,7 +117,7 @@ def put(
         "result":     result,
     })
 
-    path.write_text(
+    Path(target_real).write_text(
         json.dumps(records, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
