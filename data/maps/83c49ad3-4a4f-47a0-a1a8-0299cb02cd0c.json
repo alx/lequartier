@@ -1000,8 +1000,8 @@
         },
         "properties": {
           "name": "Chez Pelo Butchery",
-          "category": "Restaurant",
-          "icon": "🍽️",
+          "category": "Bakery & Food",
+          "icon": "🥩",
           "coord_source": "research",
           "coord_accuracy": "high",
           "source": "curated",
