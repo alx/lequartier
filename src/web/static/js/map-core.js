@@ -11,7 +11,7 @@
   var RENTAL_SIZE = 40;
   var ACCENT      = '#1a6b3c';
 
-  var DEFAULT_CATS = { 'Supermarket': true, 'Park': true, 'Playground': true };
+  var DEFAULT_CATS = { 'Bakery & Food': true, 'Supermarket': true, 'Park': true, 'Playground': true };
 
   var CIRCLE_STYLES = [
     { radiusM: 400,  label: '5 min' },
@@ -184,7 +184,7 @@
     var id     = ++_idSeq;
 
     var placeLabel = '';
-    if (props.name && props.status !== 'secondary') {
+    if (props.name) {
       placeLabel = '<div style="position:absolute;top:' + (POI_SIZE + 4) + 'px;left:50%;' +
         'transform:translateX(-50%);max-width:80px;width:max-content;' +
         'font-size:9px;font-weight:600;color:#1a1a1a;text-align:center;line-height:1.3;' +

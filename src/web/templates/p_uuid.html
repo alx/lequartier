@@ -79,20 +79,18 @@
   </div>
 </div>
 
-<div class="landing-footer landing-footer--wide">
-  <div class="landing-footer__left">
-    <a href="/" class="landing-random-btn" title="Go home">
-      <i class="fa-solid fa-house"></i>
-    </a>
-    <span>{% if location.city %}{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}{% else %}Le Quartier{% endif %}</span>
-  </div>
-  <div class="landing-footer__right">
+<nav class="bottom-nav" id="bottom-nav">
+  <a href="/" class="landing-random-btn" title="Go home">
+    <i class="fa-solid fa-house"></i>
+  </a>
+  <span>{% if location.city %}{{ location.city }}{% if location.country %}, {{ location.country }}{% endif %}{% else %}Le Quartier{% endif %}</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;">
     <span id="share-copied-msg" style="display:none;font-size:0.72rem;color:var(--accent);white-space:nowrap;">link copied</span>
     <a href="#" class="landing-random-btn" title="Copy share link" onclick="lqCopyShareUrl();return false;">
       <i class="fa-solid fa-share-nodes"></i>
     </a>
   </div>
-</div>
+</nav>
 {% endif %}
 
 {% endblock %}
@@ -183,7 +181,7 @@
       var pillEls = Array.from(pillContainer.querySelectorAll('.cat-pill'));
       var bycat = {};
       pillEls.forEach(function(el) { bycat[el.dataset.cat] = el; });
-      var DEFAULT_ON = ['Supermarket', 'Park', 'Playground'];
+      var DEFAULT_ON = ['Bakery & Food', 'Supermarket', 'Park', 'Playground'];
       var extraCats = pillEls.map(function(el) { return el.dataset.cat; })
         .filter(function(c) { return PILL_ORDER.indexOf(c) < 0; });
       DEFAULT_ON
