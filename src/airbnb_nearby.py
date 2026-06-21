@@ -40,7 +40,7 @@ import tomllib
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse, urlunparse
 
 import overpass as overpass_lib
 import requests
@@ -435,10 +435,59 @@ def _find_coords_recursive(obj, depth: int = 0) -> tuple[float, float] | None:
 _airbnb_soup_cache: dict[str, BeautifulSoup] = {}
 
 
+def build_validated_airbnb_url(url: str) -> str:
+    try:
+        # Minimal path validation
+        if "/../" in url or re.search(r"/%2e%2e/", url, re.IGNORECASE):
+            raise ValueError("Invalid path")
+        
+        parsed = urlparse(url)
+        
+        # Protocol check
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid protocol")
+        
+        # Host check
+        if not parsed.hostname:
+            raise ValueError("Invalid host")
+        
+        # Domain validation - Airbnb domains only
+        allowed_domains = [
+            "airbnb.com", "airbnb.fr", "airbnb.co.uk", "airbnb.ca",
+            "airbnb.de", "airbnb.es", "airbnb.it", "airbnb.com.au",
+            "airbnb.co.nz", "airbnb.ie", "airbnb.nl", "airbnb.be",
+            "airbnb.ch", "airbnb.at", "airbnb.dk", "airbnb.se",
+            "airbnb.no", "airbnb.fi", "airbnb.pt", "airbnb.pl",
+            "airbnb.cz", "airbnb.gr", "airbnb.ru", "airbnb.com.br",
+            "airbnb.com.mx", "airbnb.com.ar", "airbnb.cl", "airbnb.co.cr",
+            "airbnb.com.co", "airbnb.com.pe", "airbnb.com.ec", "airbnb.co.ve",
+            "airbnb.com.sg", "airbnb.co.in", "airbnb.co.id", "airbnb.com.my",
+            "airbnb.com.ph", "airbnb.co.th", "airbnb.co.kr", "airbnb.co.jp",
+            "airbnb.com.hk", "airbnb.com.tw", "airbnb.co.nz", "airbnb.com.tr",
+            "airbnb.ae", "airbnb.co.za", "airbnb.com.cn"
+        ]
+        
+        hostname_lower = parsed.hostname.lower()
+        # Check if hostname is exactly one of the allowed domains or a subdomain
+        is_valid = False
+        for domain in allowed_domains:
+            if hostname_lower == domain or hostname_lower == f"www.{domain}":
+                is_valid = True
+                break
+        
+        if not is_valid:
+            raise ValueError("Invalid host")
+        
+        return urlunparse(parsed)
+    except Exception:
+        raise ValueError("Invalid URL")
+
+
 def _get_airbnb_soup(url: str) -> BeautifulSoup:
     if url not in _airbnb_soup_cache:
         print("Fetching Airbnb page to extract coordinates...", file=sys.stderr)
-        resp = requests.get(url, headers=BROWSER_HEADERS, timeout=20)
+        validated_url = build_validated_airbnb_url(url)
+        resp = requests.get(validated_url, headers=BROWSER_HEADERS, timeout=20)
         if resp.status_code != 200:
             print(f"Error: Airbnb returned HTTP {resp.status_code}", file=sys.stderr)
             sys.exit(1)
