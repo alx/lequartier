@@ -1,12 +1,14 @@
-# Beads adoption + session search CLI — Implementation Plan
+# Beads adoption + session search — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Adopt `br` (beads) as the agent-actionable issue queue for this repo, then ship `scripts/session_search.py` — a stdlib-only CLI that searches Claude Code session transcripts by keyword, file touched, and date range.
+> **Status note (2026-06-23):** Task 1 is COMPLETE. Tasks 2–3 are SUPERSEDED — session search is handled by CASS (`~/.local/bin/cass`), not a bespoke script. See br-lgk for the CASS configuration task and the updated spec at `docs/superpowers/specs/2026-06-23-beads-and-session-search-design.md`.
 
-**Architecture:** Task 1 files four issues into the global `~/.beads` workspace via `br create` shell commands. Tasks 2–3 build the session search script with pure-JSONL scanning (no index), covered end-to-end by pytest.
+**Goal:** Adopt `br` (beads) as the agent-actionable issue queue for this repo, seeding it with four actionable issues including one to configure CASS for session search.
 
-**Tech Stack:** Python 3.11+ stdlib only (`json`, `argparse`, `pathlib`, `re`, `datetime`); `br` CLI (beads v0.2.15+); pytest.
+**Architecture:** Task 1 files four issues into the global `~/.beads` workspace via `br create` shell commands. ~~Tasks 2–3 build the session search script~~ (superseded — use CASS).
+
+**Tech Stack:** `br` CLI (beads v0.2.15+); CASS (`cass`).
 
 ## Global Constraints
 
@@ -83,11 +85,11 @@ br create \
 
 Expected: JSON with `"id": "br-..."`.
 
-- [ ] **Step 4: File issue — session search CLI**
+- [x] **Step 4: File issue — configure CASS for session search**
 
 ```bash
 br create \
-  --title "Session search CLI (scripts/session_search.py)" \
+  --title "Configure CASS (coding_agent_session_search) for this project" \
   --type feature \
   --priority 2 \
   --description "Stdlib-only script to search Claude Code session transcripts. Searches user messages, assistant messages, files touched (Read/Edit/Write/Bash tool calls), and date range. Default output: one line per session (date, short ID, first user message). --verbose: matching excerpts with ±1 message context. See docs/superpowers/specs/2026-06-23-beads-and-session-search-design.md for full spec." \
