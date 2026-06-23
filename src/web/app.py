@@ -129,6 +129,9 @@ def create_app(config: dict | None = None) -> Flask:
             "debug_mode": bool(os.environ.get("FLASK_DEBUG")),
         }
 
+    from .routes.airbnb import airbnb
+    app.register_blueprint(airbnb)
+
     from .routes.wizard import wizard
     app.register_blueprint(wizard)
 

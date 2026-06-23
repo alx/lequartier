@@ -5,7 +5,7 @@ import json
 from flask import Blueprint, Response, jsonify, render_template, request, session
 
 from .shared import _ZILLOW_CURATED_DIR, _require_edit_auth
-from .wizard import _og_image_url
+from .airbnb import _og_image_url
 from .. import cache as cache_mod
 from .. import poi_engine
 from .. import listing_index
