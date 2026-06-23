@@ -1,26 +1,17 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
-from flask import Blueprint, Response, jsonify, render_template, request, session, url_for
+from flask import Blueprint, Response, jsonify, render_template, request, session
 
 from .shared import _ZILLOW_CURATED_DIR, _require_edit_auth
+from .wizard import _og_image_url
 from .. import cache as cache_mod
 from .. import poi_engine
 from .. import listing_index
 from .. import tasks as task_mod
 
 zillow = Blueprint("zillow", __name__)
-
-_OG_IMAGES_DIR = Path(__file__).parent.parent / "static" / "img" / "og"
-
-
-def _og_image_url(listing_id: str) -> str | None:
-    """Return an absolute URL to the pre-generated OG PNG, or None if absent."""
-    if (_OG_IMAGES_DIR / f"{listing_id}.png").exists():
-        return url_for("static", filename=f"img/og/{listing_id}.png", _external=True)
-    return None
 
 
 def _render_zillow_map(zillow_id: str, r: dict, readonly: bool) -> str:
