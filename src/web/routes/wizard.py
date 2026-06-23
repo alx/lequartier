@@ -32,8 +32,7 @@ from ... import airbnb_nearby as lib
 
 from .shared import (
     CATEGORY_ICONS, CATEGORY_COLORS,
-    _CURATED_DIR, _ZILLOW_CURATED_DIR,
-    _MAPS_DATA_DIR, _MAPS_IMG_DIR, _SCRIPTS_DIR,
+    _CURATED_DIR, _ZILLOW_CURATED_DIR, _SCRIPTS_DIR,
     _require_edit_auth,
 )
 from .payment import _stripe_active

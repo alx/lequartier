@@ -207,7 +207,7 @@ def test_host_map_page_session_id_not_paid_stays_locked(client, tmp_path):
 
 def test_download_map_requires_unlock(client):
     locked_rec = {**_BASE_REC, "unlocked": 0}
-    with patch("src.web.routes.wizard.maps_db.get", return_value=locked_rec), \
+    with patch("src.web.routes.export.maps_db.get", return_value=locked_rec), \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}):
         resp = client.get(f"/p/{_UUID}/download/map")
     assert resp.status_code == 403
@@ -215,7 +215,7 @@ def test_download_map_requires_unlock(client):
 
 def test_download_qr_requires_unlock(client):
     locked_rec = {**_BASE_REC, "unlocked": 0}
-    with patch("src.web.routes.wizard.maps_db.get", return_value=locked_rec), \
+    with patch("src.web.routes.export.maps_db.get", return_value=locked_rec), \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}):
         resp = client.get(f"/p/{_UUID}/download/qr")
     assert resp.status_code == 403
