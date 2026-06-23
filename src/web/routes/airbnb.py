@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 import subprocess
 import uuid as uuid_mod
 from pathlib import Path
@@ -13,8 +14,7 @@ from flask import (
 )
 
 from .shared import (
-    CATEGORY_ICONS, CATEGORY_COLORS,
-    _CURATED_DIR, _SCRIPTS_DIR, _MAPS_IMG_DIR,
+    _CURATED_DIR, _SCRIPTS_DIR,
     _require_edit_auth,
 )
 from .export import _generate_exports
@@ -31,7 +31,6 @@ airbnb = Blueprint("airbnb", __name__)
 
 @airbnb.after_request
 def _allow_airbnb_framing(response):
-    import re
     # Allow chrome-extension:// (and any) origin to embed the read-only Airbnb map.
     # Only applied to the listing read-only route, not edit/jpg/geojson.
     if re.match(r"^/airbnb/[^/]+$", request.path):
@@ -611,7 +610,7 @@ def geo_page(coords: str):
         return redirect(url_for("wizard.host_map_page", map_uuid=map_uuid))
 
     task = task_mod.run_in_thread(_fetch_task_geo, listing_id, lat, lon)
-    return redirect(url_for("wizard.geo_page", coords=coords, task_id=task.task_id))
+    return redirect(url_for("airbnb.geo_page", coords=coords, task_id=task.task_id))
 
 
 @airbnb.get("/airbnb/<listing_id>/edit")

@@ -11,8 +11,6 @@ from flask import (
     abort,
     current_app,
     jsonify,
-    make_response,
-    redirect,
     render_template,
     request,
     send_file,
