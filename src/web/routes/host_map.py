@@ -10,7 +10,7 @@ from flask import (
     render_template, request, session,
 )
 
-from .shared import CATEGORY_ICONS, CATEGORY_COLORS, _MAPS_IMG_DIR, _SCRIPTS_DIR
+from .shared import CATEGORY_ICONS, CATEGORY_COLORS
 from .airbnb import _fetch_task, _fetch_task_direct, _fetch_task_geo
 from .payment import _stripe_active
 from .. import cache as cache_mod
