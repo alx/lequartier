@@ -251,9 +251,9 @@ def test_download_qr_serves_file_when_ready(client, tmp_path):
 def test_download_map_returns_202_when_not_ready(client, tmp_path):
     rec = {**_BASE_REC, "unlocked": 1}
 
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
-         patch("src.web.routes.wizard._MAPS_IMG_DIR", tmp_path), \
-         patch("src.web.routes.wizard._SCRIPTS_DIR", tmp_path), \
+    with patch("src.web.routes.export.maps_db.get", return_value=rec), \
+         patch("src.web.routes.export._MAPS_IMG_DIR", tmp_path), \
+         patch("src.web.routes.export._SCRIPTS_DIR", tmp_path), \
          patch("subprocess.Popen"):
         resp = client.get(f"/p/{_UUID}/download/map")
 

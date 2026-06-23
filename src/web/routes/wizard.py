@@ -5,11 +5,8 @@ import os
 import random
 import re
 import subprocess
-import time
 import uuid as uuid_mod
 from pathlib import Path
-
-import requests as http_requests
 
 from flask import (
     Blueprint,
@@ -35,9 +32,9 @@ from ... import airbnb_nearby as lib
 
 from .shared import (
     CATEGORY_ICONS, CATEGORY_COLORS,
-    _GH_API, _GH_REPO, _CURATED_DIR, _ZILLOW_CURATED_DIR,
+    _CURATED_DIR, _ZILLOW_CURATED_DIR,
     _MAPS_DATA_DIR, _MAPS_IMG_DIR, _SCRIPTS_DIR,
-    _gh_headers, _gh_put_file, _require_edit_auth,
+    _require_edit_auth,
 )
 from .payment import _stripe_active
 from .export import _generate_exports
