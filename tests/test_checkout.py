@@ -226,9 +226,9 @@ def test_download_map_serves_file_when_ready(client, tmp_path):
     img.write_bytes(b"\x89PNG\r\n")
     rec = {**_BASE_REC, "unlocked": 1, "result_path": None, "qr_path": None}
 
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
-         patch("src.web.routes.wizard.maps_db.set_paths"), \
-         patch("src.web.routes.wizard._MAPS_IMG_DIR", tmp_path):
+    with patch("src.web.routes.export.maps_db.get", return_value=rec), \
+         patch("src.web.routes.export.maps_db.set_paths"), \
+         patch("src.web.routes.export._MAPS_IMG_DIR", tmp_path):
         resp = client.get(f"/p/{_UUID}/download/map")
 
     assert resp.status_code == 200
@@ -240,8 +240,8 @@ def test_download_qr_serves_file_when_ready(client, tmp_path):
     qr.write_bytes(b"\x89PNG\r\n")
     rec = {**_BASE_REC, "unlocked": 1}
 
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
-         patch("src.web.routes.wizard._MAPS_IMG_DIR", tmp_path):
+    with patch("src.web.routes.export.maps_db.get", return_value=rec), \
+         patch("src.web.routes.export._MAPS_IMG_DIR", tmp_path):
         resp = client.get(f"/p/{_UUID}/download/qr")
 
     assert resp.status_code == 200
@@ -280,8 +280,8 @@ def test_downloads_allowed_when_stripe_inactive(client, tmp_path):
     qr.write_bytes(b"\x89PNG\r\n")
     rec = {**_BASE_REC, "unlocked": 0}
 
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
-         patch("src.web.routes.wizard._MAPS_IMG_DIR", tmp_path), \
+    with patch("src.web.routes.export.maps_db.get", return_value=rec), \
+         patch("src.web.routes.export._MAPS_IMG_DIR", tmp_path), \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": ""}):
         resp = client.get(f"/p/{_UUID}/download/qr")
 

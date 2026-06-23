@@ -135,6 +135,9 @@ def create_app(config: dict | None = None) -> Flask:
     from .routes.payment import payment
     app.register_blueprint(payment)
 
+    from .routes.export import export
+    app.register_blueprint(export)
+
     from .routes.webhook import webhook
     app.register_blueprint(webhook)
 
