@@ -6,27 +6,20 @@ import uuid as uuid_mod
 from pathlib import Path
 
 from flask import (
-    Blueprint,
-    Response,
-    abort,
-    current_app,
-    jsonify,
-    render_template,
-    request,
-    session,
+    Blueprint, Response, abort, current_app, jsonify,
+    render_template, request, session,
 )
 
+from .shared import CATEGORY_ICONS, CATEGORY_COLORS, _MAPS_IMG_DIR, _SCRIPTS_DIR
+from .airbnb import _fetch_task, _fetch_task_direct, _fetch_task_geo
+from .payment import _stripe_active
 from .. import cache as cache_mod
 from .. import tasks as task_mod
 from .. import poi_engine
 from .. import maps_db
 from ... import airbnb_nearby as lib
 
-from .airbnb import _fetch_task, _fetch_task_direct, _fetch_task_geo
-from .payment import _stripe_active
-from .shared import CATEGORY_ICONS, CATEGORY_COLORS
-
-wizard = Blueprint("wizard", __name__)
+host_map = Blueprint("host_map", __name__)
 
 
 def _active_result() -> dict | None:
@@ -70,12 +63,12 @@ def _api_nearby_response(geojson: dict) -> Response:
                     content_type="application/geo+json")
 
 
-@wizard.route("/api/nearby", methods=["OPTIONS"])
+@host_map.route("/api/nearby", methods=["OPTIONS"])
 def api_nearby_preflight():
     return Response("", status=204)
 
 
-@wizard.post("/api/generate")
+@host_map.post("/api/generate")
 def api_generate():
     """Start a map-generation task (called by userscripts on 404). lat/lon are optional."""
     data       = request.get_json(force=True) or {}
@@ -105,7 +98,7 @@ def api_generate():
     return jsonify({"task_id": task.task_id})
 
 
-@wizard.get("/api/nearby")
+@host_map.get("/api/nearby")
 def api_nearby():
     try:
         lat = float(request.args.get("lat", ""))
@@ -157,7 +150,7 @@ def api_nearby():
 
 # ── /map ───────────────────────────────────────────────────────────────────────
 
-@wizard.get("/map")
+@host_map.get("/map")
 def map_page():
     try:
         lat = float(request.args["lat"])
@@ -227,7 +220,7 @@ def map_page():
 # ── Host Map: paid export flow ────────────────────────────────────────────────
 
 
-@wizard.post("/api/start-map")
+@host_map.post("/api/start-map")
 def api_start_map():
     """Start a background POI task for the landing page host flow.
 
@@ -249,7 +242,7 @@ def api_start_map():
     return jsonify({"task_id": task.task_id, "uuid": map_uuid, "listing_id": listing_id})
 
 
-@wizard.post("/api/start-map-geo")
+@host_map.post("/api/start-map-geo")
 def api_start_map_geo():
     """Start a background POI task from GPS coordinates (landing page geo flow)."""
     data = request.get_json(force=True) or {}
@@ -267,7 +260,7 @@ def api_start_map_geo():
     return jsonify({"task_id": task.task_id, "uuid": map_uuid})
 
 
-@wizard.get("/p/<map_uuid>")
+@host_map.get("/p/<map_uuid>")
 def host_map_page(map_uuid: str):
     """Shareable Host Map page — interactive map always visible, exports gated."""
     rec: dict | None = maps_db.get(map_uuid)

@@ -36,14 +36,14 @@ def test_checkout_missing_uuid(client):
 
 
 def test_checkout_map_not_found(client):
-    with patch("src.web.routes.wizard.maps_db.get", return_value=None):
+    with patch("src.web.routes.host_map.maps_db.get", return_value=None):
         resp = client.post("/api/checkout?uuid=" + _UUID)
     assert resp.status_code == 404
     assert b"not found" in resp.data.lower()
 
 
 def test_checkout_already_unlocked(client):
-    with patch("src.web.routes.wizard.maps_db.get",
+    with patch("src.web.routes.host_map.maps_db.get",
                return_value={**_BASE_REC, "unlocked": 1}):
         resp = client.post("/api/checkout?uuid=" + _UUID)
     assert resp.status_code == 400
@@ -51,7 +51,7 @@ def test_checkout_already_unlocked(client):
 
 
 def test_checkout_missing_stripe_key(client):
-    with patch("src.web.routes.wizard.maps_db.get", return_value=dict(_BASE_REC)), \
+    with patch("src.web.routes.host_map.maps_db.get", return_value=dict(_BASE_REC)), \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": ""}):
         resp = client.post("/api/checkout?uuid=" + _UUID)
     assert resp.status_code == 503
@@ -61,8 +61,8 @@ def test_checkout_missing_stripe_key(client):
 def test_checkout_creates_session_and_returns_url(client):
     fake_session = SimpleNamespace(id=_SESSION_ID, url="https://checkout.stripe.com/pay/test")
 
-    with patch("src.web.routes.wizard.maps_db.get", return_value=dict(_BASE_REC)), \
-         patch("src.web.routes.wizard.maps_db.set_stripe_session") as mock_set, \
+    with patch("src.web.routes.host_map.maps_db.get", return_value=dict(_BASE_REC)), \
+         patch("src.web.routes.host_map.maps_db.set_stripe_session") as mock_set, \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}), \
          patch("stripe.checkout.Session.create", return_value=fake_session):
         resp = client.post("/api/checkout?uuid=" + _UUID)
@@ -76,7 +76,7 @@ def test_checkout_creates_session_and_returns_url(client):
 def test_checkout_stripe_error_returns_502(client):
     import stripe as _stripe
 
-    with patch("src.web.routes.wizard.maps_db.get", return_value=dict(_BASE_REC)), \
+    with patch("src.web.routes.host_map.maps_db.get", return_value=dict(_BASE_REC)), \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}), \
          patch("stripe.checkout.Session.create",
                side_effect=_stripe.StripeError("card_error")):
@@ -111,7 +111,7 @@ def test_webhook_bad_signature_returns_400(client):
 def test_webhook_unlocks_map(client):
     event = _make_event(_SESSION_ID)
     with patch("stripe.Webhook.construct_event", return_value=event), \
-         patch("src.web.routes.wizard.maps_db.unlock") as mock_unlock, \
+         patch("src.web.routes.host_map.maps_db.unlock") as mock_unlock, \
          patch.dict("os.environ", {"STRIPE_WEBHOOK_SECRET": "whsec_fake"}):
         resp = client.post(
             "/stripe/webhook",
@@ -125,7 +125,7 @@ def test_webhook_unlocks_map(client):
 def test_webhook_ignores_non_checkout_events(client):
     event = {"type": "payment_intent.created", "data": {"object": {}}}
     with patch("stripe.Webhook.construct_event", return_value=event), \
-         patch("src.web.routes.wizard.maps_db.unlock") as mock_unlock, \
+         patch("src.web.routes.host_map.maps_db.unlock") as mock_unlock, \
          patch.dict("os.environ", {"STRIPE_WEBHOOK_SECRET": "whsec_fake"}):
         resp = client.post(
             "/stripe/webhook",
@@ -151,7 +151,7 @@ def _make_rec_with_result(tmp_path):
 
 def test_host_map_page_locked_shows_checkout_button(client, tmp_path):
     rec = _make_rec_with_result(tmp_path)
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
+    with patch("src.web.routes.host_map.maps_db.get", return_value=rec), \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}):
         resp = client.get(f"/p/{_UUID}")
     assert resp.status_code == 200
@@ -161,7 +161,7 @@ def test_host_map_page_locked_shows_checkout_button(client, tmp_path):
 
 def test_host_map_page_unlocked_shows_downloads(client, tmp_path):
     rec = {**_make_rec_with_result(tmp_path), "unlocked": 1}
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec):
+    with patch("src.web.routes.host_map.maps_db.get", return_value=rec):
         resp = client.get(f"/p/{_UUID}")
     assert resp.status_code == 200
     assert b"download/map" in resp.data
@@ -173,9 +173,9 @@ def test_host_map_page_verifies_stripe_on_session_id(client, tmp_path):
     rec = _make_rec_with_result(tmp_path)
     paid_session = SimpleNamespace(payment_status="paid")
 
-    with patch("src.web.routes.wizard.maps_db.get") as mock_get, \
-         patch("src.web.routes.wizard.maps_db.set_stripe_session") as mock_set_session, \
-         patch("src.web.routes.wizard.maps_db.unlock") as mock_unlock, \
+    with patch("src.web.routes.host_map.maps_db.get") as mock_get, \
+         patch("src.web.routes.host_map.maps_db.set_stripe_session") as mock_set_session, \
+         patch("src.web.routes.host_map.maps_db.unlock") as mock_unlock, \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}), \
          patch("stripe.checkout.Session.retrieve", return_value=paid_session):
 
@@ -194,7 +194,7 @@ def test_host_map_page_session_id_not_paid_stays_locked(client, tmp_path):
     rec = _make_rec_with_result(tmp_path)
     unpaid_session = SimpleNamespace(payment_status="unpaid")
 
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
+    with patch("src.web.routes.host_map.maps_db.get", return_value=rec), \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_fake"}), \
          patch("stripe.checkout.Session.retrieve", return_value=unpaid_session):
         resp = client.get(f"/p/{_UUID}?session_id={_SESSION_ID}")
@@ -266,7 +266,7 @@ def test_download_map_returns_202_when_not_ready(client, tmp_path):
 def test_host_map_page_unlocked_when_stripe_inactive(client, tmp_path):
     """When STRIPE_SECRET_KEY is unset, all maps render as unlocked."""
     rec = _make_rec_with_result(tmp_path)  # unlocked=0
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec), \
+    with patch("src.web.routes.host_map.maps_db.get", return_value=rec), \
          patch.dict("os.environ", {"STRIPE_SECRET_KEY": ""}):
         resp = client.get(f"/p/{_UUID}")
     assert resp.status_code == 200

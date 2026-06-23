@@ -433,7 +433,7 @@ def _poll_task(task_id: str, readonly: bool = False):
                 r["listing_id"], r["lat"], r["lon"], r
             )
             resp = make_response("")
-            resp.headers["HX-Redirect"] = url_for("wizard.host_map_page", map_uuid=map_uuid)
+            resp.headers["HX-Redirect"] = url_for("host_map.host_map_page", map_uuid=map_uuid)
             return resp
         cfg = poi_engine.get_cfg()
         session["active_result"] = r
@@ -558,7 +558,7 @@ def airbnb_page(listing_id: str):
         if task and task.status == task_mod.Status.DONE:
             r = task.result
             map_uuid = _get_or_create_host_map(r["listing_id"], r["lat"], r["lon"], r)
-            return redirect(url_for("wizard.host_map_page", map_uuid=map_uuid))
+            return redirect(url_for("host_map.host_map_page", map_uuid=map_uuid))
         if task and task.status == task_mod.Status.ERROR:
             return render_template("airbnb.html", mode="error", listing_id=listing_id,
                                    listing_id_prefix="airbnb", error=task.error, readonly=True)
@@ -571,7 +571,7 @@ def airbnb_page(listing_id: str):
             map_uuid = _get_or_create_host_map(
                 cached["listing_id"], cached["lat"], cached["lon"], cached
             )
-            return redirect(url_for("wizard.host_map_page", map_uuid=map_uuid))
+            return redirect(url_for("host_map.host_map_page", map_uuid=map_uuid))
 
     airbnb_url = f"https://www.airbnb.com/rooms/{listing_id}"
     task = task_mod.run_in_thread(_fetch_task, airbnb_url, None, None, None, refresh)
@@ -597,7 +597,7 @@ def geo_page(coords: str):
         if task and task.status == task_mod.Status.DONE:
             r = task.result
             map_uuid = _get_or_create_host_map(r["listing_id"], r["lat"], r["lon"], r)
-            return redirect(url_for("wizard.host_map_page", map_uuid=map_uuid))
+            return redirect(url_for("host_map.host_map_page", map_uuid=map_uuid))
         if task and task.status == task_mod.Status.ERROR:
             return render_template("airbnb.html", mode="error", listing_id=coords,
                                    listing_id_prefix="geo", error=task.error, readonly=True)
@@ -607,7 +607,7 @@ def geo_page(coords: str):
     cached = cache_mod.get(listing_id, lat, lon)
     if cached:
         map_uuid = _get_or_create_host_map(listing_id, cached["lat"], cached["lon"], cached)
-        return redirect(url_for("wizard.host_map_page", map_uuid=map_uuid))
+        return redirect(url_for("host_map.host_map_page", map_uuid=map_uuid))
 
     task = task_mod.run_in_thread(_fetch_task_geo, listing_id, lat, lon)
     return redirect(url_for("airbnb.geo_page", coords=coords, task_id=task.task_id))

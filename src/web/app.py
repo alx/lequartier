@@ -132,8 +132,8 @@ def create_app(config: dict | None = None) -> Flask:
     from .routes.airbnb import airbnb
     app.register_blueprint(airbnb)
 
-    from .routes.wizard import wizard
-    app.register_blueprint(wizard)
+    from .routes.host_map import host_map
+    app.register_blueprint(host_map)
 
     from .routes.payment import payment
     app.register_blueprint(payment)

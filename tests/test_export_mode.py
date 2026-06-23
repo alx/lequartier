@@ -38,7 +38,7 @@ def _make_rec(tmp_path):
 def test_interactive_map_includes_marker_call(client, tmp_path):
     """Normal embed view must include placeRentalMarker() call."""
     rec = _make_rec(tmp_path)
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec):
+    with patch("src.web.routes.host_map.maps_db.get", return_value=rec):
         resp = client.get(f"/p/{TEST_UUID}?embed=1")
     assert resp.status_code == 200
     assert b"placeRentalMarker(LAT, LON)" in resp.data
@@ -47,7 +47,7 @@ def test_interactive_map_includes_marker_call(client, tmp_path):
 def test_export_mode_suppresses_marker_call(client, tmp_path):
     """export_mode=true must remove the placeRentalMarker() call from rendered JS."""
     rec = _make_rec(tmp_path)
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec):
+    with patch("src.web.routes.host_map.maps_db.get", return_value=rec):
         resp = client.get(f"/p/{TEST_UUID}?embed=1&export_mode=true")
     assert resp.status_code == 200
     assert b"placeRentalMarker(LAT, LON)" not in resp.data
@@ -56,7 +56,7 @@ def test_export_mode_suppresses_marker_call(client, tmp_path):
 def test_export_mode_renders_header(client, tmp_path):
     """export_mode=true must include the export-header div with city name."""
     rec = _make_rec(tmp_path)
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec):
+    with patch("src.web.routes.host_map.maps_db.get", return_value=rec):
         resp = client.get(f"/p/{TEST_UUID}?embed=1&export_mode=true")
     assert resp.status_code == 200
     assert b"export-header" in resp.data
@@ -66,7 +66,7 @@ def test_export_mode_renders_header(client, tmp_path):
 def test_no_export_mode_no_header(client, tmp_path):
     """Without export_mode, export-header must not appear."""
     rec = _make_rec(tmp_path)
-    with patch("src.web.routes.wizard.maps_db.get", return_value=rec):
+    with patch("src.web.routes.host_map.maps_db.get", return_value=rec):
         resp = client.get(f"/p/{TEST_UUID}?embed=1")
     assert resp.status_code == 200
     assert b"export-header" not in resp.data
