@@ -15,6 +15,7 @@ from flask import (
 
 from .shared import (
     _CURATED_DIR, _SCRIPTS_DIR,
+    _OG_IMAGES_DIR, _og_image_url,
     _require_edit_auth,
 )
 from .export import _generate_exports
@@ -508,14 +509,6 @@ def task_map_state(task_id: str):
 
 
 _PREVIEWS_DIR = Path(__file__).parent.parent / "static" / "img" / "previews"
-_OG_IMAGES_DIR = Path(__file__).parent.parent / "static" / "img" / "og"
-
-
-def _og_image_url(listing_id: str) -> str | None:
-    """Return an absolute URL to the pre-generated OG PNG, or None if absent."""
-    if (_OG_IMAGES_DIR / f"{listing_id}.png").exists():
-        return url_for("static", filename=f"img/og/{listing_id}.png", _external=True)
-    return None
 
 
 def _render_airbnb_map(r: dict, readonly: bool = False, embed: bool = False) -> str:

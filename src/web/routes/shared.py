@@ -94,3 +94,14 @@ def _require_edit_auth(f):
             {"WWW-Authenticate": 'Basic realm="Edit"'},
         )
     return decorated
+
+
+_OG_IMAGES_DIR = Path(__file__).parent.parent / "static" / "img" / "og"
+
+
+def _og_image_url(listing_id: str) -> str | None:
+    """Return an absolute URL to the pre-generated OG PNG, or None if absent."""
+    from flask import url_for
+    if (_OG_IMAGES_DIR / f"{listing_id}.png").exists():
+        return url_for("static", filename=f"img/og/{listing_id}.png", _external=True)
+    return None
