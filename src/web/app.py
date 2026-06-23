@@ -138,6 +138,9 @@ def create_app(config: dict | None = None) -> Flask:
     from .routes.export import export
     app.register_blueprint(export)
 
+    from .routes.zillow import zillow
+    app.register_blueprint(zillow)
+
     from .routes.webhook import webhook
     app.register_blueprint(webhook)
 
