@@ -132,6 +132,9 @@ def create_app(config: dict | None = None) -> Flask:
     from .routes.wizard import wizard
     app.register_blueprint(wizard)
 
+    from .routes.payment import payment
+    app.register_blueprint(payment)
+
     from .routes.webhook import webhook
     app.register_blueprint(webhook)
 
