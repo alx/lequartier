@@ -15,7 +15,7 @@ from flask import (
 
 from .shared import (
     _CURATED_DIR, _SCRIPTS_DIR,
-    _OG_IMAGES_DIR, _og_image_url,
+    _og_image_url,
     _require_edit_auth,
 )
 from .export import _generate_exports
