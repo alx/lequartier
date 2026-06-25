@@ -102,10 +102,9 @@ def test_write_redirect_stub_canonical_link(tmp_path):
 
 # ── render_page ───────────────────────────────────────────────────────────────
 
-def test_render_page_returns_bytes(app):
+def test_render_page_returns_bytes(app, tmp_path):
     """render_page returns HTML bytes for a known /p/{uuid} route."""
     import scripts.build_static as bs
-    import tempfile
 
     result = {
         "geojson": {"type": "FeatureCollection", "features": []},
@@ -113,10 +112,9 @@ def test_render_page_returns_bytes(app):
         "n_pois": 0, "lat": 13.75, "lon": 100.5,
         "listing_id": "12345",
     }
-    with tempfile.NamedTemporaryFile(suffix=".json", mode="w",
-                                     delete=False, encoding="utf-8") as f:
-        json.dump(result, f)
-        result_path = f.name
+    result_file = tmp_path / "result.json"
+    result_file.write_text(json.dumps(result), encoding="utf-8")
+    result_path = str(result_file)
 
     rec = {
         "uuid": "render-test-uuid", "listing_id": "12345",
@@ -143,20 +141,18 @@ def test_render_page_raises_on_404(app):
                 bs.render_page(client, "/p/no-such-uuid")
 
 
-def test_render_page_sets_script_name(app):
+def test_render_page_sets_script_name(app, tmp_path):
     """Static asset URLs in rendered HTML are prefixed with /lequartier."""
     import scripts.build_static as bs
-    import tempfile
 
     result = {
         "geojson": {"type": "FeatureCollection", "features": []},
         "location": {"city": "Test", "country": "Country"},
         "n_pois": 0, "lat": 0.0, "lon": 0.0, "listing_id": "99",
     }
-    with tempfile.NamedTemporaryFile(suffix=".json", mode="w",
-                                     delete=False, encoding="utf-8") as f:
-        json.dump(result, f)
-        result_path = f.name
+    result_file = tmp_path / "result.json"
+    result_file.write_text(json.dumps(result), encoding="utf-8")
+    result_path = str(result_file)
 
     rec = {
         "uuid": "script-name-uuid", "listing_id": "99",
