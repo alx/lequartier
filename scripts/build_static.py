@@ -110,10 +110,10 @@ def _sync_to_gh_pages(dist: Path) -> None:
 
     # Stash tracked modifications so checkout can proceed cleanly
     stash_out = subprocess.check_output(
-        ["git", "stash", "--quiet"],
+        ["git", "stash"],
         cwd=PROJECT_ROOT, text=True,
     ).strip()
-    stashed = bool(stash_out)  # empty output means "No local changes to save"
+    stashed = "Saved working directory" in stash_out
 
     subprocess.run(
         ["git", "checkout", "gh-pages"],
