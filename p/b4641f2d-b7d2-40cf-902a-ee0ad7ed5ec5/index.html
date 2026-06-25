@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>
+  บ้านละไม, ประเทศไทย — Le Quartier
+</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+  <meta name="description" content="Generate a neighbourhood map for any rental listing — supermarkets, parks, transit, restaurants and more.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="
+  บ้านละไม, ประเทศไทย
+">
+  <meta property="og:description" content="Walkable neighbourhood map — 15 places nearby.">
+  <meta property="og:image" content="https://maps.girard-davila.net/images/map-previews/lamai.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="http://localhost/p/b4641f2d-b7d2-40cf-902a-ee0ad7ed5ec5">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="/lequartier/static/css/app.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="">
+  <script src="/lequartier/static/js/htmx.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/lequartier/static/js/map-core.js"></script>
+
+  <!-- Google Analytics -->
+  
+</head>
+<body>
+  <div id="map"></div>
+
+  <main>
+    
+
+
+
+
+<div class="center-overlay" id="host-map-overlay">
+  <div class="overlay-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.55rem;">
+      <div class="block-label" style="margin-bottom:0;"><i class="fa-solid fa-house"></i> Le Quartier</div>
+      
+    </div>
+
+    
+    <div id="cat-pills-container" style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;border-top:1px solid var(--border);padding-top:0.55rem;">
+      
+      <span class="cat-pill" data-cat="Supermarket" data-primary-count="1" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+        <i class="fa-solid fa-cart-shopping" style="color:#0f766e;"></i>
+        Supermarket &middot; <span class="pill-count">1</span>
+      </span>
+      
+      <span class="cat-pill" data-cat="Bakery &amp; Food" data-primary-count="1" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+        <i class="fa-solid fa-cookie-bite" style="color:#b45309;"></i>
+        Bakery &amp; Food &middot; <span class="pill-count">1</span>
+      </span>
+      
+      <span class="cat-pill" data-cat="Market" data-primary-count="2" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+        <i class="fa-solid fa-store" style="color:#b45309;"></i>
+        Market &middot; <span class="pill-count">2</span>
+      </span>
+      
+      <span class="cat-pill" data-cat="Activity" data-primary-count="4" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+        <i class="fa-solid fa-person-running" style="color:#0369a1;"></i>
+        Activity &middot; <span class="pill-count">4</span>
+      </span>
+      
+      <span class="cat-pill" data-cat="Culture" data-primary-count="1" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+        <i class="fa-solid fa-masks-theater" style="color:#be123c;"></i>
+        Culture &middot; <span class="pill-count">1</span>
+      </span>
+      
+      <span class="cat-pill" data-cat="Restaurant" data-primary-count="5" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+        <i class="fa-solid fa-utensils" style="color:#b45309;"></i>
+        Restaurant &middot; <span class="pill-count">5</span>
+      </span>
+      
+      <span class="cat-pill" data-cat="Health" data-primary-count="1" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.78rem;color:var(--text-muted);">
+        <i class="fa-solid fa-kit-medical" style="color:#dc2626;"></i>
+        Health &middot; <span class="pill-count">1</span>
+      </span>
+      
+    </div>
+    
+
+  </div>
+</div>
+
+<nav class="bottom-nav" id="bottom-nav">
+  <a href="/" class="landing-random-btn" title="Go home">
+    <i class="fa-solid fa-house"></i>
+  </a>
+  <span>บ้านละไม, ประเทศไทย</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;">
+    <span id="share-copied-msg" style="display:none;font-size:0.72rem;color:var(--accent);white-space:nowrap;">link copied</span>
+    <a href="#" class="landing-random-btn" title="Copy share link" onclick="lqCopyShareUrl();return false;">
+      <i class="fa-solid fa-share-nodes"></i>
+    </a>
+  </div>
+</nav>
+
+
+
+  </main>
+
+  
+
+  
+<script>
+(function () {
+  // ── Page-specific data ──────────────────────────────────────────────────
+  var LAT         = 9.4648138;
+  var LON         = 100.0456778;
+  var UUID        = "b4641f2d-b7d2-40cf-902a-ee0ad7ed5ec5";
+  var SHARE_URL   = "http://localhost/p/b4641f2d-b7d2-40cf-902a-ee0ad7ed5ec5";
+  var GEOJSON          = {"type": "FeatureCollection", "_meta": {"crs": "EPSG:4326", "generated": "2026-06-18T07:17:26.088200+00:00", "source": "OSM Overpass + Google Places — ", "listing_url": "", "center": {"lat": 9.4648138, "lon": 100.0456778}, "radius_m": 1000.0, "coord_confidence": "high", "units": "metric", "routing": true, "category_meta": {"Supermarket": {"icon": "🛒", "fa_icon": "fa-cart-shopping", "color": "#16a34a"}, "Bakery & Food": {"icon": "🥖", "fa_icon": "fa-cookie-bite", "color": "#2563eb"}, "Market": {"icon": "🏪", "fa_icon": "fa-store", "color": "#f97316"}, "Night Shop": {"icon": "🌙", "fa_icon": "fa-moon", "color": "#9333ea"}, "Park": {"icon": "🌳", "fa_icon": "fa-tree", "color": "#dc2626"}, "Playground": {"icon": "🛝", "fa_icon": "fa-child-reaching", "color": "#0891b2"}, "Dog Park": {"icon": "🐕", "fa_icon": "fa-dog", "color": "#ca8a04"}, "Education": {"icon": "🏫", "fa_icon": "fa-school", "color": "#be185d"}, "Transit": {"icon": "🚌", "fa_icon": "fa-bus", "color": "#15803d"}, "Activity": {"icon": "🎠", "fa_icon": "fa-person-running", "color": "#1d4ed8"}, "Culture": {"icon": "🏛️", "fa_icon": "fa-landmark", "color": "#ea580c"}, "Wellness": {"icon": "🧘", "fa_icon": "fa-spa", "color": "#7c3aed"}, "Restaurant": {"icon": "🍽️", "fa_icon": "fa-utensils", "color": "#b91c1c"}, "Health": {"icon": "💊", "fa_icon": "fa-pills", "color": "#0e7490"}, "Bike Share": {"icon": "🚲", "fa_icon": "fa-bicycle", "color": "#16a34a"}}, "location": {"neighbourhood": null, "city": "บ้านละไม", "country": "ประเทศไทย", "timezone": null}}, "features": [{"type": "Feature", "id": "geo/9.4648,100.0457-001", "geometry": {"type": "Point", "coordinates": [100.0443434, 9.4647637]}, "properties": {"name": "FamilyMart", "category": "Supermarket", "icon": "🛒", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 77, "website": "https://www.familymart.co.th/", "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-002", "geometry": {"type": "Point", "coordinates": [100.0448593, 9.4662119]}, "properties": {"name": "Big C Mini", "category": "Supermarket", "icon": "🛒", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 76, "status": "secondary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-003", "geometry": {"type": "Point", "coordinates": [100.0429331, 9.4624129]}, "properties": {"name": "Will Wait Bakery", "category": "Bakery & Food", "icon": "🥖", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 52, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-004", "geometry": {"type": "Point", "coordinates": [100.0442942, 9.4654426]}, "properties": {"name": "Market", "category": "Market", "icon": "🏪", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": true, "score": 70, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-005", "geometry": {"type": "Point", "coordinates": [100.0480457, 9.4687973]}, "properties": {"name": "Market", "category": "Market", "icon": "🏪", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": true, "score": 56, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-006", "geometry": {"type": "Point", "coordinates": [100.0488924, 9.4714234]}, "properties": {"name": "Playground", "category": "Playground", "icon": "🛝", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": true, "score": 23, "opening_hours": {"raw": "Mo-Su 10:00-20:00", "open_now": null, "source": "osm"}, "status": "secondary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-007", "geometry": {"type": "Point", "coordinates": [100.0455096, 9.4645453]}, "properties": {"name": "Activity", "category": "Activity", "icon": "🎠", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": true, "score": 60, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-008", "geometry": {"type": "Point", "coordinates": [100.0461018, 9.4650648]}, "properties": {"name": "Activity", "category": "Activity", "icon": "🎠", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": true, "score": 59, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-009", "geometry": {"type": "Point", "coordinates": [100.046756, 9.4662486]}, "properties": {"name": "Activity", "category": "Activity", "icon": "🎠", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": true, "score": 53, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-010", "geometry": {"type": "Point", "coordinates": [100.0436101, 9.4642161]}, "properties": {"name": "Koko galery", "category": "Activity", "icon": "🎠", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 51, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-011", "geometry": {"type": "Point", "coordinates": [100.0374268, 9.4612971]}, "properties": {"name": "Culture", "category": "Culture", "icon": "🏛️", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": true, "score": 24, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-012", "geometry": {"type": "Point", "coordinates": [100.0457893, 9.4647336]}, "properties": {"name": "Hippo and Loma", "category": "Restaurant", "icon": "🍽️", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 70, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-013", "geometry": {"type": "Point", "coordinates": [100.0451664, 9.465712]}, "properties": {"name": "Cafe Ogurci", "category": "Restaurant", "icon": "🍽️", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 66, "opening_hours": {"raw": "11:00-23:00", "open_now": null, "source": "osm"}, "phone": "0972096824", "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-014", "geometry": {"type": "Point", "coordinates": [100.0445533, 9.4646954]}, "properties": {"name": "Eda na Samui", "category": "Restaurant", "icon": "🍽️", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 66, "opening_hours": {"raw": "Mo-Fr 12:00-21:00; Sa 12:00-20:00", "open_now": null, "source": "osm"}, "phone": "+66993039115", "website": "https://www.edanasamui.com/", "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-015", "geometry": {"type": "Point", "coordinates": [100.0452923, 9.4633682]}, "properties": {"name": "Swing Bar", "category": "Restaurant", "icon": "🍽️", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 64, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-016", "geometry": {"type": "Point", "coordinates": [100.0441378, 9.4656004]}, "properties": {"name": "Cafe Madrid", "category": "Restaurant", "icon": "🍽️", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 63, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-017", "geometry": {"type": "Point", "coordinates": [100.0446814, 9.4654745]}, "properties": {"name": "Morya Pharmacy", "category": "Health", "icon": "💊", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 62, "status": "primary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-018", "geometry": {"type": "Point", "coordinates": [100.0440685, 9.4648841]}, "properties": {"name": "PHARMACY @Drug Store", "category": "Health", "icon": "💊", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 60, "opening_hours": {"raw": "Mo-Su 08:00-24:00", "open_now": null, "source": "osm"}, "status": "secondary"}}, {"type": "Feature", "id": "geo/9.4648,100.0457-019", "geometry": {"type": "Point", "coordinates": [100.0454624, 9.4665034]}, "properties": {"name": "Lamai Medical Clinic", "category": "Health", "icon": "💊", "coord_source": "osm", "coord_accuracy": "high", "source": "osm", "listing_url": "", "generated_name": false, "score": 59, "status": "secondary"}}]};
+  var EXPORT_MODE      = false;
+  var SECONDARY_COUNTS = {"Health": 2, "Playground": 1, "Supermarket": 1};
+
+  var PILL_ORDER = [
+    'Supermarket', 'Park', 'Playground',
+    'Bakery & Food', 'Restaurant', 'Market',
+    'Transit', 'Bike Share', 'Health',
+  ];
+
+  // ── Load POIs ───────────────────────────────────────────────────────────
+  function loadPOIs() {
+    var features = (GEOJSON && GEOJSON.features) ? GEOJSON.features : [];
+    if (!features.length) return;
+
+    if (EXPORT_MODE) {
+      // Keep primary POIs only, top 2 per category by score for a clean export
+      var perCat = {};
+      features = features
+        .filter(function(f) { return f.properties.status !== 'secondary'; })
+        .sort(function(a, b) { return (b.properties.score || 0) - (a.properties.score || 0); })
+        .filter(function(f) {
+          var cat = f.properties.category || '?';
+          perCat[cat] = (perCat[cat] || 0) + 1;
+          return perCat[cat] <= 2;
+        });
+    }
+
+    LQ.poiLayer = L.layerGroup();
+    features.forEach(function(f) {
+      if (!f.geometry || !f.geometry.coordinates) return;
+      if (f.properties && f.properties.status === 'secondary') {
+        LQ.secondaryMarkers.push(LQ.makePOIMarker(f));
+        return;
+      }
+      var m = LQ.makePOIMarker(f);
+      var cat = (f.properties && f.properties.category) || '';
+      if (cat) (LQ.catMarkers[cat] = LQ.catMarkers[cat] || []).push(m);
+      if (!EXPORT_MODE && !LQ.DEFAULT_CATS[cat]) {
+        LQ.hiddenCats[cat] = true;
+      } else {
+        m.addTo(LQ.poiLayer);
+      }
+    });
+    LQ.poiLayer.addTo(LQ.map);
+  }
+
+  window.lqCopyShareUrl = function() {
+    navigator.clipboard.writeText(SHARE_URL).then(function() {
+      var msg = document.getElementById('share-copied-msg');
+      if (!msg) return;
+      msg.style.display = '';
+      setTimeout(function() { msg.style.display = 'none'; }, 2000);
+    }).catch(function() {
+      prompt('Copy this link:', SHARE_URL);
+    });
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    LQ.initMap({});
+    LQ.map.fitBounds(L.latLng(LAT, LON).toBounds(600));
+    if (EXPORT_MODE) { LQ.map.setZoom(LQ.map.getZoom() + 2); }
+    document.getElementById('map').classList.add('map-active');
+
+    if (!EXPORT_MODE && window.innerWidth <= 768) {
+      LQ.map.panBy([0, -Math.round(window.innerHeight * 0.16)], { animate: false });
+    }
+
+    LQ.drawRings(LAT, LON);
+    LQ.placeRentalMarker(LAT, LON);
+    loadPOIs();
+
+    // Wire category pills
+    var pillContainer = document.getElementById('cat-pills-container');
+    if (pillContainer) {
+      var pillEls = Array.from(pillContainer.querySelectorAll('.cat-pill'));
+      var bycat = {};
+      pillEls.forEach(function(el) { bycat[el.dataset.cat] = el; });
+      var DEFAULT_ON = ['Bakery & Food', 'Supermarket', 'Park', 'Playground'];
+      var extraCats = pillEls.map(function(el) { return el.dataset.cat; })
+        .filter(function(c) { return PILL_ORDER.indexOf(c) < 0; });
+      DEFAULT_ON
+        .concat(PILL_ORDER.filter(function(c) { return DEFAULT_ON.indexOf(c) < 0; }))
+        .concat(extraCats)
+        .forEach(function(cat) {
+          if (bycat[cat]) pillContainer.appendChild(bycat[cat]);
+        });
+      pillEls.forEach(function(el) {
+        if (LQ.hiddenCats[el.dataset.cat]) el.style.opacity = '0.45';
+        el.onclick = function() { _toggleCat(el.dataset.cat); };
+      });
+      if (LQ.secondaryMarkers.length) {
+        var link = document.createElement('a');
+        link.id = 'show-more-link';
+        link.href = '#';
+        link.textContent = 'Show more…';
+        link.style.cssText = 'font-size:0.78rem;color:var(--text-muted);text-decoration:underline;align-self:center;white-space:nowrap;';
+        link.onclick = function(e) { e.preventDefault(); _toggleSecondary(); };
+        pillContainer.appendChild(link);
+      }
+    }
+  });
+
+  function _toggleCat(cat) {
+    LQ.toggleCat(cat);
+    var pillContainer = document.getElementById('cat-pills-container');
+    if (pillContainer) {
+      var el = pillContainer.querySelector('[data-cat="' + cat + '"]');
+      if (el) el.style.opacity = LQ.hiddenCats[cat] ? '0.45' : '1';
+    }
+  }
+
+  function _toggleSecondary() {
+    var isNowVisible = LQ.toggleSecondary();
+    var link = document.getElementById('show-more-link');
+    if (link) link.textContent = isNowVisible ? 'Show less…' : 'Show more…';
+    document.querySelectorAll('#cat-pills-container .cat-pill[data-primary-count]').forEach(function(el) {
+      var base  = parseInt(el.dataset.primaryCount, 10);
+      var delta = SECONDARY_COUNTS[el.dataset.cat] || 0;
+      var span  = el.querySelector('.pill-count');
+      if (span) span.textContent = base + (isNowVisible ? delta : 0);
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
