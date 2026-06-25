@@ -182,7 +182,8 @@
     }
     .form-field input:focus,
     .form-field textarea:focus {
-      outline: none;
+      outline: 2px solid #2d6a4f;
+      outline-offset: 2px;
       border-color: #2d6a4f;
     }
     .form-field input[aria-invalid="true"],
@@ -392,13 +393,10 @@
   </footer>
 
   <!-- Formspree Vanilla JS Ajax -->
+  <script src="https://unpkg.com/@formspree/ajax@1"></script>
   <script>
-    window.formspree = window.formspree || function () {
-      (formspree.q = formspree.q || []).push(arguments);
-    };
     formspree('initForm', { formElement: '#contact-form', formId: 'mnjkjern' });
   </script>
-  <script src="https://unpkg.com/@formspree/ajax@1" defer></script>
 
 </body>
 </html>
