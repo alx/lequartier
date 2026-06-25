@@ -16,7 +16,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 STATIC_SRC   = PROJECT_ROOT / "src" / "web" / "static"
 DIST_DIR     = PROJECT_ROOT / "dist"
 DB_PATH      = PROJECT_ROOT / "data" / "listings.db"
-SCRIPT_NAME  = "/lequartier"
+SCRIPT_NAME  = ""  # custom domain at root — no subdirectory prefix
 
 
 def get_canonical_listings(db_path: Path = DB_PATH) -> list[tuple[str, str]]:

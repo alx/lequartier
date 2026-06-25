@@ -90,14 +90,14 @@ def test_write_redirect_stub_meta_refresh_url(tmp_path):
     import scripts.build_static as bs
     bs.write_redirect_stub("listing-111", "uuid-aaa", tmp_path)
     html = (tmp_path / "airbnb" / "listing-111" / "index.html").read_text()
-    assert 'content="0;url=/lequartier/p/uuid-aaa/"' in html
+    assert 'content="0;url=/p/uuid-aaa/"' in html
 
 
 def test_write_redirect_stub_canonical_link(tmp_path):
     import scripts.build_static as bs
     bs.write_redirect_stub("listing-111", "uuid-aaa", tmp_path)
     html = (tmp_path / "airbnb" / "listing-111" / "index.html").read_text()
-    assert 'href="/lequartier/p/uuid-aaa/"' in html
+    assert 'href="/p/uuid-aaa/"' in html
 
 
 # ── render_page ───────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ def test_render_page_raises_on_404(app):
 
 
 def test_render_page_sets_script_name(app, tmp_path):
-    """Static asset URLs in rendered HTML are prefixed with /lequartier."""
+    """Static asset URLs in rendered HTML use root-relative paths (no subdirectory prefix)."""
     import scripts.build_static as bs
 
     result = {
@@ -166,4 +166,4 @@ def test_render_page_sets_script_name(app, tmp_path):
         with app.test_client() as client:
             html = bs.render_page(client, "/p/script-name-uuid")
 
-    assert b"/lequartier/static/" in html
+    assert b"/static/" in html
