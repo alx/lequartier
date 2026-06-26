@@ -259,6 +259,39 @@
     anchor.insertAdjacentElement('beforebegin', wrapper);
   }
 
+  // ── URL validation helper ─────────────────────────────────────────────────
+  function buildValidatedUrl(baseUrl, taskId) {
+    try {
+      // Minimal path validation
+      if (baseUrl.includes('/../') || /\/%2e%2e\//i.test(baseUrl)) {
+        throw new Error('Invalid path');
+      }
+      
+      const url = new URL(baseUrl);
+      
+      // Protocol + host checks
+      const allowedDomains = ['lequartier.girard-davila.net'];
+      if (!allowedDomains.includes(url.hostname)) {
+        throw new Error('Invalid host');
+      }
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        throw new Error('Invalid protocol');
+      }
+      
+      // Validate path parameters
+      if (!/^[A-Za-z0-9_-]+$/.test(taskId)) {
+        throw new Error('Invalid parameter');
+      }
+      
+      // Rebuild pathname from fixed literals + validated segments
+      url.pathname = `/tasks/${taskId}/map-state`;
+      
+      return url.href;
+    } catch {
+      throw new Error('Invalid URL');
+    }
+  }
+
   // ── Generation with live progress ─────────────────────────────────────────
   async function generateAndPoll(listing_id, lat, lon, backendBase) {
     const loadingEl = document.getElementById('lq-loading');
@@ -300,7 +333,7 @@
     while (polling) {
       await new Promise(r => setTimeout(r, 1000));
       try {
-        const r = await fetch(`${backendBase}/tasks/${taskId}/map-state`).then(res => res.json());
+        const r = await fetch(buildValidatedUrl(backendBase, taskId)).then(res => res.json());
 
         const inner = document.getElementById('lq-prog-inner');
         if (inner) inner.style.width = (r.progress_pct || 5) + '%';
