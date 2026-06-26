@@ -160,7 +160,13 @@ async function fetchFreshPhotoUrl(browser, airbnbUrl) {
 }
 
 async function screenshotListing(id, browser) {
-  const jsonPath = path.join(CURATED_DIR, `${id}.json`);
+  const resolvedBase = path.resolve(CURATED_DIR);
+  const resolvedTarget = path.resolve(resolvedBase, `${id}.json`);
+  const relative = path.relative(resolvedBase, resolvedTarget);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`invalid path`);
+  }
+  const jsonPath = resolvedTarget;
   if (!fs.existsSync(jsonPath)) {
     throw new Error(`curated JSON not found: ${jsonPath}`);
   }
@@ -197,7 +203,13 @@ async function screenshotListing(id, browser) {
     }
 
     const html = buildHtml(data);
-    tmpFile = path.join(os.tmpdir(), `og-${id}.html`);
+    const resolvedTmpBase = path.resolve(os.tmpdir());
+    const resolvedTmpTarget = path.resolve(resolvedTmpBase, `og-${id}.html`);
+    const relativeTmp = path.relative(resolvedTmpBase, resolvedTmpTarget);
+    if (relativeTmp.startsWith('..') || path.isAbsolute(relativeTmp)) {
+      throw new Error(`invalid path`);
+    }
+    tmpFile = resolvedTmpTarget;
     fs.writeFileSync(tmpFile, html, 'utf8');
 
     const page = await browser.newPage();
@@ -265,7 +277,13 @@ async function screenshotListing(id, browser) {
         document.body.appendChild(container);
       });
 
-      const outFile = path.join(OUT_DIR, `${id}.png`);
+      const resolvedOutBase = path.resolve(OUT_DIR);
+      const resolvedOutTarget = path.resolve(resolvedOutBase, `${id}.png`);
+      const relativeOut = path.relative(resolvedOutBase, resolvedOutTarget);
+      if (relativeOut.startsWith('..') || path.isAbsolute(relativeOut)) {
+        throw new Error(`invalid path`);
+      }
+      const outFile = resolvedOutTarget;
       await page.screenshot({ path: outFile, type: 'png' });
       console.log(`  saved → ${path.relative(process.cwd(), outFile)}`);
     } finally {
