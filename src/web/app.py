@@ -162,7 +162,7 @@ def create_app(config: dict | None = None) -> Flask:
 
 def run_dev() -> None:
     app = create_app()
-    app.run(debug=True, host="127.0.0.1", port=5010, threaded=True)
+    app.run(host="127.0.0.1", port=5010, threaded=True)
 
 
 def run_prod() -> None:
