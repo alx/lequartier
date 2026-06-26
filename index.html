@@ -153,6 +153,31 @@
     .feature h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.2rem; }
     .feature p  { font-size: 0.85rem; color: #555; }
 
+    /* ── Examples ── */
+    .examples {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .example-card {
+      background: #fff;
+      border: 1px solid #e5e5e3;
+      border-radius: 10px;
+      padding: 1.1rem 1rem;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .example-card:hover {
+      border-color: #2d6a4f;
+      box-shadow: 0 2px 8px rgba(45,106,79,0.12);
+    }
+    .example-card .flag { font-size: 1.4rem; margin-bottom: 0.4rem; }
+    .example-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.2rem; color: #1a1a1a; }
+    .example-card p  { font-size: 0.85rem; color: #2d6a4f; }
+
     /* ── Contact form ── */
     .contact-form {
       margin-top: 1.5rem;
@@ -266,6 +291,31 @@
       <p>Hosts get a permanent shareable link and a downloadable QR code they can drop into their listing description, welcome book, or check-in message. No design skills required.</p>
       <div class="screenshot-wrap">
         <img src="screenshot.png" alt="Le Quartier neighbourhood map showing walkable POIs around a rental listing" />
+      </div>
+    </section>
+  </div>
+
+  <!-- EXAMPLES -->
+  <div class="container">
+    <section id="examples">
+      <h2>See it live</h2>
+      <p>Browse pre-generated maps for real listings — no sign-in required.</p>
+      <div class="examples">
+        <a href="airbnb/686559818391956388/" class="example-card">
+          <div class="flag">🇬🇷</div>
+          <h3>Athens, Greece</h3>
+          <p>View map →</p>
+        </a>
+        <a href="airbnb/10349749/" class="example-card">
+          <div class="flag">🇫🇷</div>
+          <h3>Toulouse, France</h3>
+          <p>View map →</p>
+        </a>
+        <a href="airbnb/688796991005765901/" class="example-card">
+          <div class="flag">🇹🇭</div>
+          <h3>Ko Samui, Thailand</h3>
+          <p>View map →</p>
+        </a>
       </div>
     </section>
   </div>
